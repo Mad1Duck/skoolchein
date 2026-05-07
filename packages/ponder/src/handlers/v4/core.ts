@@ -1,6 +1,6 @@
 import { ponder } from "ponder:registry";
 import { db } from "@/db";
-import { v4Programs, v4Applicants, v4Scholars, v4Votes, v4ConfidenceStakes, v4Reputation } from "@/db/schema";
+import { v4Programs, v4Applicants, v4Scholars, v4Votes, v4ConfidenceStakes, v4Reputation, v4FraudNfts } from "@/db/schema";
 import { scholarshipCoreAbi } from "abis/v4/ScholarshipCore";
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
@@ -394,8 +394,17 @@ export const scholarshipCoreHandlers = () => {
           eq(v4Scholars.pid, Number(pid)),
         ));
 
+      // Record Fraud NFT if it's a heavy fraud
+      if (Number(dtype) === 2) {
+        await db.insert(v4FraudNfts).values({
+          scholarWallet: String(scholar),
+          pid: Number(pid),
+          metadataUri: "ipfs://QmFraudAlertMetadata",
+        });
+      }
+
       await insertBlock({ event, eventName: "ScholarshipCore:ScholarSlashed" });
-      await sendSseToAll("main", { step: "ScholarSlashed", data: { scholar, pid: Number(pid) }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { step: "ScholarSlashed", data: { scholar, pid: Number(pid), isHeavy: Number(dtype) === 2 }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScholarSlashed handler error");
     }

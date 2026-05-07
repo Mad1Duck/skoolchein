@@ -126,3 +126,13 @@ contract DonorNFT is BaseCredentialNFT {
 contract StudentNFT is BaseCredentialNFT {
     constructor() BaseCredentialNFT("Scholarship Graduate", "SGNFT") {}
 }
+
+/**
+ * @title  FraudNFT
+ * @notice The "Scarlet Letter" of the protocol. Soulbound NFT minted to 
+ *         scholars who commit HEAVY_FRAUD. 
+ *         Permanent, non-transferable, and serves as a public warning.
+ */
+contract FraudNFT is BaseCredentialNFT {
+    constructor() BaseCredentialNFT("Protocol Fraud Alert", "SCAM") {}
+}

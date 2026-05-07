@@ -42,6 +42,7 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     mapping(uint256 => mapping(address => bool)) public isCommitteeMember;
     // member index (1-based) for bitmap; 0 = not a member
     mapping(uint256 => mapping(address => uint8)) private _memberIndex;
+    mapping(uint256 => uint256) public activeMemberCount;
 
     // ── Scoring (unchanged) ──────────────────────────────────────────────────
     mapping(uint256 => mapping(address => mapping(address => bool))) public hasScored;
@@ -106,13 +107,17 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
         isCommitteeMember[pid][member] = true;
         _memberIndex[pid][member] = idx;
         _committeeMembers[pid].push(member);
+        activeMemberCount[pid]++;
         emit CommitteeMemberAdded(pid, member);
     }
 
     function removeCommitteeMember(uint256 pid, address member) external {
         ScholarshipTypes.Program memory prog = _core.getProgram(pid);
         if (msg.sender != prog.initiator) revert OnlyInitiator();
+        if (!isCommitteeMember[pid][member]) revert NotCommitteeMember();
+        
         isCommitteeMember[pid][member] = false;
+        activeMemberCount[pid]--;
         // Note: index kept to preserve bitmap integrity for past votes.
         emit CommitteeMemberRemoved(pid, member);
     }
@@ -139,16 +144,22 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     }
 
     function _tryFinalizeScore(uint256 pid, address applicant, uint256 academic, uint256 income, uint256 recommend) internal {
-        // Average scores from all members who have submitted — simplified for size
-        // Full implementation would accumulate; this calls core once all members voted
         address[] memory members = _committeeMembers[pid];
         uint256 n = members.length;
         uint256 voted;
         for (uint256 i; i < n; ) {
-            if (hasScored[pid][applicant][members[i]]) voted++;
+            // Only count votes from members who are STILL active
+            if (isCommitteeMember[pid][members[i]] && hasScored[pid][applicant][members[i]]) {
+                voted++;
+            }
             unchecked { ++i; }
         }
-        if (voted == n && n > 0) {
+
+        // Majority Scoring: trigger when more than 50% of ACTIVE members have voted
+        uint256 activeCount = activeMemberCount[pid];
+        uint256 majority    = activeCount / 2 + 1;
+        
+        if (voted >= majority && activeCount > 0) {
             _core.submitCommitteeScore(pid, applicant, academic, income, recommend, msg.sender);
         }
     }
@@ -165,7 +176,7 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
         else               disputeVotesAgainst[disputeId]++;
         emit DisputeVoteCast(disputeId, msg.sender, upholdDispute);
 
-        uint256 majority = _committeeMembers[pid].length / 2 + 1;
+        uint256 majority = activeMemberCount[pid] / 2 + 1;
         if (disputeVotesFor[disputeId] >= majority) {
             _core.resolveDisputeBH(disputeId);
         } else if (disputeVotesAgainst[disputeId] >= majority) {
@@ -203,8 +214,7 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
 
         emit MilestoneVoteCast(milestoneId, msg.sender, approve);
 
-        uint256 total   = _committeeMembers[pid].length;
-        uint256 majority = total / 2 + 1;
+        uint256 majority = activeMemberCount[pid] / 2 + 1;
 
         uint256 approveCount = _popcount(_approveVotes[milestoneId]);
         uint256 rejectCount  = _popcount(_rejectVotes[milestoneId]);

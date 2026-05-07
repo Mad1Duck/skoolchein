@@ -215,6 +215,16 @@ export const v4TreasuryWithdrawals = pgTable("v4_treasury_withdrawals", {
   timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
 });
 
+/** Tracks Fraud NFTs (Tainted credentials) issued to blacklisted students */
+export const v4FraudNfts = pgTable("v4_fraud_nfts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  scholarWallet: varchar("scholar_wallet", { length: 42 }).notNull(),
+  pid: integer("pid").notNull(),
+  tokenId: integer("token_id"),
+  metadataUri: varchar("metadata_uri", { length: 255 }).default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 // V4 TABLES — Donations
 // ══════════════════════════════════════════════════════════════════════════════

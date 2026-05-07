@@ -102,6 +102,7 @@ abstract contract ScholarshipCoreBase is Initializable {
     IScholarshipReputation public reputation;
     ICredentialNFT         public donorNFT;
     ICredentialNFT         public studentNFT;
+    ICredentialNFT         public fraudNFT;
     IMilestoneManager      public milestoneManager;
     address                public bountyHunter; // Using address to match existing wiring or use IScholarshipBounty
 
@@ -333,6 +334,10 @@ abstract contract ScholarshipCoreBase is Initializable {
         scholars[wallet][pid].status = ScholarshipTypes.StudentStatus.FROZEN;
         if (dtype == ScholarshipTypes.DisputeType.HEAVY_FRAUD) {
             globalStudentStatus[wallet] = ScholarshipTypes.StudentStatus.BLACKLISTED;
+            // Mint the "Scarlet Letter" NFT
+            if (address(fraudNFT) != address(0)) {
+                fraudNFT.mint(wallet, pid, "ipfs://QmFraudAlertMetadata");
+            }
         } else {
             globalStudentStatus[wallet] = ScholarshipTypes.StudentStatus.FROZEN;
             globalFreezeUntil[wallet] = block.timestamp + _config.freezeHeavy;

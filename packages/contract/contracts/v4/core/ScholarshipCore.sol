@@ -62,6 +62,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
         address _reputation,
         address _donorNFT,
         address _studentNFT,
+        address _fraudNFT,
         address _milestoneManager,
         address _bountyHunter
     ) external initializer {
@@ -74,12 +75,18 @@ contract ScholarshipCore is ScholarshipCoreBase {
         reputation       = IScholarshipReputation(_reputation);
         donorNFT         = ICredentialNFT(_donorNFT);
         studentNFT       = ICredentialNFT(_studentNFT);
+        fraudNFT         = ICredentialNFT(_fraudNFT);
         milestoneManager = IMilestoneManager(_milestoneManager);
         bountyHunter     = _bountyHunter;
         _roles[MILESTONE_ROLE][_milestoneManager] = true;
         if (_bountyHunter != address(0)) {
             _roles[BOUNTY_ROLE][_bountyHunter] = true;
         }
+    }
+
+    function setFraudNFT(address _fraudNFT) external {
+        if (msg.sender != admin) revert NotAdmin();
+        fraudNFT = ICredentialNFT(_fraudNFT);
     }
 
     function setBounty(address _bounty) external {
