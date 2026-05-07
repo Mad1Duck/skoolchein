@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
 import { usePrograms, useProgramApplicants } from '@/lib/api/hooks';
 import { fetchApplicantProfile, fetchProgramMeta } from '@/lib/ipfs';
 import { useVoteForCandidate } from '@/lib/contracts/write-hooks';

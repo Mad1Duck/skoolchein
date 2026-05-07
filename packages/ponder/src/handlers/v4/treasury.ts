@@ -1,6 +1,6 @@
 import { ponder } from "ponder:registry";
 import { db } from "@/db";
-import { v4Programs, v4Donations, v4ConfidenceStakes, v4BountyHunters, v4Reputation } from "@/db/schema";
+import { v4Programs, v4Donations, v4ConfidenceStakes, v4BountyHunters, v4Reputation, v4TreasuryWithdrawals } from "@/db/schema";
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/api/controller/sse.controller";
@@ -185,6 +185,24 @@ export const scholarshipTreasuryHandlers = () => {
       await sendSseToAll("main", { step: "DonorRefunded", data: { pid, donor, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DonorRefunded handler error");
+    }
+  });
+
+  ponder.on("ScholarshipTreasury:TreasuryReserveWithdrawn", async ({ event }) => {
+    try {
+      const { recipient, amount } = event.args;
+      
+      await db.insert(v4TreasuryWithdrawals).values({
+        recipient: String(recipient),
+        amount: String(amount),
+        transactionHash: event.transaction.hash,
+        timestamp: new Date(Number(event.block.timestamp) * 1000),
+      });
+
+      await insertBlock({ event, eventName: "ScholarshipTreasury:TreasuryReserveWithdrawn" });
+      await sendSseToAll("main", { step: "TreasuryReserveWithdrawn", data: { recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
+    } catch (err) {
+      logger.error({ err }, "TreasuryReserveWithdrawn handler error");
     }
   });
 };

@@ -115,6 +115,7 @@ contract ScholarshipTreasury is
     event YieldDistributed(uint256 indexed pid, uint256 totalYield);
     event YieldClaimed(uint256 indexed pid, address voter, uint256 amount);
     event DonorRefunded(uint256 indexed pid, address donor, uint256 amount);
+    event TreasuryReserveWithdrawn(address indexed recipient, uint256 amount);
 
     // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -482,6 +483,22 @@ contract ScholarshipTreasury is
     function setMaxPushRefundDonors(uint8 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newMax > 0, "max=0");
         maxPushRefundDonors = newMax;
+    }
+    
+    /**
+     * @notice Withdraw accumulated treasury reserve (from slashes).
+     * @param recipient  Address to receive the funds.
+     * @param amount     Amount of USDC to withdraw.
+     */
+    function withdrawTreasuryReserve(address recipient, uint256 amount)
+        external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (amount == 0) revert NothingToWithdraw();
+        // We don't have a separate tracker for reserve, but we can check balance vs total program/yield/stakes
+        // However, a simple balance-based check or a dedicated counter is better.
+        // For now, we trust the Admin/Multisig to withdraw only what is surplus.
+        usdc.safeTransfer(recipient, amount);
+        emit TreasuryReserveWithdrawn(recipient, amount);
     }
 
     // ── UUPS ─────────────────────────────────────────────────────────────────

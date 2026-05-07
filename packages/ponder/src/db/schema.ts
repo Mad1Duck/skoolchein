@@ -206,6 +206,15 @@ export const v4Reputation = pgTable("v4_reputation", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+/** Tracks manual withdrawals of slashed funds from Treasury */
+export const v4TreasuryWithdrawals = pgTable("v4_treasury_withdrawals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  recipient: varchar("recipient", { length: 42 }).notNull(),
+  amount: numeric("amount").default("0"),
+  transactionHash: varchar("tx_hash", { length: 66 }),
+  timestamp: timestamp("timestamp", { withTimezone: true }).defaultNow(),
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 // V4 TABLES — Donations
 // ══════════════════════════════════════════════════════════════════════════════
