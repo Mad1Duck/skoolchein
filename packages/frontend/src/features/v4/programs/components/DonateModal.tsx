@@ -65,8 +65,8 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
       <div className="space-y-5">
         {step === 'form' && (
           <>
-            <div className="bg-skgreen-light border-2 border-black rounded-xl p-4 text-sm">
-              <p className="font-bold mb-1">How Donations Work</p>
+            <div className="bg-skgreen-light border-2 border-black p-4 text-sm shadow-[3px_3px_0_0_#000]">
+              <p className="font-extrabold uppercase tracking-wider text-[10px] mb-2">How Donations Work</p>
               <ul className="text-gray-700 space-y-1 text-xs list-disc list-inside">
                 <li>Your donation gives you <strong>voting power</strong> equal to the net amount</li>
                 <li>A 1 USDC fee is deducted from all donations</li>
@@ -76,14 +76,14 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">
-                Donation Amount (USDC) <span className="text-red-500">*</span>
+              <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
+                Donation Amount (USDC) <span className="text-skred">*</span>
               </label>
               <input
                 type="number"
                 min="2"
                 step="1"
-                className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skgreen"
+                className="w-full"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -91,10 +91,10 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">NFT Metadata URI</label>
+              <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">NFT Metadata URI</label>
               <input
                 type="text"
-                className="w-full border-2 border-black p-3 rounded-lg font-mono text-sm focus:outline-none focus:border-skgreen"
+                className="w-full font-data text-sm"
                 value={nftUri}
                 onChange={(e) => setNftUri(e.target.value)}
                 placeholder="ipfs://Qm..."

@@ -20,7 +20,7 @@ export function CommitteeScoreModal({ isOpen, onClose, programId, applicant }: P
 
   const handleSubmit = () => {
     submitScore({
-      programId: BigInt(programId),
+      pid: BigInt(programId),
       applicant: applicant.wallet as `0x${string}`,
       academicScore: BigInt(scores.academic),
       incomeScore: BigInt(scores.income),
@@ -31,7 +31,7 @@ export function CommitteeScoreModal({ isOpen, onClose, programId, applicant }: P
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title="Submit Committee Score">
       <div className="space-y-5">
-        <div className="flex items-center gap-3 bg-gray-50 border-2 border-black rounded-xl p-3">
+        <div className="flex items-center gap-3 bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]">
           <WalletAvatar address={applicant.wallet} size={36} />
           <div>
             <p className="font-bold">{shortenAddress(applicant.wallet)}</p>

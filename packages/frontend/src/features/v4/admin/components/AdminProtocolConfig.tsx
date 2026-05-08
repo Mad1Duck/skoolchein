@@ -47,7 +47,7 @@ export function AdminProtocolConfig() {
         <div className="flex items-center gap-2">
           <input
             type="number"
-            className="flex-1 border-2 border-black p-2 rounded-lg focus:outline-none focus:border-skpurple font-mono"
+            className="flex-1 font-data"
             value={type === 'usdc' ? formatUnits(BigInt(value), 6) : value.toString()}
             onChange={(e) => {
               let newVal: any = e.target.value;
@@ -59,8 +59,8 @@ export function AdminProtocolConfig() {
               handleChange(field, newVal);
             }}
           />
-          {type === 'usdc' && <span className="text-xs font-bold bg-gray-200 px-2 py-1 rounded">USDC</span>}
-          {type === 'duration' && <span className="text-xs font-bold bg-gray-200 px-2 py-1 rounded">SEC</span>}
+          {type === 'usdc' && <span className="text-xs font-bold bg-white px-2 py-1 border-2 border-black shadow-[2px_2px_0_0_#000]">USDC</span>}
+          {type === 'duration' && <span className="text-xs font-bold bg-white px-2 py-1 border-2 border-black shadow-[2px_2px_0_0_#000]">SEC</span>}
         </div>
         {help && <p className="text-[10px] text-gray-400 italic">{help}</p>}
       </div>
@@ -69,7 +69,7 @@ export function AdminProtocolConfig() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-black text-white p-4 rounded-xl">
+      <div className="flex justify-between items-center bg-black text-white p-4 border-2 border-black shadow-[4px_4px_0_0_#fff]">
         <div>
           <h2 className="text-2xl font-black">Contract Parameters</h2>
           <p className="text-xs opacity-70">Modify core protocol constants. Use with caution.</p>

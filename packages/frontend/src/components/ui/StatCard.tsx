@@ -9,26 +9,26 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  purple: "bg-skpurple-light text-skpurple",
-  red:    "bg-skred-light text-skred",
-  yellow: "bg-skyellow-light text-yellow-700",
-  green:  "bg-skgreen text-green-800",
-  cyan:   "bg-skcyan-light text-cyan-800",
-  orange: "bg-orange-100 text-orange-700",
+  purple: "bg-skpurple-light text-skpurple border-skpurple",
+  red:    "bg-skred-light text-skred border-skred",
+  yellow: "bg-skyellow-light text-yellow-800 border-yellow-500",
+  green:  "bg-skgreen text-green-800 border-green-500",
+  cyan:   "bg-skcyan-light text-cyan-800 border-cyan-500",
+  orange: "bg-skbw text-orange-800 border-orange-400",
 };
 
 export function StatCard({ label, value, icon, color = "purple", subtitle }: StatCardProps) {
   return (
-    <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-4 flex items-start gap-3">
+    <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-4 flex items-start gap-3 neo-interactive">
       {icon && (
-        <div className={`w-10 h-10 rounded-md ${colorMap[color]} flex items-center justify-center text-lg border-2 border-black shadow-[2px_2px_0_0_#000] shrink-0`}>
+        <div className={`w-10 h-10 rounded-md ${colorMap[color].split(' ').slice(0,2).join(' ')} flex items-center justify-center text-lg border-2 border-black shadow-[2px_2px_0_0_#000] shrink-0`}>
           {icon}
         </div>
       )}
-      <div className="flex flex-col min-w-0">
-        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
-        <span className="text-xl font-data font-bold truncate">{value}</span>
-        {subtitle && <span className="text-xs text-gray-500">{subtitle}</span>}
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight">{label}</span>
+        <span className="text-2xl font-data font-bold truncate mt-0.5">{value}</span>
+        {subtitle && <span className="text-xs text-gray-500 mt-0.5">{subtitle}</span>}
       </div>
     </div>
   );

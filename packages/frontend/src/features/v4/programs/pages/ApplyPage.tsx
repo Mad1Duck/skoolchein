@@ -59,24 +59,11 @@ export function ApplyPage() {
       const essayCID = eRes?.metaCID || 'QmEssayFallback123';
       const documentCID = dRes?.metaCID || 'QmDocFallback123';
       const recommendCID = rRes?.metaCID || 'QmRecommendFallback123';
-      console.log(
-        {
-          programId: BigInt(program?.pid!),
-          profileCID,
-          documentCID,
-          essayCID,
-          recommendCID,
-          selfDeclaredAcademicScore: BigInt(formData.academicScore),
-          selfDeclaredIncomeScore: BigInt(formData.incomeScore),
-          selfDeclaredRecommendScore: BigInt(formData.recommendScore),
-        },
-        '====ok=====',
-      );
 
       setStep('tx');
 
       apply({
-        programId: BigInt(program?.pid!),
+        pid: BigInt(program?.pid!),
         profileCID,
         documentCID,
         essayCID,
@@ -93,81 +80,86 @@ export function ApplyPage() {
 
   if (isLoading)
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
+      <div className="max-w-3xl mx-auto px-4 md:px-8 py-10 md:py-14">
         <NeoSkeleton lines={5} />
       </div>
     );
   if (!program)
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-24 text-center">
-        <h2 className="font-paytone text-2xl mb-2">Program Not Found</h2>
-        <p className="text-gray-600 mb-4">The program you are trying to apply to does not exist.</p>
-        <Link to="/programs" className="text-skpurple font-bold">Back to Programs</Link>
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-24 text-center">
+        <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] rounded-lg p-10 inline-block">
+          <h2 className="font-paytone text-3xl mb-3">Program Not Found</h2>
+          <p className="text-gray-600 mb-6">The program you are trying to apply to does not exist.</p>
+          <Link to="/programs">
+            <NeoButton label="Back to Programs" variant="secondary" size="md" />
+          </Link>
+        </div>
       </div>
     );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
-      <div className="mb-6">
+    <div className="max-w-3xl mx-auto px-4 md:px-8 py-10 md:py-14">
+      <div className="mb-8">
         <Link
           to={`/programs/$id`}
           params={{ id }}
-          className="text-skpurple font-bold text-sm">
-          Back to Program
+          className="text-skpurple font-bold text-sm hover:underline">
+          ← Back to Program
         </Link>
-        <h1 className="font-paytone text-3xl md:text-4xl mt-3 text-black">Apply for Scholarship</h1>
-        <p className="text-gray-600 text-base md:text-lg">{meta?.name ?? `Program #${id}`}</p>
+        <h1 className="font-paytone text-3xl md:text-5xl mt-4 leading-[0.95]">Apply for Scholarship</h1>
+        <p className="text-gray-600 text-base md:text-lg mt-2">{meta?.name ?? `Program #${id}`}</p>
       </div>
 
-      <NeoCard className="p-4 md:p-6">
+      <NeoCard fill="cream">
         <NeoCardBody>
           {step === 'uploading' && (
             <div className="text-center py-16">
-              <div className="w-12 h-12 border-2 border-black bg-skyellow mx-auto animate-pulse mb-4" />
-              <p className="font-bold text-lg">Uploading Documents to IPFS</p>
+              <div className="w-12 h-12 border-2 border-black bg-skyellow mx-auto animate-pulse mb-4 shadow-[3px_3px_0_0_#000]" />
+              <p className="font-paytone text-xl">Uploading to IPFS</p>
+              <p className="text-gray-500 text-sm mt-1">Encrypting and pinning your documents...</p>
             </div>
           )}
 
           {step === 'tx' && (
             <div className="text-center py-16">
-              <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-              <p className="font-bold text-lg">Confirm Transaction in Wallet</p>
-              <p className="text-gray-500 text-sm">Sign the smart contract interaction to continue.</p>
+              <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4 shadow-[3px_3px_0_0_#000]" />
+              <p className="font-paytone text-xl">Confirm in Wallet</p>
+              <p className="text-gray-500 text-sm mt-1">Sign the smart contract interaction to submit.</p>
             </div>
           )}
 
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="bg-skyellow-light p-4 border-2 border-black shadow-[3px_3px_0_0_#000]">
-                <h3 className="font-paytone text-lg mb-3">Documents</h3>
+              <div className="bg-skyellow-light p-5 border-2 border-black shadow-[3px_3px_0_0_#000]">
+                <h3 className="font-paytone text-lg mb-4">Documents</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold mb-1">Profile / Bio</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">Profile / Bio</label>
                     <textarea
                       required
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       rows={2}
                       value={formData.profileText}
                       onChange={(e) => setFormData((p) => ({ ...p, profileText: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1">
-                      HackQuest ID <span className="text-gray-500 text-xs font-normal">(Optional)</span>
+                    <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
+                      HackQuest ID <span className="text-gray-500 font-normal normal-case tracking-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       placeholder="user@example.com"
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       value={formData.hackquestId}
                       onChange={(e) => setFormData((p) => ({ ...p, hackquestId: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1">Essay Answers</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">Essay Answers</label>
                     <textarea
                       required
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       rows={3}
                       value={formData.essayText}
                       onChange={(e) => setFormData((p) => ({ ...p, essayText: e.target.value }))}
@@ -176,21 +168,20 @@ export function ApplyPage() {
                 </div>
               </div>
 
-              <div className="bg-skpurple-light p-4 border-2 border-black shadow-[3px_3px_0_0_#000]">
-                <h3 className="font-paytone text-lg mb-2">Self-Declared Scores</h3>
-                <p className="text-xs text-gray-700 mb-4 bg-white p-2 border-2 border-black">
-                  WARNING: Your scores will be stored on-chain. If anyone spots a false claim, your
-                  deposit might be slashed and your application rejected. Be honest.
+              <div className="bg-skpurple-light p-5 border-2 border-black shadow-[3px_3px_0_0_#000]">
+                <h3 className="font-paytone text-lg mb-3">Self-Declared Scores</h3>
+                <p className="text-xs text-gray-700 mb-5 bg-white p-3 border-2 border-black">
+                  <span className="font-extrabold uppercase tracking-wider">Warning:</span> Your scores will be stored on-chain. If anyone spots a false claim, your deposit might be slashed and your application rejected. Be honest.
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold mb-1">Academic (0-100)</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5">Academic (0-100)</label>
                     <input
                       type="number"
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       value={formData.academicScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, academicScore: Number(e.target.value) }))
@@ -198,13 +189,13 @@ export function ApplyPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">Income Need (0-100)</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5">Income Need</label>
                     <input
                       type="number"
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       value={formData.incomeScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, incomeScore: Number(e.target.value) }))
@@ -212,13 +203,13 @@ export function ApplyPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">Recommendation</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5">Recommendation</label>
                     <input
                       type="number"
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full"
                       value={formData.recommendScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, recommendScore: Number(e.target.value) }))

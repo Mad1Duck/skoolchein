@@ -16,11 +16,11 @@ export function WalletAvatar({
 
   return (
     <div
-      className={`rounded-full border-2 border-black shadow-[2px_2px_0_0_#000] shrink-0 ${className}`}
+      className={`rounded-full border-[1.5px] border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] shrink-0 ${className}`}
       style={{
         width: size,
         height: size,
-        backgroundColor: `hsl(${hue}, 70%, 55%)`,
+        backgroundColor: `hsl(${hue}, 72%, 58%)`,
       }}
       title={address}
     />

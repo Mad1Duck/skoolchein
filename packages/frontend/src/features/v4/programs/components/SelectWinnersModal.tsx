@@ -106,17 +106,17 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Select Winners — Program #${programId}`}>
       <div className="space-y-4">
-        <div className="flex justify-between items-center bg-skblue-light border-2 border-black p-3 rounded-xl text-sm">
+        <div className="flex justify-between items-center bg-skblue-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
           <span className="font-bold">Total USDC to Allocate:</span>
           <span className="font-paytone text-lg text-skblue">${totalFundNeeded.toFixed(2)} USDC</span>
         </div>
 
         <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
           {winners.map((w, wi) => (
-            <div key={w.applicant.id} className="border-2 border-black rounded-xl overflow-hidden">
+            <div key={w.applicant.id} className="border-2 border-black overflow-hidden shadow-[3px_3px_0_0_#000]">
               {/* Winner header */}
               <div className="bg-skpink-light px-4 py-3 flex items-center gap-3 border-b-2 border-black">
-                <div className="w-6 h-6 rounded-full bg-skpink text-white flex items-center justify-center text-xs font-bold shrink-0">
+                <div className="w-6 h-6 bg-skpink text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">
                   {wi + 1}
                 </div>
                 <WalletAvatar address={w.applicant.wallet} size={24} />
@@ -131,7 +131,7 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
                 <p className="text-xs font-bold uppercase text-gray-500">Mandatory Milestones</p>
                 {w.milestones.map((m, mi) => (
                   <div key={mi} className="flex gap-2 items-start">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 border border-black flex items-center justify-center text-xs mt-2">
+                    <div className="flex-shrink-0 w-6 h-6 bg-gray-200 border-2 border-black flex items-center justify-center text-xs mt-2">
                       {mi + 1}
                     </div>
                     <div className="grid grid-cols-4 gap-2 flex-1">

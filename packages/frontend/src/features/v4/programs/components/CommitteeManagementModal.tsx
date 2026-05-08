@@ -49,7 +49,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
             Current Members ({members.length})
           </h3>
           {members.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center text-gray-500 text-sm">
+            <div className="border-2 border-dashed border-gray-400 p-6 text-center text-gray-500 text-sm">
               No committee members yet. Add the first member below.
             </div>
           ) : (
@@ -57,7 +57,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
               {members.map((m) => (
                 <li
                   key={m}
-                  className="flex items-center justify-between bg-gray-50 border-2 border-black rounded-xl p-3"
+                  className="flex items-center justify-between bg-white border-2 border-black p-3 shadow-[2px_2px_0_0_#000]"
                 >
                   <div className="flex items-center gap-3">
                     <WalletAvatar address={m} size={28} />
@@ -78,7 +78,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
         </div>
 
         {/* Add Member */}
-        <div className="bg-skpurple-light border-2 border-black rounded-xl p-4 space-y-3">
+        <div className="bg-skpurple-light border-2 border-black p-4 space-y-3 shadow-[3px_3px_0_0_#000]">
           <h3 className="font-bold text-sm">Add Committee Member</h3>
           <p className="text-xs text-gray-600">
             Maximum 15 members allowed. Members cannot be the program initiator.
@@ -87,7 +87,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
             <input
               type="text"
               placeholder="0x... wallet address"
-              className="flex-1 border-2 border-black p-2 rounded-lg font-mono text-sm focus:outline-none focus:border-skpurple"
+              className="flex-1 font-data text-sm"
               value={newMember}
               onChange={(e) => setNewMember(e.target.value)}
             />

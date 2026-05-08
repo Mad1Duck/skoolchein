@@ -156,7 +156,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               <label className="block text-sm font-bold mb-1">Program Name <span className="text-red-500">*</span></label>
               <input
                 type="text"
-                className="w-full border-2 border-black p-2 rounded-lg focus:outline-skpurple"
+                className="w-full"
                 value={formData.name}
                 onChange={(e) => set('name', e.target.value)}
               />
@@ -182,7 +182,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             <div>
               <label className="block text-sm font-bold mb-1">Description</label>
               <textarea
-                className="w-full border-2 border-black p-2 rounded-lg focus:outline-skpurple"
+                className="w-full"
                 rows={2}
                 value={formData.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -195,7 +195,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <label className="block text-xs font-bold mb-1">Total Fund (USDC)</label>
                 <input
                   type="number"
-                  className="w-full border-2 border-black p-2 rounded-lg focus:outline-skpurple"
+                  className="w-full"
                   value={formData.totalFund}
                   onChange={(e) => set('totalFund', e.target.value)}
                 />
@@ -205,7 +205,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <input
                   type="number"
                   min={1}
-                  className="w-full border-2 border-black p-2 rounded-lg focus:outline-skpurple"
+                  className="w-full"
                   value={formData.targetWinners}
                   onChange={(e) => set('targetWinners', Number(e.target.value))}
                 />
@@ -215,7 +215,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <input
                   type="number"
                   min={1}
-                  className="w-full border-2 border-black p-2 rounded-lg focus:outline-skpurple"
+                  className="w-full"
                   value={formData.maxCandidates}
                   onChange={(e) => set('maxCandidates', Number(e.target.value))}
                 />
@@ -234,10 +234,10 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                     key={value}
                     type="button"
                     onClick={() => set('screeningMode', value)}
-                    className={`p-2 border-2 rounded-xl text-left text-sm transition-all ${
+                    className={`p-3 border-2 text-left text-sm transition-all duration-75 ${
                       formData.screeningMode === value
-                        ? 'border-skpurple bg-skpurple-light'
-                        : 'border-gray-300 hover:border-black'
+                        ? 'border-black bg-skpurple-light shadow-[2px_2px_0_0_#000]'
+                        : 'border-gray-300 hover:border-black hover:shadow-[1px_1px_0_0_#000]'
                     }`}
                   >
                     <p className="font-bold">{label}</p>
@@ -277,7 +277,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <input
                   type="text"
                   placeholder="0x... CommitteeGovernance proxy address"
-                  className="w-full border-2 border-black p-2 rounded-lg font-mono text-sm focus:outline-skpurple"
+                  className="w-full font-data text-sm"
                   value={formData.committeeContract}
                   onChange={(e) => set('committeeContract', e.target.value)}
                 />
@@ -298,7 +298,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             </button>
 
             {showAdvanced && (
-              <div className="space-y-4 bg-gray-50 border-2 border-black rounded-xl p-4">
+              <div className="space-y-4 bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000]">
                 {/* Milestone Dispute Window */}
                 <div>
                   <label className="flex justify-between text-xs font-bold mb-1">
@@ -342,7 +342,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                         type="number"
                         min={0}
                         max={100}
-                        className="w-16 border border-gray-300 rounded p-1 text-xs"
+                        className="w-16 border-2 border-black p-1 text-xs"
                         value={formData[field]}
                         onChange={(e) => set(field, Number(e.target.value))}
                       />
@@ -371,7 +371,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                         type="number"
                         min={0}
                         max={100}
-                        className="w-16 border border-gray-300 rounded p-1 text-xs"
+                        className="w-16 border-2 border-black p-1 text-xs"
                         value={formData[field]}
                         onChange={(e) => set(field, Number(e.target.value))}
                       />

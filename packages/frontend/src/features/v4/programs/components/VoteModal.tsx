@@ -61,7 +61,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
       <div className="space-y-5">
         {step === 'choose' && (
           <>
-            <div className="bg-skblue-light border-2 border-black rounded-xl p-4 text-sm">
+            <div className="bg-skblue-light border-2 border-black p-4 text-sm shadow-[3px_3px_0_0_#000]">
               <p className="font-bold mb-1">Dual-Mode Participation</p>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Choose how you want to support this candidate. You can use your global protocol reputation or the voting power you earned from donations.
@@ -71,8 +71,8 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => setUseReputationMode(false)}
-                className={`p-4 border-2 border-black rounded-xl text-left transition-all ${
-                  !useReputationMode ? 'shadow-neo bg-skgreen-light' : 'bg-white hover:bg-gray-50'
+                className={`p-4 border-2 border-black text-left transition-all duration-75 ${
+                  !useReputationMode ? 'bg-skgreen-light shadow-[3px_3px_0_0_#000]' : 'bg-white hover:bg-gray-50'
                 }`}
               >
                 <div className="flex justify-between items-center">
@@ -85,8 +85,8 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
 
               <button
                 onClick={() => setUseReputationMode(true)}
-                className={`p-4 border-2 border-black rounded-xl text-left transition-all ${
-                  useReputationMode ? 'shadow-neo bg-skblue-light' : 'bg-white hover:bg-gray-50'
+                className={`p-4 border-2 border-black text-left transition-all duration-75 ${
+                  useReputationMode ? 'bg-skblue-light shadow-[3px_3px_0_0_#000]' : 'bg-white hover:bg-gray-50'
                 }`}
               >
                 <div className="flex justify-between items-center">
@@ -99,7 +99,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
             </div>
 
             {useReputationMode && repData?.isVotingLocked && (
-              <div className="bg-red-50 border-2 border-red-500 rounded-xl p-3 text-xs text-red-700 flex items-center gap-2">
+              <div className="bg-skred-light border-2 border-black p-3 text-xs text-skred flex items-center gap-2 shadow-[2px_2px_0_0_#000]">
                 <span>Your voting power is currently locked due to a pending dispute or cooldown.</span>
               </div>
             )}
@@ -114,7 +114,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
               Please confirm the transaction in your wallet to cast your vote for <strong>{candidateName ?? candidateAddress}</strong>.
             </p>
             {error && (
-              <div className="bg-red-50 p-3 rounded-lg text-xs text-red-600 border border-red-200">
+              <div className="bg-skred-light p-3 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
                 Error: {error.message || 'Transaction failed'}
               </div>
             )}

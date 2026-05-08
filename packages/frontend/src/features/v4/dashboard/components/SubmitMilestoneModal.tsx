@@ -67,7 +67,7 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
 
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
+            <div className="bg-skyellow-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
               <p className="font-bold">Submit Proof Document</p>
               <p className="text-gray-700 mt-1 text-xs">
                 Since this is an OPTIONAL/NEGOTIATED milestone, you are required to submit concrete proof. This text will be permanently stored on IPFS.
@@ -82,7 +82,7 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
               <textarea
                 required
                 rows={4}
-                className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skpurple resize-none"
+                className="w-full resize-none"
                 placeholder="Include a link to your Google Doc, GitHub repo, or directly describe your completed deliverable here..."
                 value={proofDescription}
                 onChange={(e) => setProofDescription(e.target.value)}

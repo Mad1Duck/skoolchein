@@ -32,10 +32,12 @@ export function DashboardPage() {
   // ── Role detection ────────────────────────────────────────────────────────────
   if (!address) {
     return (
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-20 text-center">
-        <h1 className="font-paytone text-4xl mb-2">Connect Wallet</h1>
-        <p className="text-gray-600 mb-6">Connect your wallet to view your dashboard.</p>
-        <NeoButton label="Connect Wallet" variant="connect" size="md" />
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-24 text-center">
+        <div className="bg-skyellow border-2 border-black shadow-[4px_4px_0_0_#000] rounded-lg p-10 inline-block">
+          <h1 className="font-paytone text-3xl md:text-4xl mb-3">Connect Wallet</h1>
+          <p className="text-gray-700 mb-6">Sign in to view your scholarships, votes, and reputation.</p>
+          <NeoButton label="Connect Wallet" variant="connect" size="lg" />
+        </div>
       </div>
     );
   }
@@ -50,9 +52,17 @@ export function DashboardPage() {
 
   if (!dashboard) {
     return (
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-20 text-center">
-        <h1 className="font-paytone text-4xl mb-2">No Data</h1>
-        <p className="text-gray-600">No dashboard data found for this wallet.</p>
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-24 text-center">
+        <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] rounded-lg p-10 inline-block">
+          <h1 className="font-paytone text-3xl md:text-4xl mb-3">No Data</h1>
+          <p className="text-gray-600 mb-6">This wallet hasn't interacted with the protocol yet.</p>
+          <NeoButton
+            label="Browse Programs"
+            variant="secondary"
+            size="md"
+            onClick={() => window.location.href = '/programs'}
+          />
+        </div>
       </div>
     );
   }
@@ -66,50 +76,46 @@ export function DashboardPage() {
   if (disputes.length > 0) roles.push('BOUNTY_HUNTER');
   if (committeeProgramIds.length > 0) roles.push('COMMITTEE');
 
-  const roleColors: Record<string, string> = {
-    INITIATOR: 'bg-skpink-light text-black',
-    SCHOLAR: 'bg-skblue-light text-black',
-    VOTER: 'bg-skpurple-light text-black',
-    BOUNTY_HUNTER: 'bg-skgreen-light text-black',
-    COMMITTEE: 'bg-skyellow-light text-black',
+  const roleFills: Record<string, string> = {
+    INITIATOR: 'bg-skpink text-black',
+    SCHOLAR: 'bg-skcyan text-black',
+    VOTER: 'bg-skpurple text-white',
+    BOUNTY_HUNTER: 'bg-skgreen text-black',
+    COMMITTEE: 'bg-skyellow text-black',
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-10">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+    <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
+      {/* Role Identity Banner */}
+      <div className="border-2 border-black bg-white shadow-[4px_4px_0_0_#000] rounded-lg p-5 md:p-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <h1 className="font-paytone text-4xl md:text-5xl mb-2">My Dashboard</h1>
-            <p className="text-gray-600 text-sm md:text-base font-data break-all">{address}</p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {roles.map((r) => (
+                <span
+                  key={r}
+                  className={`px-2 py-1 ${roleFills[r] ?? 'bg-gray-100 text-black'} border-2 border-black text-[10px] font-extrabold uppercase tracking-widest`}
+                >
+                  {r.replace('_', ' ')}
+                </span>
+              ))}
+              {roles.length === 0 && (
+                <span className="px-2 py-1 bg-gray-100 text-black border-2 border-black text-[10px] font-extrabold uppercase tracking-widest">
+                  NEWCOMER
+                </span>
+              )}
+            </div>
+            <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">My Dashboard</h1>
           </div>
-          <NeoButton
-            label="Create Program"
-            variant="primary"
-            size="lg"
-            onClick={() => setIsCreateModalOpen(true)}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2 mt-4">
-          {roles.map((r) => (
-            <span
-              key={r}
-              className={`px-2.5 py-1 ${roleColors[r] ?? 'bg-gray-100 text-black'} border-2 border-black shadow-[2px_2px_0_0_#000] rounded-md text-[10px] font-bold uppercase tracking-wider`}
-            >
-              {r.replace('_', ' ')}
-            </span>
-          ))}
-          {roles.length === 0 && (
-            <span className="px-2.5 py-1 bg-gray-100 text-black border-2 border-black shadow-[2px_2px_0_0_#000] rounded-md text-[10px] font-bold uppercase tracking-wider">
-              NEWCOMER
-            </span>
-          )}
+          <div className="flex flex-col items-start md:items-end gap-1">
+            <p className="text-xs font-data text-gray-400 uppercase tracking-widest">Connected</p>
+            <p className="text-sm font-data text-gray-600">{address}</p>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      {/* Stats: asymmetric, 4-up */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
         <StatCard
           label="Reputation"
           value={
@@ -117,16 +123,17 @@ export function DashboardPage() {
               ? Number(formatUnits(BigInt(reputation.repBalance), 18)).toFixed(2)
               : '0'
           }
+          color="purple"
         />
-        <StatCard label="Scholarships" value={summary.scholarshipsCount.toString()} />
-        <StatCard label="Votes Cast" value={summary.votesCount.toString()} />
-        <StatCard label="Disputes" value={summary.disputesCount.toString()} />
+        <StatCard label="Scholarships" value={summary.scholarshipsCount.toString()} color="green" />
+        <StatCard label="Votes Cast" value={summary.votesCount.toString()} color="cyan" />
+        <StatCard label="Disputes" value={summary.disputesCount.toString()} color="red" />
       </div>
 
-      {/* Role Panels */}
-      <div className="space-y-12">
-        <InitiatorPanel 
-          programs={programsCreated} 
+      {/* Role Panels with visual separators */}
+      <div className="space-y-10">
+        <InitiatorPanel
+          programs={programsCreated}
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
         />
 

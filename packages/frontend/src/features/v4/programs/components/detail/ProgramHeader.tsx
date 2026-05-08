@@ -44,14 +44,14 @@ export function ProgramHeader({
       </div>
       <div className="flex gap-2 shrink-0">
         {userAddress === program.initiator && (
-          <div className="flex items-center gap-2 bg-gray-100 border-2 border-black rounded-xl px-3 py-1">
+          <div className="flex items-center gap-2 bg-white border-2 border-black px-3 py-1 shadow-[2px_2px_0_0_#000]">
             <span className="text-[10px] font-bold uppercase">Public:</span>
             <button
               disabled={isToggling}
               onClick={() => toggle(BigInt(program.pid), !program.openDonation)}
-              className={`w-10 h-5 rounded-full border-2 border-black relative transition-colors ${program.openDonation ? 'bg-skgreen' : 'bg-gray-400'}`}
+              className={`w-10 h-5 border-2 border-black relative transition-colors ${program.openDonation ? 'bg-skgreen' : 'bg-gray-400'}`}
             >
-              <div className={`absolute top-0.5 w-3 h-3 bg-white border border-black rounded-full transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
+              <div className={`absolute top-0.5 w-3 h-3 bg-white border border-black transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
             </button>
           </div>
         )}

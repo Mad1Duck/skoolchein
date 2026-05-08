@@ -81,7 +81,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
 
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
+            <div className="bg-skyellow-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
               <p className="font-bold">How Optional Milestones Work</p>
               <p className="text-gray-700 mt-1 text-xs">
                 Propose a custom deliverable for additional funding. Your committee will vote to approve or reject it.
@@ -96,7 +96,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 <button
                   type="button"
                   onClick={() => setKind(1)}
-                  className={`p-3 border-2 rounded-xl text-sm font-bold transition-all ${
+                  className={`p-3 border-2 text-sm font-bold transition-all duration-75 ${
                     kind === 1 ? 'border-skpurple bg-skpurple-light' : 'border-black bg-white hover:bg-gray-50'
                   }`}
                 >
@@ -106,7 +106,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 <button
                   type="button"
                   onClick={() => setKind(2)}
-                  className={`p-3 border-2 rounded-xl text-sm font-bold transition-all ${
+                  className={`p-3 border-2 text-sm font-bold transition-all duration-75 ${
                     kind === 2 ? 'border-skblue bg-skblue-light' : 'border-black bg-white hover:bg-gray-50'
                   }`}
                 >
@@ -126,7 +126,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 min="1"
                 step="1"
                 required
-                className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skpurple"
+                className="w-full"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -138,7 +138,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
               <div>
                 <label className="block text-sm font-bold mb-1">Platform</label>
                 <select
-                  className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skpurple bg-white h-[50px]"
+                  className="w-full bg-white h-[50px]"
                   value={provider}
                   onChange={(e) => setProvider(e.target.value)}
                 >
@@ -151,7 +151,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 <label className="block text-sm font-bold mb-1">External ID</label>
                 <input
                   type="text"
-                  className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skpurple"
+                  className="w-full"
                   value={externalId}
                   onChange={(e) => setExternalId(e.target.value)}
                   placeholder="e.g. HQ-ADV-01"
@@ -168,7 +168,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
               <textarea
                 required
                 rows={3}
-                className="w-full border-2 border-black p-3 rounded-lg focus:outline-none focus:border-skpurple resize-none"
+                className="w-full resize-none"
                 placeholder="Describe what you will deliver and how it benefits your scholarship goals…"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

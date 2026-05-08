@@ -41,8 +41,8 @@ export function AdminControlModal({
     voteEnd: formatEpoch(program.votingEnd || ''),
   });
 
-  const { adminForceStatus, isPending: forcing, isSuccess: forceSuccess } = useAdminForceStatus();
-  const { adminUpdateDates, isPending: updating, isSuccess: updateSuccess } = useAdminUpdateDates();
+  const { forceStatus: adminForceStatus, isPending: forcing, isSuccess: forceSuccess } = useAdminForceStatus();
+  const { updateDates: adminUpdateDates, isPending: updating, isSuccess: updateSuccess } = useAdminUpdateDates();
 
   useEffect(() => {
     if (forceSuccess || updateSuccess) {
@@ -71,19 +71,19 @@ export function AdminControlModal({
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Admin: Program ${program.pid}`}>
       <div className="flex gap-2 mb-6">
         <button
-          className={`flex-1 py-2 font-bold rounded-lg border-2 border-black transition-colors ${
+          className={`flex-1 py-2 font-bold border-2 border-black transition-all duration-75 ${
             activeTab === 'status'
-              ? 'bg-skpurple text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'
-              : 'bg-gray-100 hover:bg-gray-200'
+              ? 'bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]'
+              : 'bg-white shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
           }`}
           onClick={() => setActiveTab('status')}>
           Force Status
         </button>
         <button
-          className={`flex-1 py-2 font-bold rounded-lg border-2 border-black transition-colors ${
+          className={`flex-1 py-2 font-bold border-2 border-black transition-all duration-75 ${
             activeTab === 'dates'
-              ? 'bg-skpurple text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'
-              : 'bg-gray-100 hover:bg-gray-200'
+              ? 'bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]'
+              : 'bg-white shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
           }`}
           onClick={() => setActiveTab('dates')}>
           Update Dates
@@ -92,7 +92,7 @@ export function AdminControlModal({
 
       {activeTab === 'status' ? (
         <div className="space-y-4">
-          <div className="p-3 bg-gray-100 border-2 border-black rounded-xl">
+          <div className="p-3 bg-white border-2 border-black shadow-[3px_3px_0_0_#000]">
             <p className="text-xs font-bold text-gray-500 uppercase">Current Status</p>
             <p className="font-paytone text-xl">{program.status.replace('_', ' ')}</p>
           </div>
@@ -100,7 +100,7 @@ export function AdminControlModal({
           <div>
             <label className="block text-sm font-bold mb-2">Target Status</label>
             <select
-              className="w-full p-3 rounded-lg border-2 border-black neo-shadow-sm font-bold bg-white focus:outline-none focus:border-skpurple"
+              className="w-full p-3 border-2 border-black font-bold bg-white"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(Number(e.target.value))}>
               {PROGRAM_STATUSES.map((s) => (
@@ -132,7 +132,7 @@ export function AdminControlModal({
                 type="datetime-local"
                 value={dates.appStart}
                 onChange={(e) => setDates((d) => ({ ...d, appStart: e.target.value }))}
-                className="w-full p-2 border-2 text-sm border-black rounded-lg neo-shadow-sm focus:outline-none focus:border-skpurple"
+                className="w-full p-2 border-2 text-sm border-black"
               />
             </div>
             <div>
@@ -141,7 +141,7 @@ export function AdminControlModal({
                 type="datetime-local"
                 value={dates.appEnd}
                 onChange={(e) => setDates((d) => ({ ...d, appEnd: e.target.value }))}
-                className="w-full p-2 border-2 text-sm border-black rounded-lg neo-shadow-sm focus:outline-none focus:border-skpurple"
+                className="w-full p-2 border-2 text-sm border-black"
               />
             </div>
             <div>
@@ -150,7 +150,7 @@ export function AdminControlModal({
                 type="datetime-local"
                 value={dates.voteStart}
                 onChange={(e) => setDates((d) => ({ ...d, voteStart: e.target.value }))}
-                className="w-full p-2 border-2 text-sm border-black rounded-lg neo-shadow-sm focus:outline-none focus:border-skpurple"
+                className="w-full p-2 border-2 text-sm border-black"
               />
             </div>
             <div>
@@ -159,7 +159,7 @@ export function AdminControlModal({
                 type="datetime-local"
                 value={dates.voteEnd}
                 onChange={(e) => setDates((d) => ({ ...d, voteEnd: e.target.value }))}
-                className="w-full p-2 border-2 text-sm border-black rounded-lg neo-shadow-sm focus:outline-none focus:border-skpurple"
+                className="w-full p-2 border-2 text-sm border-black"
               />
             </div>
           </div>

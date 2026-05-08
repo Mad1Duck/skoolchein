@@ -60,14 +60,14 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
       <div className="space-y-5">
         {step === 'form' && (
           <>
-            <div className="bg-skpurple-light border-2 border-black rounded-xl p-4 text-sm">
+            <div className="bg-skpurple-light border-2 border-black p-4 text-sm shadow-[3px_3px_0_0_#000]">
               <p className="font-bold mb-1">Stake and Earn</p>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Staking confidence on a scholar allows you to earn a share of protocol fees if they successfully complete their program.
               </p>
             </div>
 
-            <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-3 flex justify-between items-center">
+            <div className="bg-white border-2 border-dashed border-black p-3 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
               <span className="text-xs font-bold text-gray-500 uppercase">Available Power</span>
               <span className="font-black">{donationPower} USDC</span>
             </div>
@@ -80,7 +80,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
                 type="number"
                 min="1"
                 step="1"
-                className="w-full border-2 border-black p-4 rounded-xl font-black text-xl focus:outline-none focus:border-skpurple shadow-neo-sm"
+                className="w-full border-2 border-black p-4 font-black text-xl shadow-[3px_3px_0_0_#000]"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -97,7 +97,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
               Confirm the transaction to stake <strong>{amount} USDC</strong> on <strong>{scholarName ?? scholarAddress}</strong>.
             </p>
             {error && (
-              <div className="bg-red-50 p-3 rounded-lg text-xs text-red-600 border border-red-200">
+              <div className="bg-skred-light p-3 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
                 Error: {error.message || 'Transaction failed'}
               </div>
             )}

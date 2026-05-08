@@ -46,66 +46,83 @@ export function ProgramsPage() {
 
   return (
     <div className="w-full">
-      {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="px-4 md:px-6 pt-10 pb-12 border-b-2 border-black bg-white">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="font-paytone text-4xl md:text-5xl mb-3">
-            Empower the Future
-          </h1>
-          <p className="text-lg md:text-xl text-gray-700 max-w-2xl mb-6">
-            Transparent scholarships powered by smart contracts.
-            Funds go directly to students.
-          </p>
-          <NeoButton
-            label="Create New Program"
-            variant="primary"
-            size="lg"
-            onClick={() => setIsCreateModalOpen(true)}
-          />
+      {/* ── Hero: asymmetric, editorial ──────────────────────────────────────── */}
+      <section className="px-4 md:px-8 lg:px-12 pt-12 md:pt-16 pb-14 md:pb-20 border-b-2 border-black bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className="max-w-xl">
+              <span className="inline-block px-2 py-1 bg-skyellow border-2 border-black text-[10px] font-extrabold uppercase tracking-widest mb-4">
+                Scholarship Protocol v4
+              </span>
+              <h1 className="font-paytone text-4xl md:text-6xl leading-[0.95] mb-4">
+                Empower<br />the Future
+              </h1>
+              <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-md">
+                Transparent, on-chain scholarships. Funds flow directly to verified students with committee oversight.
+              </p>
+            </div>
+            <div className="shrink-0">
+              <NeoButton
+                label="Create Program"
+                variant="primary"
+                size="lg"
+                onClick={() => setIsCreateModalOpen(true)}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── Programs ───────────────────────────────────────────────────────── */}
-      <section id="programs" className="px-4 md:px-6 py-10 bg-skyellow border-b-2 border-black">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <h2 className="font-paytone text-3xl md:text-4xl">Find a Program</h2>
-          </div>
+      {/* ── Programs grid ───────────────────────────────────────────────────── */}
+      <section id="programs" className="px-4 md:px-8 lg:px-12 py-10 md:py-14 bg-skcream border-b-2 border-black">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+            <div>
+              <h2 className="font-paytone text-2xl md:text-3xl">All Programs</h2>
+              <p className="text-sm text-gray-500 mt-1">{programs.length} program{programs.length !== 1 ? 's' : ''} available</p>
+            </div>
 
-          {/* Filter tabs */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
-                className={`
-                  px-3 py-1.5 rounded-md border-2 border-black font-bold text-sm
-                  transition-all duration-100
-                  ${
-                    activeTab === tab.value
-                      ? 'bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]'
-                      : 'bg-white text-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none'
-                  }
-                `}>
-                {tab.label}
-              </button>
-            ))}
+            {/* Filter tabs */}
+            <div className="flex flex-wrap gap-2">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value)}
+                  className={`
+                    px-3 py-1.5 border-2 border-black font-bold text-xs uppercase tracking-wider
+                    transition-all duration-75
+                    ${
+                      activeTab === tab.value
+                        ? 'bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]'
+                        : 'bg-white text-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]'
+                    }
+                  `}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Program grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (
                 <NeoCardSkeleton key={i} />
               ))}
             </div>
           ) : programs.length === 0 ? (
-            <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-10 text-center">
-              <p className="font-paytone text-xl mb-2">No programs found</p>
-              <p className="text-gray-600 text-sm">Try a different filter or create a new program.</p>
+            <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-12 text-center">
+              <p className="font-paytone text-2xl mb-2">No programs found</p>
+              <p className="text-gray-500 text-sm mb-6">Adjust your filters or start something new.</p>
+              <NeoButton
+                label="Create Program"
+                variant="secondary"
+                size="md"
+                onClick={() => setIsCreateModalOpen(true)}
+              />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {programs.map((program) => (
                 <ProgramCardWithMeta key={program.id} program={program} />
               ))}

@@ -3,26 +3,41 @@ import type { ReactNode } from "react";
 interface NeoCardProps {
   children: ReactNode;
   className?: string;
-  accent?: "purple" | "red" | "yellow" | "green" | "cyan" | "orange" | "pink" | "none";
+  fill?: "purple" | "red" | "yellow" | "green" | "cyan" | "orange" | "pink" | "cream" | "white" | "none";
   hoverable?: boolean;
   onClick?: () => void;
 }
 
-const accentColors: Record<string, string> = {
-  purple: "bg-skpurple",
-  red:    "bg-skred",
-  yellow: "bg-skyellow",
+const fillColors: Record<string, string> = {
+  purple: "bg-skpurple-light",
+  red:    "bg-skred-light",
+  yellow: "bg-skyellow-light",
   green:  "bg-skgreen",
-  cyan:   "bg-skcyan",
-  orange: "bg-skorange",
+  cyan:   "bg-skcyan-light",
+  orange: "bg-skbw",
   pink:   "bg-skpink",
-  none:   "",
+  cream:  "bg-skcream",
+  white:  "bg-white",
+  none:   "bg-white",
+};
+
+const accentNotch: Record<string, string> = {
+  purple: "text-skpurple",
+  red:    "text-skred",
+  yellow: "text-skyellow",
+  green:  "text-skgreen",
+  cyan:   "text-skcyan",
+  orange: "text-skorange",
+  pink:   "text-skpink",
+  cream:  "text-skyellow",
+  white:  "text-black",
+  none:   "text-black",
 };
 
 export function NeoCard({
   children,
   className = "",
-  accent = "none",
+  fill = "none",
   hoverable = true,
   onClick,
 }: NeoCardProps) {
@@ -35,16 +50,14 @@ export function NeoCard({
     <div
       onClick={onClick}
       className={`
-        relative bg-white border-2 border-black rounded-md overflow-hidden
+        relative ${fillColors[fill]} border-2 border-black rounded-lg overflow-hidden
         shadow-[3px_3px_0_0_#000]
-        transition-all duration-100 ease-out
+        transition-all duration-75 ease-out
         ${hoverClass} ${cursorClass} ${className}
       `}
     >
-      {accent !== "none" && (
-        <div className={`h-1 w-full ${accentColors[accent]}`} />
-      )}
-      {children}
+      <div className={`neo-notch ${accentNotch[fill]} ${fill !== "none" && fill !== "white" ? "" : "hidden"}`} />
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -57,10 +70,27 @@ export function NeoCardBody({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`p-4 ${className}`}>{children}</div>;
+  return <div className={`p-5 ${className}`}>{children}</div>;
 }
 
-/** Sub-component for card footer with border-top */
+/** Sub-component for card section divider */
+export function NeoCardSection({
+  children,
+  className = "",
+  muted = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className={`px-5 py-3 border-t-2 border-black ${muted ? "bg-gray-50/60" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/** Sub-component for card footer */
 export function NeoCardFooter({
   children,
   className = "",
@@ -69,7 +99,7 @@ export function NeoCardFooter({
   className?: string;
 }) {
   return (
-    <div className={`px-4 py-3 border-t-2 border-black bg-gray-50 ${className}`}>
+    <div className={`px-5 py-3.5 border-t-2 border-black bg-gray-50 ${className}`}>
       {children}
     </div>
   );

@@ -47,8 +47,9 @@ export function DisputesPage() {
 
           <div className="space-y-3">
             {loadingMilestones ? <NeoSkeleton lines={6} /> : milestones.length === 0 ? (
-              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-8 text-center">
-                <p className="font-bold text-gray-500">All clear. No submitted milestones currently pending review.</p>
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-10 text-center">
+                <p className="font-paytone text-lg mb-1">All Clear</p>
+                <p className="text-gray-500 text-sm">No submitted milestones currently pending review.</p>
               </div>
             ) : (
               milestones.map(({ milestone }) => (
@@ -87,20 +88,21 @@ export function DisputesPage() {
 
           <div className="space-y-3">
             {loadingDisputes ? <NeoSkeleton lines={6} /> : activeDisputes.length === 0 ? (
-              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-8 text-center">
-                <p className="font-bold text-gray-500">No active disputes. The protocol is peaceful.</p>
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-10 text-center">
+                <p className="font-paytone text-lg mb-1">Protocol Peaceful</p>
+                <p className="text-gray-500 text-sm">No active disputes at the moment.</p>
               </div>
             ) : (
               activeDisputes.map(({ dispute }) => {
                 const isMyDispute = dispute.scholarAddress.toLowerCase() === address?.toLowerCase();
 
                 return (
-                  <NeoCard key={dispute.id} accent="red">
+                  <NeoCard key={dispute.id} fill="red">
                     <NeoCardBody>
                       <div className="flex justify-between items-start mb-3 gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="bg-skred text-white px-2 py-0.5 text-[10px] font-bold uppercase">{dispute.disputeType}</span>
+                            <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black bg-skred text-white">{dispute.disputeType.replace(/_/g, ' ')}</span>
                             <span className="font-bold font-data">#{dispute.blockchainId}</span>
                           </div>
                           <p className="text-xs text-gray-500 font-data">BH {formatShort(dispute.bountyHunter)}</p>
@@ -111,8 +113,8 @@ export function DisputesPage() {
                         </div>
                       </div>
 
-                      <div className="bg-red-50 p-2 border-2 border-red-200 mb-3 text-xs font-data break-all line-clamp-2">
-                        <span className="font-bold text-red-800">Evidence:</span> {dispute.evidenceCID}
+                      <div className="bg-white p-3 border-2 border-black mb-3 text-xs font-data break-all line-clamp-2 shadow-[2px_2px_0_0_#000]">
+                        <span className="font-extrabold uppercase tracking-wider text-skred">Evidence:</span> {dispute.evidenceCID}
                       </div>
 
                       {isMyDispute ? (
@@ -137,9 +139,9 @@ export function DisputesPage() {
                <h3 className="font-paytone text-xl mb-3 text-gray-400">Resolved Disputes</h3>
                <div className="space-y-2">
                  {pastDisputes.map(({ dispute }) => (
-                   <div key={dispute.id} className="flex justify-between p-3 bg-gray-50 border-2 border-gray-200 text-sm">
+                   <div key={dispute.id} className="flex justify-between items-center p-3 bg-white border-2 border-black shadow-[2px_2px_0_0_#000] text-sm">
                      <span className="font-bold font-data text-gray-600">#{dispute.blockchainId}</span>
-                     <span className="font-bold">{dispute.status.replace("_", " ")}</span>
+                     <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black bg-gray-100">{dispute.status.replace(/_/g, ' ')}</span>
                    </div>
                  ))}
                </div>

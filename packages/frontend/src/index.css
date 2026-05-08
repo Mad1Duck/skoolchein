@@ -2,11 +2,12 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   DESIGN SYSTEM — Neo-Brutalism
+   PREMIUM NEO-BRUTALISM DESIGN SYSTEM v2
+   Human-centered. Production-grade. Intentionally crafted.
    ══════════════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* ── Core palette (exact values preserved) ───────────────────────────────── */
+  /* ── Core palette (preserved, organized) ──────────────────────────────────── */
   --color-skpurple: #6a88f8;
   --color-skpurple-hover: #4565dd;
   --color-skpurple-light: #e8edff;
@@ -31,38 +32,49 @@
   --color-success-container: #d9fbb0;
   --color-on-success-container: #1a5a1a;
 
-  /* ── Typography (exact) ───────────────────────────────────────────────────── */
+  /* ── Typography ──────────────────────────────────────────────────────────── */
   --font-nunito: "Nunito Sans", sans-serif;
   --font-paytone: "Paytone One", sans-serif;
 
-  /* ── Animations (deliberate, fast) ───────────────────────────────────────── */
+  /* ── Animations ───────────────────────────────────────────────────────────── */
   @keyframes slide-up {
     0% { transform: translateY(8px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
   @keyframes skeleton-stripe {
-    0% { opacity: 0.6; }
+    0% { opacity: 0.5; }
     50% { opacity: 1; }
-    100% { opacity: 0.6; }
+    100% { opacity: 0.5; }
+  }
+  @keyframes press-in {
+    0% { transform: translate(0, 0); box-shadow: 3px 3px 0 0 #000; }
+    100% { transform: translate(3px, 3px); box-shadow: 0 0 0 0 #000; }
   }
 
-  --animate-slide-up: slide-up 0.1s ease-out forwards;
-  --animate-skeleton: skeleton-stripe 1.2s infinite ease-in-out;
+  --animate-slide-up: slide-up 0.12s ease-out forwards;
+  --animate-skeleton: skeleton-stripe 1.6s infinite ease-in-out;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   NEOBRUTALISM UTILITIES — hard shadows, flat surfaces, no blur
+   ELEVATION SYSTEM — Layered depth without blur
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* Hard-offset shadows. No blur radius. Solid black. */
-.neo-shadow-sm { box-shadow: 2px 2px 0 0 #000; }
-.neo-shadow    { box-shadow: 3px 3px 0 0 #000; }
-.neo-shadow-md { box-shadow: 4px 4px 0 0 #000; }
-.neo-shadow-lg { box-shadow: 6px 6px 0 0 #000; }
+.neo-shadow-1 { box-shadow: 1px 1px 0 0 #000; }
+.neo-shadow-2 { box-shadow: 2px 2px 0 0 #000; }
+.neo-shadow-3 { box-shadow: 3px 3px 0 0 #000; }
+.neo-shadow-4 { box-shadow: 4px 4px 0 0 #000; }
 
-/* Interactive: press collapses shadow + translates. 100ms max. */
+/* Inset shadow for pressed / depressed states */
+.neo-inset {
+  box-shadow: inset 2px 2px 0 0 rgba(0,0,0,0.15);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   INTERACTION SYSTEM — Tactile, satisfying, fast
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 .neo-interactive {
-  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+  transition: transform 0.06s ease-out, box-shadow 0.06s ease-out;
   box-shadow: 3px 3px 0 0 #000;
 }
 .neo-interactive:hover {
@@ -70,53 +82,133 @@
   box-shadow: 4px 4px 0 0 #000;
 }
 .neo-interactive:active {
-  transform: translate(3px, 3px);
-  box-shadow: 0 0 0 0 #000;
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 #000;
 }
 
-.neo-border   { border: 2px solid #000; }
-.neo-border-3 { border: 3px solid #000; }
+/* Pressed variant — for tabs, toggles, active states */
+.neo-pressed {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 #000;
+}
 
-/* Card: thick border, hard shadow, flat. Hover lifts. */
-.neo-card {
-  border: 2px solid #000;
-  border-radius: 0.75rem;
-  box-shadow: 3px 3px 0 0 #000;
+/* ══════════════════════════════════════════════════════════════════════════════
+   SURFACE SYSTEM — Strategic color fills, not just white
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.neo-surface {
   background: #fff;
+  border: 2px solid #000;
+}
+
+.neo-surface-cream { background: #fefae0; border: 2px solid #000; }
+.neo-surface-yellow { background: #fff8dc; border: 2px solid #000; }
+.neo-surface-purple { background: #e8edff; border: 2px solid #000; }
+.neo-surface-green { background: #d9fbb0; border: 2px solid #000; }
+.neo-surface-red { background: #ffe5e2; border: 2px solid #000; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CARD SYSTEM — Modular, scalable, with accent notches
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.neo-card {
+  position: relative;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 0.5rem;
+  box-shadow: 3px 3px 0 0 #000;
   overflow: hidden;
   transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.neo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #000;
+  opacity: 0.06;
 }
 .neo-card:hover {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 0 #000;
 }
 
-/* Badge: pill with hard shadow */
+.neo-card-filled {
+  position: relative;
+  border: 2px solid #000;
+  border-radius: 0.5rem;
+  box-shadow: 3px 3px 0 0 #000;
+  overflow: hidden;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.neo-card-filled:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 #000;
+}
+
+/* Notch accent — brutalist signature element */
+.neo-notch {
+  position: relative;
+}
+.neo-notch::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 1rem;
+  width: 2.5rem;
+  height: 4px;
+  background: currentColor;
+  border-radius: 0 0 2px 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BADGE SYSTEM — Bold, readable, context-aware
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 .neo-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.75rem;
+  padding: 0.2rem 0.6rem;
   border: 2px solid #000;
-  border-radius: 9999px;
-  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  box-shadow: 2px 2px 0 0 #000;
+  letter-spacing: 0.06em;
+  line-height: 1;
 }
 
-/* Skeleton: flat blocks, no gradients */
-.neo-skeleton {
-  background: #e5e5e5;
-  border-radius: 0.25rem;
-  animation: skeleton-stripe 1.2s infinite ease-in-out;
+/* ══════════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY UTILITIES — Editorial hierarchy
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.font-display {
+  font-family: var(--font-paytone);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
-/* On-chain data: always monospace */
+.font-body {
+  font-family: var(--font-nunito);
+  line-height: 1.6;
+}
+
 .font-data {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SKELETON — Restrained, informative
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.neo-skeleton {
+  background: #e8e8e8;
+  border-radius: 0.25rem;
+  animation: skeleton-stripe 1.6s infinite ease-in-out;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -131,19 +223,22 @@
 
 input, textarea, select {
   background-color: #fff;
-  box-shadow: 3px 3px 0 0 #000;
+  box-shadow: 2px 2px 0 0 #000;
   border: 2px solid #000;
   padding: 10px 14px;
-  border-radius: 0.5rem;
+  border-radius: 0.375rem;
   font-family: var(--font-nunito);
   font-size: 1rem;
   line-height: 1.5;
-  transition: box-shadow 0.08s ease-out;
+  transition: box-shadow 0.06s ease-out, border-color 0.06s ease-out;
+}
+input:hover, textarea:hover, select:hover {
+  box-shadow: 3px 3px 0 0 #000;
 }
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--color-skpurple);
-  box-shadow: 3px 3px 0 0 var(--color-skpurple);
+  box-shadow: 2px 2px 0 0 var(--color-skpurple);
 }
 
 ::selection {

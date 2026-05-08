@@ -41,7 +41,7 @@ export function NeoBadge({
   const label = config.label ?? status.replace(/_/g, " ");
 
   return (
-    <span className={`neo-badge ${config.bg} ${config.text} ${className}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 border-2 border-black text-[10px] font-extrabold uppercase tracking-widest leading-none ${config.bg} ${config.text} ${className}`}>
       {label}
     </span>
   );

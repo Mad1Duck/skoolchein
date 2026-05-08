@@ -65,7 +65,7 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Resolve Shortlist — Program #${programId}`}>
       <div className="space-y-4">
-        <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
+        <div className="bg-skyellow-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
           <p className="font-bold">Instructions</p>
           <p className="text-gray-700 mt-1">
             Applicants are auto-sorted by score.
@@ -78,7 +78,7 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
               <span>Resolution Progress</span>
               <span>{blockchainProgress} / {ranked.length}</span>
             </div>
-            <div className="w-full bg-white border-2 border-black rounded-full h-4 overflow-hidden">
+            <div className="w-full bg-white border-2 border-black h-4 overflow-hidden">
               <div 
                 className="bg-skpurple h-full transition-all duration-500" 
                 style={{ width: `${progressPercent}%` }}
@@ -95,12 +95,12 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
               onDragStart={() => handleDragStart(idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
               onDragEnd={handleDragEnd}
-              className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-grab active:cursor-grabbing transition-all select-none ${
+              className={`flex items-center gap-3 p-3 border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
                 dragIdx === idx ? 'border-skpurple bg-skpurple-light' : 'border-black bg-white hover:bg-gray-50'
               }`}
             >
               {/* Rank badge */}
-              <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="w-7 h-7 bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">
                 {idx + 1}
               </div>
 

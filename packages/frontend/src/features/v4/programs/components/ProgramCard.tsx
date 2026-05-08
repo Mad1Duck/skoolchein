@@ -9,7 +9,7 @@ interface ProgramCardProps {
   meta?: ProgramMetadata;
 }
 
-const accentByStatus: Record<string, 'purple' | 'red' | 'yellow' | 'green' | 'cyan' | 'orange'> = {
+const fillByStatus: Record<string, 'yellow' | 'orange' | 'purple' | 'green' | 'cyan' | 'red' | 'white'> = {
   CREATED: 'cyan',
   APPLICATION_OPEN: 'yellow',
   SCREENING: 'orange',
@@ -37,46 +37,51 @@ function formatDate(iso: string | null): string {
 }
 
 export function ProgramCard({ program, meta }: ProgramCardProps) {
-  const accent = accentByStatus[program.status] ?? 'purple';
+  const fill = fillByStatus[program.status] ?? 'white';
 
   return (
-    <Link to="/programs/$id" params={{ id: program.id }} preload="intent">
-      <NeoCard accent={accent} className="h-full flex flex-col">
-        <NeoCardBody className="flex-1 space-y-3">
-          <div className="flex items-center justify-between">
+    <Link to="/programs/$id" params={{ id: program.id }} preload="intent" className="block h-full">
+      <NeoCard fill={fill} className="h-full flex flex-col">
+        <NeoCardBody className="flex-1 space-y-3.5">
+          {/* Header: badge + id */}
+          <div className="flex items-start justify-between gap-2">
             <NeoBadge status={program.status} />
-            <span className="text-xs font-bold text-gray-400 uppercase font-data">
+            <span className="text-[10px] font-extrabold text-gray-400 uppercase font-data tracking-wider">
               #{program.pid}
             </span>
           </div>
 
-          <h3 className="font-paytone text-lg leading-tight line-clamp-2">
+          {/* Title */}
+          <h3 className="font-paytone text-xl leading-[1.05] line-clamp-2">
             {meta?.name ?? `Program #${program.pid}`}
           </h3>
 
+          {/* Description */}
           {meta?.description && (
-            <p className="text-sm text-gray-600 line-clamp-2">{meta.description}</p>
+            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{meta.description}</p>
           )}
 
-          <div className="flex items-center gap-2">
-            <WalletAvatar address={program.initiator} size={24} />
-            <span className="text-xs font-data text-gray-500">
+          {/* Initiator */}
+          <div className="flex items-center gap-2 pt-1">
+            <WalletAvatar address={program.initiator} size={22} />
+            <span className="text-[11px] font-data text-gray-500">
               {shortenAddress(program.initiator)}
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-gray-100">
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 border-black/10">
             <div>
-              <p className="text-base font-data font-bold">${formatUSDC(program.totalFund)}</p>
-              <p className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Fund</p>
+              <p className="text-base font-data font-bold leading-tight">${formatUSDC(program.totalFund)}</p>
+              <p className="text-[9px] font-extrabold uppercase text-gray-500 tracking-widest mt-0.5">Fund</p>
             </div>
             <div>
-              <p className="text-base font-data font-bold">{program.applicantCount}</p>
-              <p className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Applicants</p>
+              <p className="text-base font-data font-bold leading-tight">{program.applicantCount}</p>
+              <p className="text-[9px] font-extrabold uppercase text-gray-500 tracking-widest mt-0.5">Applicants</p>
             </div>
             <div>
-              <p className="text-base font-data font-bold">{program.targetWinners}</p>
-              <p className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Winners</p>
+              <p className="text-base font-data font-bold leading-tight">{program.targetWinners}</p>
+              <p className="text-[9px] font-extrabold uppercase text-gray-500 tracking-widest mt-0.5">Winners</p>
             </div>
           </div>
         </NeoCardBody>
@@ -89,7 +94,7 @@ export function ProgramCard({ program, meta }: ProgramCardProps) {
                 ? `Vote until ${formatDate(program.votingEnd)}`
                 : `Created ${formatDate(program.createdAt)}`}
           </span>
-          <span className="font-bold text-skpurple">View Details</span>
+          <span className="font-bold text-skpurple text-sm">View →</span>
         </NeoCardFooter>
       </NeoCard>
     </Link>

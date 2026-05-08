@@ -28,7 +28,7 @@ export function CandidateCard({ applicant, programId }: CandidateCardProps) {
         <NeoCardBody className="flex flex-col h-full">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-skpurple to-skyellow border-2 border-black flex-shrink-0" />
+              <div className="w-12 h-12 bg-skpurple border-2 border-black flex-shrink-0 shadow-[2px_2px_0_0_#000]" />
               <div>
                 <h3 className="font-bold text-lg leading-tight">
                   {profile?.fullName ?? 'Anonymous Student'}
@@ -40,17 +40,17 @@ export function CandidateCard({ applicant, programId }: CandidateCardProps) {
             </div>
 
             {profile?.bio && (
-              <p className="text-sm text-gray-700 bg-gray-50 p-3 border-2 border-black rounded-lg mb-4 line-clamp-3">
+              <p className="text-sm text-gray-700 bg-white p-3 border-2 border-black mb-4 line-clamp-3 shadow-[2px_2px_0_0_#000]">
                 "{profile.bio}"
               </p>
             )}
 
             <div className="grid grid-cols-2 gap-2 text-center mb-4">
-              <div className="bg-skyellow-light p-2 rounded border border-black">
+              <div className="bg-skyellow-light p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
                 <p className="text-[10px] font-bold uppercase">Screening</p>
                 <p className="font-paytone text-lg">{applicant.screeningScore}</p>
               </div>
-              <div className="bg-skblue-light p-2 rounded border border-black">
+              <div className="bg-skblue-light p-2 border-2 border-black shadow-[2px_2px_0_0_#000]">
                 <p className="text-[10px] font-bold uppercase">Total</p>
                 <p className="font-paytone text-lg">{applicant.totalScore}</p>
               </div>

@@ -18,10 +18,10 @@ interface NeoButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 /* Brutalist buttons: solid fill, 2px black border, 3px hard shadow.
    Hover collapses shadow + translates (3px,3px). 100ms transition. */
 const variantStyles: Record<Exclude<Variant, 'connect'>, string> = {
-  primary: 'bg-skpurple text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none',
-  secondary: 'bg-white text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none',
-  danger: 'bg-skred text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none',
-  success: 'bg-skgreen text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none',
+  primary: 'bg-skpurple text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+  secondary: 'bg-white text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+  danger: 'bg-skred text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+  success: 'bg-skgreen text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
   ghost: 'bg-transparent text-black border-transparent shadow-none hover:shadow-none hover:bg-gray-100',
 };
 
@@ -35,8 +35,8 @@ const baseClasses = `
   inline-flex items-center justify-center gap-2
   font-bold font-nunito border-2
   select-none
-  transition-all duration-100 ease-out
-  disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-[3px] disabled:translate-y-[3px]
+  transition-all duration-75 ease-out
+  disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-x-[3px] disabled:translate-y-[3px]
   cursor-pointer
 `;
 
@@ -62,7 +62,7 @@ export function NeoButton({
               <div className={wrapperClassName}>
                 <button
                   onClick={openConnectModal}
-                  className={`${baseClasses} bg-skyellow text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none ${sizeStyles[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
+                  className={`${baseClasses} bg-skyellow text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none ${sizeStyles[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
                   {label ?? children ?? 'Connect Wallet'}
                 </button>
               </div>
@@ -74,7 +74,7 @@ export function NeoButton({
               <div className={wrapperClassName}>
                 <button
                   onClick={openChainModal}
-                  className={`${baseClasses} bg-skred text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none ${sizeStyles[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
+                  className={`${baseClasses} bg-skred text-white border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none ${sizeStyles[size]} ${fullWidth ? 'w-full' : ''} ${className}`}>
                   Wrong Network
                 </button>
               </div>
@@ -89,12 +89,12 @@ export function NeoButton({
             <div className={`flex gap-2 ${wrapperClassName}`}>
               <button
                 onClick={openChainModal}
-                className={`${baseClasses} bg-white text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none ${sizeStyles[size]} ${className}`}>
+                className={`${baseClasses} bg-white text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none ${sizeStyles[size]} ${className}`}>
                 {chain.name}
               </button>
               <button
                 onClick={openProfileModal}
-                className={`${baseClasses} bg-skyellow text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none ${sizeStyles[size]} ${className} font-data`}>
+                className={`${baseClasses} bg-skyellow text-black border-black shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none ${sizeStyles[size]} ${className} font-data`}>
                 {addr}
               </button>
             </div>

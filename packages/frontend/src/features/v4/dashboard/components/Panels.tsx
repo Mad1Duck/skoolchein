@@ -404,9 +404,9 @@ function ScholarCard({
                   {scholar.currentMilestone} / {scholar.totalMilestones}
                 </span>
               </div>
-              <div className="w-full h-2 bg-gray-300 rounded-full overflow-hidden border border-black">
+              <div className="w-full h-3 bg-gray-200 border-2 border-black overflow-hidden">
                 <div
-                  className="h-full bg-skblue transition-all"
+                  className="h-full bg-skpurple transition-all"
                   style={{
                     width: `${(scholar.currentMilestone / Math.max(1, scholar.totalMilestones)) * 100}%`,
                   }}
@@ -501,7 +501,7 @@ function ScholarCard({
               {milestones.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center justify-between text-sm bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                  className="flex items-center justify-between text-sm bg-white px-3 py-2.5 border-2 border-black shadow-[2px_2px_0_0_#000]">
                   <div>
                     <span className="font-bold">#{m.blockchainId}</span>
                     <span className="ml-2 text-xs font-bold uppercase px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-700">
@@ -533,16 +533,16 @@ function ScholarCard({
 function StatusPill({ status }: { status: string }) {
   const colors: Record<string, string> = {
     PENDING: 'bg-skyellow text-black',
-    SUBMITTED: 'bg-skblue text-white',
+    SUBMITTED: 'bg-skpurple text-white',
     COMPLETED: 'bg-skgreen text-black',
     FROZEN: 'bg-skred text-white',
-    DISPUTED: 'bg-orange-400 text-white',
+    DISPUTED: 'bg-skorange text-black',
     PROPOSED: 'bg-skpurple-light text-black',
     REJECTED: 'bg-gray-300 text-black',
   };
   return (
     <span
-      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-black ${
+      className={`px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black ${
         colors[status] ?? 'bg-gray-100 text-black'
       }`}>
       {status}
@@ -576,7 +576,7 @@ export function VoterPanel({
               You haven't cast any votes yet. Participating in selection and staking on scholars helps maintain the protocol's integrity.
             </p>
             <Link to="/vote">
-              <NeoButton label="Discovery Active Program" variant="primary" size="lg" />
+              <NeoButton label="Discover Active Programs" variant="primary" size="lg" />
             </Link>
           </NeoCardBody>
         </NeoCard>
@@ -848,7 +848,7 @@ function CommitteeProgramSection({
               {pendingApplicants.slice(0, 5).map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-2">
+                  className="flex items-center justify-between bg-white border-2 border-black shadow-[2px_2px_0_0_#000] p-3">
                   <span className="font-mono text-sm">{a.wallet.slice(0, 8)}…</span>
                   <NeoButton
                     label="Score"
@@ -916,7 +916,7 @@ function CommitteeMilestoneVoteRow({
 }) {
   const { voteOnMilestone, isPending } = useVoteOnMilestone();
   return (
-    <div className="flex items-center justify-between bg-skpurple-light border border-black rounded-lg p-2">
+    <div className="flex items-center justify-between bg-skpurple-light border-2 border-black p-3">
       <div>
         <span className="font-bold text-sm">Milestone #{milestone.blockchainId}</span>
         <span className="text-xs text-gray-500 ml-2">
@@ -948,7 +948,7 @@ function CommitteeMilestoneVoteRow({
 function CommitteeDisputeVoteRow({ dispute, programId }: { dispute: Dispute; programId: number }) {
   const { voteOnDispute, isPending } = useVoteOnDispute();
   return (
-    <div className="flex items-center justify-between bg-red-50 border border-red-300 rounded-lg p-2">
+    <div className="flex items-center justify-between bg-skred-light border-2 border-black p-3">
       <div>
         <span className="font-bold text-sm">Dispute #{dispute.blockchainId}</span>
         <span className="text-xs text-skred ml-2 font-bold">

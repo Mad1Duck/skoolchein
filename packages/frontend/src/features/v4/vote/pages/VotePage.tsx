@@ -23,8 +23,9 @@ export function VotePage() {
       {loadingPrograms ? (
         <NeoSkeleton lines={3} />
       ) : programs.length === 0 ? (
-        <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-10 text-center">
-          <p className="font-bold text-gray-500">No programs are currently in the voting phase.</p>
+        <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-12 text-center">
+          <p className="font-paytone text-xl mb-2">No Active Votes</p>
+          <p className="text-gray-500 text-sm">No programs are currently in the voting phase. Check back later or browse open programs.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -44,8 +45,9 @@ export function VotePage() {
 
           <div className="md:col-span-3">
             {!selectedProgram ? (
-              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-10 text-center">
-                <p className="text-gray-500 font-bold">Select a program to view candidates.</p>
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-12 text-center">
+                <p className="font-paytone text-lg mb-1">Select a Program</p>
+                <p className="text-gray-500 text-sm">Choose a program from the list to view candidates and cast your vote.</p>
               </div>
             ) : (
               <CandidateList program={selectedProgram} />

@@ -23,7 +23,7 @@ export function ProgramVoteSelector({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+      className={`w-full text-left p-4 border-2 transition-all duration-75 ${
         isSelected
           ? 'border-black bg-skpink text-black translate-x-1'
           : 'border-gray-200 bg-white hover:border-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_rgba(0,0,0)]'
