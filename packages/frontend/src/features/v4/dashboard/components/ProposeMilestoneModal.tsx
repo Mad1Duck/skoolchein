@@ -66,14 +66,14 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
       <div className="space-y-5">
         {step === 'uploading' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-spin mb-4">⏳</p>
-            <p className="font-bold">Uploading description to IPFS…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
+            <p className="font-bold">Uploading description to IPFS</p>
           </div>
         )}
 
         {step === 'tx' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-bounce mb-4">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">Confirm Transaction in Wallet</p>
             <p className="text-sm text-gray-600 mt-1">Sign to submit your milestone proposal.</p>
           </div>
@@ -82,7 +82,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
-              <p className="font-bold">📋 How Optional Milestones Work</p>
+              <p className="font-bold">How Optional Milestones Work</p>
               <p className="text-gray-700 mt-1 text-xs">
                 Propose a custom deliverable for additional funding. Your committee will vote to approve or reject it.
                 Approved milestones follow the same proof + dispute window flow as mandatory milestones.
@@ -100,7 +100,6 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                     kind === 1 ? 'border-skpurple bg-skpurple-light' : 'border-black bg-white hover:bg-gray-50'
                   }`}
                 >
-                  <p className="text-base mb-1">🎯</p>
                   OPTIONAL
                   <p className="text-xs font-normal text-gray-600 mt-0.5">Extra deliverable proposed by scholar</p>
                 </button>
@@ -111,7 +110,6 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                     kind === 2 ? 'border-skblue bg-skblue-light' : 'border-black bg-white hover:bg-gray-50'
                   }`}
                 >
-                  <p className="text-base mb-1">🤝</p>
                   NEGOTIATED
                   <p className="text-xs font-normal text-gray-600 mt-0.5">Co-designed with program initiator</p>
                 </button>

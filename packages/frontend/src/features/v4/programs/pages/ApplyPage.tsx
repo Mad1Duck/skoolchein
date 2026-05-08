@@ -93,54 +93,59 @@ export function ApplyPage() {
 
   if (isLoading)
     return (
-      <div className="max-w-3xl mx-auto p-8">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
         <NeoSkeleton lines={5} />
       </div>
     );
   if (!program)
-    return <div className="p-8 text-center text-red-500 font-bold">Program not found</div>;
+    return (
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-24 text-center">
+        <h2 className="font-paytone text-2xl mb-2">Program Not Found</h2>
+        <p className="text-gray-600 mb-4">The program you are trying to apply to does not exist.</p>
+        <Link to="/programs" className="text-skpurple font-bold">Back to Programs</Link>
+      </div>
+    );
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <div className="mb-8">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
+      <div className="mb-6">
         <Link
           to={`/programs/$id`}
           params={{ id }}
-          className="text-skpurple font-bold hover:underline">
-          ← Back to Program
+          className="text-skpurple font-bold text-sm">
+          Back to Program
         </Link>
-        <h1 className="font-paytone text-4xl mt-4 text-black">Apply for Scholarship</h1>
-        <p className="text-gray-600 text-lg">{meta?.name ?? `Program #${id}`}</p>
+        <h1 className="font-paytone text-3xl md:text-4xl mt-3 text-black">Apply for Scholarship</h1>
+        <p className="text-gray-600 text-base md:text-lg">{meta?.name ?? `Program #${id}`}</p>
       </div>
 
-      <NeoCard className="p-6">
+      <NeoCard className="p-4 md:p-6">
         <NeoCardBody>
           {step === 'uploading' && (
             <div className="text-center py-16">
-              <p className="text-4xl animate-spin mb-4">⏳</p>
-              <p className="font-bold text-lg">Uploading Documents to IPFS...</p>
+              <div className="w-12 h-12 border-2 border-black bg-skyellow mx-auto animate-pulse mb-4" />
+              <p className="font-bold text-lg">Uploading Documents to IPFS</p>
             </div>
           )}
 
           {step === 'tx' && (
             <div className="text-center py-16">
-              <p className="text-4xl animate-bounce mb-4">📝</p>
+              <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
               <p className="font-bold text-lg">Confirm Transaction in Wallet</p>
-              <p className="text-gray-500">Please sign the smart contract interaction.</p>
+              <p className="text-gray-500 text-sm">Sign the smart contract interaction to continue.</p>
             </div>
           )}
 
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Document Pledges */}
-              <div className="bg-skyellow-light p-4 rounded-xl border-2 border-black">
-                <h3 className="font-paytone text-lg mb-2">Documents (Text for now)</h3>
+              <div className="bg-skyellow-light p-4 border-2 border-black shadow-[3px_3px_0_0_#000]">
+                <h3 className="font-paytone text-lg mb-3">Documents</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Profile / Bio</label>
                     <textarea
                       required
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       rows={2}
                       value={formData.profileText}
                       onChange={(e) => setFormData((p) => ({ ...p, profileText: e.target.value }))}
@@ -148,12 +153,12 @@ export function ApplyPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">
-                      HackQuest ID (Email or Username) <span className="text-skpurple text-xs font-normal">(Optional for auto-verify)</span>
+                      HackQuest ID <span className="text-gray-500 text-xs font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       placeholder="user@example.com"
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       value={formData.hackquestId}
                       onChange={(e) => setFormData((p) => ({ ...p, hackquestId: e.target.value }))}
                     />
@@ -162,7 +167,7 @@ export function ApplyPage() {
                     <label className="block text-sm font-bold mb-1">Essay Answers</label>
                     <textarea
                       required
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       rows={3}
                       value={formData.essayText}
                       onChange={(e) => setFormData((p) => ({ ...p, essayText: e.target.value }))}
@@ -171,16 +176,13 @@ export function ApplyPage() {
                 </div>
               </div>
 
-              {/* Self-declared scores */}
-              <div className="bg-skpurple-light p-4 rounded-xl border-2 border-black">
-                <h3 className="font-paytone text-lg mb-2">
-                  Self-Declared Scores (BY_STUDENT mode)
-                </h3>
-                <p className="text-xs text-gray-700 mb-4 bg-white p-2 border border-black rounded">
-                  ⚠️ Note: Your scores will be stored on-chain. If anyone spots a false claim, your
-                  deposit might be slashed and your application rejected. Be honest!
+              <div className="bg-skpurple-light p-4 border-2 border-black shadow-[3px_3px_0_0_#000]">
+                <h3 className="font-paytone text-lg mb-2">Self-Declared Scores</h3>
+                <p className="text-xs text-gray-700 mb-4 bg-white p-2 border-2 border-black">
+                  WARNING: Your scores will be stored on-chain. If anyone spots a false claim, your
+                  deposit might be slashed and your application rejected. Be honest.
                 </p>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold mb-1">Academic (0-100)</label>
                     <input
@@ -188,7 +190,7 @@ export function ApplyPage() {
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       value={formData.academicScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, academicScore: Number(e.target.value) }))
@@ -202,7 +204,7 @@ export function ApplyPage() {
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       value={formData.incomeScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, incomeScore: Number(e.target.value) }))
@@ -216,7 +218,7 @@ export function ApplyPage() {
                       min="0"
                       max="100"
                       required
-                      className="w-full border-2 border-black p-2 rounded focus:outline-skpurple"
+                      className="w-full border-2 border-black p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       value={formData.recommendScore}
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, recommendScore: Number(e.target.value) }))
@@ -228,7 +230,7 @@ export function ApplyPage() {
 
               <NeoButton
                 type="submit"
-                label={isApplying ? 'Applying...' : 'Submit Application & Sign Transaction'}
+                label={isApplying ? 'Applying...' : 'Submit Application'}
                 variant="primary"
                 size="lg"
                 fullWidth

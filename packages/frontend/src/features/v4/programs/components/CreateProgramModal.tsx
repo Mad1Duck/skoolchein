@@ -137,7 +137,6 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
     return (
       <NeoModal isOpen={isOpen} onClose={handleClose} title="Program Created!">
         <div className="text-center py-8 space-y-4">
-          <p className="text-6xl">🎉</p>
           <h2 className="text-2xl font-paytone">Program is now on-chain!</h2>
           <p className="text-gray-600">Your scholarship program has been successfully created.</p>
           <NeoButton label="Close" variant="primary" onClick={handleClose} fullWidth />
@@ -228,8 +227,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               <label className="block text-sm font-bold mb-1">Screening Mode</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { value: 1, label: '🧑 By Student', desc: 'Students self-declare scores' },
-                  { value: 0, label: '🏛 By Committee', desc: 'Committee members score applicants' },
+                  { value: 1, label: 'By Student', desc: 'Students self-declare scores' },
+                  { value: 0, label: 'By Committee', desc: 'Committee members score applicants' },
                 ].map(({ value, label, desc }) => (
                   <button
                     key={value}
@@ -294,7 +293,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               onClick={() => setShowAdvanced((v) => !v)}
               className="w-full text-sm font-bold text-skpurple flex items-center justify-between py-2 border-t-2 border-gray-100"
             >
-              <span>⚙️ Advanced Settings</span>
+              <span>Advanced Settings</span>
               <span>{showAdvanced ? '▲' : '▼'}</span>
             </button>
 
@@ -386,14 +385,14 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
 
         {step === 'upload' && (
           <div className="text-center py-12">
-            <p className="animate-spin text-4xl mb-4">⏳</p>
-            <p className="font-bold">Uploading Metadata to IPFS…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
+            <p className="font-bold">Uploading Metadata to IPFS</p>
           </div>
         )}
 
         {step === 'approve' && (
           <div className="text-center py-12 space-y-3">
-            <p className="text-4xl animate-pulse mb-2">💰</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
             <p className="font-bold">Approve USDC</p>
             <p className="text-sm text-gray-600">
               Approve <strong>{formData.totalFund} USDC</strong> transfer to Treasury.
@@ -403,7 +402,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
 
         {step === 'create' && (
           <div className="text-center py-12 space-y-3">
-            <p className="text-4xl animate-bounce mb-2">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
             <p className="font-bold">Sign Contract Transaction</p>
             <p className="text-sm text-gray-600">Confirm in your wallet to create the program.</p>
           </div>

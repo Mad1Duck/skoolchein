@@ -202,7 +202,6 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
 
           {winners.length === 0 && (
             <div className="text-center py-8 text-gray-500">
-              <p className="text-4xl mb-2">📭</p>
               <p>No shortlisted candidates to select.</p>
             </div>
           )}

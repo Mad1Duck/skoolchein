@@ -69,7 +69,7 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Extend ${isAppOpen ? 'Application' : 'Voting'} Deadline`}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-skyellow-light border-2 border-black rounded p-3 text-sm">
-          <p className="font-bold">⚠️ Extension Policy</p>
+          <p className="font-bold">Extension Policy</p>
           <ul className="list-disc ml-5 mt-1 text-gray-700">
             <li>You can only extend the deadline (cannot shorten).</li>
             <li>Maximum extension per time is 7 days (by default limits).</li>

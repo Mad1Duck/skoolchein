@@ -27,7 +27,7 @@ export function NeoCard({
   onClick,
 }: NeoCardProps) {
   const hoverClass = hoverable
-    ? "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_rgba(0,0,0)]"
+    ? "hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_0_#000]"
     : "";
   const cursorClass = onClick ? "cursor-pointer" : "";
 
@@ -35,14 +35,14 @@ export function NeoCard({
     <div
       onClick={onClick}
       className={`
-        relative bg-white border-2 border-black rounded-2xl overflow-hidden
-        shadow-[4px_4px_0_0_rgba(0,0,0)]
-        transition-all duration-150 ease-out
+        relative bg-white border-2 border-black rounded-md overflow-hidden
+        shadow-[3px_3px_0_0_#000]
+        transition-all duration-100 ease-out
         ${hoverClass} ${cursorClass} ${className}
       `}
     >
       {accent !== "none" && (
-        <div className={`h-1.5 w-full ${accentColors[accent]}`} />
+        <div className={`h-1 w-full ${accentColors[accent]}`} />
       )}
       {children}
     </div>
@@ -57,7 +57,7 @@ export function NeoCardBody({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`p-5 ${className}`}>{children}</div>;
+  return <div className={`p-4 ${className}`}>{children}</div>;
 }
 
 /** Sub-component for card footer with border-top */
@@ -69,7 +69,7 @@ export function NeoCardFooter({
   className?: string;
 }) {
   return (
-    <div className={`px-5 py-3 border-t-2 border-black bg-gray-50 ${className}`}>
+    <div className={`px-4 py-3 border-t-2 border-black bg-gray-50 ${className}`}>
       {children}
     </div>
   );

@@ -28,13 +28,13 @@ import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
 
-const TABS: Array<{ key: Tab; label: string; icon: string }> = [
-  { key: 'overview', label: 'Overview', icon: '📋' },
-  { key: 'applicants', label: 'Applicants', icon: '📝' },
-  { key: 'scholars', label: 'Scholars', icon: '🎓' },
-  { key: 'milestones', label: 'Milestones', icon: '🏁' },
-  { key: 'votes', label: 'Votes', icon: '🗳️' },
-  { key: 'disputes', label: 'Disputes', icon: '⚖️' },
+const TABS: Array<{ key: Tab; label: string }> = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'applicants', label: 'Applicants' },
+  { key: 'scholars', label: 'Scholars' },
+  { key: 'milestones', label: 'Milestones' },
+  { key: 'votes', label: 'Votes' },
+  { key: 'disputes', label: 'Disputes' },
 ];
 
 function formatUSDC(raw: string | bigint): string {
@@ -74,9 +74,9 @@ export function ProgramDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-12 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 space-y-6">
         <NeoSkeleton lines={3} />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <NeoSkeleton key={i} lines={2} />
           ))}
@@ -87,57 +87,63 @@ export function ProgramDetailPage() {
 
   if (!program) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-24 text-center">
-        <p className="text-6xl mb-4">🔍</p>
-        <h2 className="font-paytone text-2xl">Program not found</h2>
-        <Link to="/programs" className="text-skpurple font-bold hover:underline mt-4 inline-block">
-          ← Back to Programs
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-24 text-center">
+        <h2 className="font-paytone text-2xl mb-2">Program Not Found</h2>
+        <p className="text-gray-600 mb-4">This program does not exist or has been removed.</p>
+        <Link to="/programs" className="text-skpurple font-bold">
+          Back to Programs
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link to="/programs" className="hover:text-skpurple font-bold">
+        <Link to="/programs" className="font-bold hover:text-skpurple transition-colors duration-100">
           Programs
         </Link>
         <span>/</span>
-        <span className="font-bold text-black">{meta?.name ?? `#${program.pid}`}</span>
+        <span className="font-bold text-black">{meta?.name ?? `Program #${program.pid}`}</span>
       </div>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="font-paytone text-3xl md:text-4xl">
               {meta?.name ?? `Program #${program.pid}`}
             </h1>
             <NeoBadge status={program.status} />
           </div>
           {meta?.description && (
-            <p className="text-gray-600 text-lg max-w-2xl">{meta.description}</p>
+            <p className="text-gray-600 text-base md:text-lg max-w-2xl">{meta.description}</p>
           )}
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <WalletAvatar address={program.initiator} size={20} />
-            <span className="font-mono">{shortenAddress(program.initiator)}</span>
-            {meta?.organization && <span>• {meta.organization}</span>}
+            <span className="font-data">{shortenAddress(program.initiator)}</span>
+            {meta?.organization && <span className="text-gray-400">|</span>}
+            {meta?.organization && <span>{meta.organization}</span>}
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           {userAddress === program.initiator && (
-            <div className="flex items-center gap-2 bg-gray-100 border-2 border-black rounded-xl px-3 py-1">
-              <span className="text-[10px] font-bold uppercase">Public:</span>
-              <button
-                disabled={isToggling}
-                onClick={() => toggle(BigInt(program.pid), !program.openDonation)}
-                className={`w-10 h-5 rounded-full border-2 border-black relative transition-colors ${program.openDonation ? 'bg-skgreen' : 'bg-gray-400'}`}
-              >
-                <div className={`absolute top-0.5 w-3 h-3 bg-white border border-black rounded-full transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
-              </button>
-            </div>
+            <button
+              disabled={isToggling}
+              onClick={() => toggle(BigInt(program.pid), !program.openDonation)}
+              className={`
+                px-3 py-1.5 rounded-md border-2 border-black text-xs font-bold uppercase
+                transition-all duration-100
+                ${program.openDonation
+                  ? 'bg-skgreen text-black shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none'
+                  : 'bg-gray-200 text-gray-600 shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none'
+                }
+                disabled:opacity-50 disabled:shadow-none disabled:translate-x-[3px] disabled:translate-y-[3px]
+              `}
+            >
+              {program.openDonation ? 'Public: ON' : 'Public: OFF'}
+            </button>
           )}
           {program.status === 'APPLICATION_OPEN' && (
             <Link to="/apply/$id" params={{ id: program.id }}>
@@ -145,11 +151,11 @@ export function ProgramDetailPage() {
             </Link>
           )}
           {program.status === 'VOTING' && program.openDonation && (
-            <NeoButton 
-              label="Cast Vote" 
-              variant="primary" 
-              size="md" 
-              onClick={() => setActiveTab('applicants')} 
+            <NeoButton
+              label="Cast Vote"
+              variant="primary"
+              size="md"
+              onClick={() => setActiveTab('applicants')}
             />
           )}
           {program.openDonation && (
@@ -163,7 +169,7 @@ export function ProgramDetailPage() {
           {userAddress === program.initiator && program.status === 'VOTING' && (
             <NeoButton
               label="Select Winners"
-              variant="success"
+              variant="secondary"
               size="md"
               onClick={() => setIsSelectWinnersOpen(true)}
             />
@@ -213,54 +219,41 @@ export function ProgramDetailPage() {
       </NeoCard>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Fund"
-          value={`$${formatUSDC(program.totalFund)}`}
-          icon="💰"
-          color="green"
-        />
-        <StatCard
-          label="Spent"
-          value={`$${formatUSDC(program.spentFund)}`}
-          icon="📤"
-          color="orange"
-        />
-        <StatCard label="Applicants" value={program.applicantCount} icon="📝" color="yellow" />
-        <StatCard
-          label="Active Scholars"
-          value={program.activeScholarCount}
-          icon="🎓"
-          color="purple"
-        />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Total Fund" value={`$${formatUSDC(program.totalFund)}`} color="green" />
+        <StatCard label="Spent" value={`$${formatUSDC(program.spentFund)}`} color="orange" />
+        <StatCard label="Applicants" value={program.applicantCount} color="yellow" />
+        <StatCard label="Active Scholars" value={program.activeScholarCount} color="purple" />
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b-2 border-black pb-3">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`
-              px-4 py-2 rounded-t-xl border-2 font-bold text-sm transition-all
-              ${
-                activeTab === tab.key
-                  ? 'bg-white border-black border-b-white -mb-[3px] z-10'
+      <div className="flex flex-wrap gap-1 border-b-2 border-black pb-0">
+        {TABS.map((tab) => {
+          const count =
+            tab.key === 'applicants' && program._counts?.applicants
+              ? program._counts.applicants
+              : tab.key === 'scholars' && program._counts?.scholars
+                ? program._counts.scholars
+                : tab.key === 'disputes' && program._counts?.disputes
+                  ? program._counts.disputes
+                  : null;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`
+                px-3 py-2 rounded-t-md border-2 border-b-0 font-bold text-sm
+                transition-all duration-100
+                ${activeTab === tab.key
+                  ? 'bg-white border-black z-10 mb-[-2px]'
                   : 'bg-gray-100 border-transparent hover:bg-gray-200'
-              }
-            `}>
-            {tab.icon} {tab.label}
-            {tab.key === 'applicants' && program._counts?.applicants
-              ? ` (${program._counts.applicants})`
-              : ''}
-            {tab.key === 'scholars' && program._counts?.scholars
-              ? ` (${program._counts.scholars})`
-              : ''}
-            {tab.key === 'disputes' && program._counts?.disputes
-              ? ` (${program._counts.disputes})`
-              : ''}
-          </button>
-        ))}
+                }
+              `}>
+              {tab.label}
+              {count !== null && <span className="ml-1 text-gray-500">({count})</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}
@@ -272,16 +265,16 @@ export function ProgramDetailPage() {
             isLoading={applicantsQ.isLoading}
             renderItem={(a) => (
               <div key={a.id} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={a.wallet} size={32} />
-                  <div>
-                    <p className="font-bold">{shortenAddress(a.wallet)}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold font-data text-sm">{shortenAddress(a.wallet)}</p>
                     <p className="text-xs text-gray-500">
-                      Retry #{a.retryCount} • Score: {a.totalScore || '—'}
+                      Score: {a.totalScore ?? '—'} | Retry: {a.retryCount}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <NeoBadge status={a.status} />
                   {program.status === 'VOTING' && program.openDonation && a.status === 'SHORTLISTED' && (
                     <NeoButton
@@ -305,17 +298,16 @@ export function ProgramDetailPage() {
             isLoading={scholarsQ.isLoading}
             renderItem={(s) => (
               <div key={s.id} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={s.wallet} size={32} />
-                  <div>
-                    <p className="font-bold">{shortenAddress(s.wallet)}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold font-data text-sm">{shortenAddress(s.wallet)}</p>
                     <p className="text-xs text-gray-500">
-                      Received: ${formatUSDC(s.totalReceived)} • Milestone {s.currentMilestone}/
-                      {s.totalMilestones}
+                      Received ${formatUSDC(s.totalReceived)} | Milestone {s.currentMilestone}/{s.totalMilestones}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <NeoBadge status={s.status} />
                   {program.openDonation && s.status === 'ACTIVE' && (
                     <NeoButton
@@ -339,10 +331,10 @@ export function ProgramDetailPage() {
             isLoading={milestonesQ.isLoading}
             renderItem={(m) => (
               <div key={m.id} className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-bold">Milestone #{m.blockchainId}</p>
-                  <p className="text-xs text-gray-500">
-                    {shortenAddress(m.scholarWallet)} • ${formatUSDC(m.amount)}
+                <div className="min-w-0">
+                  <p className="font-bold text-sm">Milestone <span className="font-data">#{m.blockchainId}</span></p>
+                  <p className="text-xs text-gray-500 font-data">
+                    {shortenAddress(m.scholarWallet)} | ${formatUSDC(m.amount)}
                   </p>
                 </div>
                 <NeoBadge status={m.status} />
@@ -356,12 +348,13 @@ export function ProgramDetailPage() {
             isLoading={votesQ.isLoading}
             renderItem={(v) => (
               <div key={v.id} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={v.voterAddress} size={28} />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm">
-                      <span className="font-bold">{shortenAddress(v.voterAddress)}</span> voted for{' '}
-                      <span className="font-bold text-skpurple">
+                      <span className="font-bold font-data">{shortenAddress(v.voterAddress)}</span>{' '}
+                      voted for{' '}
+                      <span className="font-bold font-data text-skpurple">
                         {shortenAddress(v.candidateAddress)}
                       </span>
                     </p>
@@ -378,15 +371,15 @@ export function ProgramDetailPage() {
             isLoading={disputesQ.isLoading}
             renderItem={(d) => (
               <div key={d.id} className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-bold">
-                    Dispute #{d.blockchainId}{' '}
-                    <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm">
+                    Dispute <span className="font-data">#{d.blockchainId}</span>{' '}
+                    <span className="text-xs font-data bg-gray-100 px-2 py-0.5 border border-gray-200">
                       {d.disputeType}
                     </span>
                   </p>
-                  <p className="text-xs text-gray-500">
-                    BH: {shortenAddress(d.bountyHunter)} vs {shortenAddress(d.scholarAddress)}
+                  <p className="text-xs text-gray-500 font-data">
+                    BH {shortenAddress(d.bountyHunter)} vs Scholar {shortenAddress(d.scholarAddress)}
                   </p>
                 </div>
                 <NeoBadge status={d.status} />
@@ -401,30 +394,26 @@ export function ProgramDetailPage() {
 
 function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <NeoCard hoverable={false}>
         <NeoCardBody className="space-y-4">
           <h3 className="font-paytone text-lg">Program Details</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-gray-500">Max Candidates</dt>
-              <dd className="font-bold">{program.maxCandidates}</dd>
+              <dd className="font-bold font-data">{program.maxCandidates}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Target Winners</dt>
-              <dd className="font-bold">{program.targetWinners}</dd>
+              <dd className="font-bold font-data">{program.targetWinners}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Screening Mode</dt>
-              <dd className="font-bold">
-                {program.screeningMode === 0 ? 'By Committee' : 'By Student'}
-              </dd>
+              <dd className="font-bold">{program.screeningMode === 0 ? 'By Committee' : 'By Student'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Education Level</dt>
-              <dd className="font-bold">
-                {['SD', 'SMP', 'SMA', 'University'][program.educationLevel] ?? '—'}
-              </dd>
+              <dd className="font-bold">{['SD', 'SMP', 'SMA', 'University'][program.educationLevel] ?? '—'}</dd>
             </div>
           </dl>
         </NeoCardBody>
@@ -436,45 +425,45 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-gray-500">Gross Total (incl. Fee)</dt>
-              <dd className="font-bold">${formatUSDC(BigInt(program.totalFund) + BigInt(program.protocolFeeCollected || 0))}</dd>
+              <dd className="font-bold font-data">${formatUSDC(BigInt(program.totalFund) + BigInt(program.protocolFeeCollected || 0))}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500 text-skpurple font-bold">Net Total Fund</dt>
-              <dd className="font-bold text-skpurple">${formatUSDC(program.totalFund)}</dd>
+              <dt className="text-skpurple font-bold">Net Total Fund</dt>
+              <dd className="font-bold text-skpurple font-data">${formatUSDC(program.totalFund)}</dd>
             </div>
-            <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">
+            <div className="flex justify-between border-t-2 border-gray-200 pt-2 mt-1">
               <dt className="text-gray-500">Allocated</dt>
-              <dd className="font-bold">${formatUSDC(program.allocatedFund)}</dd>
+              <dd className="font-bold font-data">${formatUSDC(program.allocatedFund)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Spent</dt>
-              <dd className="font-bold text-orange-600">${formatUSDC(program.spentFund)}</dd>
+              <dd className="font-bold text-orange-600 font-data">${formatUSDC(program.spentFund)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Yield Accrued</dt>
-              <dd className="font-bold text-skblue">${formatUSDC(program.yieldAccrued)}</dd>
+              <dd className="font-bold text-skblue font-data">${formatUSDC(program.yieldAccrued)}</dd>
             </div>
           </dl>
 
           {/* Allocation Breakdown Bar */}
           <div className="pt-2">
-            <h4 className="font-bold text-xs uppercase text-gray-500 mb-2">Fund Allocation Breakdown</h4>
-            <div className="flex h-5 w-full bg-gray-200 border-2 border-black overflow-hidden rounded-md cursor-help">
+            <h4 className="font-bold text-[10px] uppercase text-gray-500 tracking-wider mb-2">Fund Allocation</h4>
+            <div className="flex h-4 w-full bg-gray-200 border-2 border-black overflow-hidden">
               <div
-                className="h-full bg-skgreen transition-all"
+                className="h-full bg-skgreen"
                 style={{ width: `${(Number(program.spentFund) / Math.max(1, Number(program.totalFund))) * 100}%` }}
                 title={`Spent: $${formatUSDC(program.spentFund)}`}
               />
               <div
-                className="h-full bg-skyellow transition-all"
+                className="h-full bg-skyellow"
                 style={{ width: `${((Number(program.allocatedFund) - Number(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100}%` }}
-                title={`Pending Allocation: $${formatUSDC(BigInt(program.allocatedFund) - BigInt(program.spentFund))}`}
+                title={`Pending: $${formatUSDC(BigInt(program.allocatedFund) - BigInt(program.spentFund))}`}
               />
             </div>
-            <div className="flex justify-between text-[10px] font-bold text-gray-600 mt-1 uppercase">
-              <span className="text-green-700">Spent: {((Number(program.spentFund) / Math.max(1, Number(program.totalFund))) * 100).toFixed(1)}%</span>
-              <span className="text-yellow-600">Pending: {(((Number(program.allocatedFund) - Number(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100).toFixed(1)}%</span>
-              <span>Unallocated: {(((Number(program.totalFund) - Number(program.allocatedFund)) / Math.max(1, Number(program.totalFund))) * 100).toFixed(1)}%</span>
+            <div className="flex justify-between text-[10px] font-bold text-gray-600 mt-1 uppercase tracking-wider">
+              <span className="text-green-700">Spent {((Number(program.spentFund) / Math.max(1, Number(program.totalFund))) * 100).toFixed(0)}%</span>
+              <span className="text-yellow-700">Pending {(((Number(program.allocatedFund) - Number(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100).toFixed(0)}%</span>
+              <span>Unallocated {(((Number(program.totalFund) - Number(program.allocatedFund)) / Math.max(1, Number(program.totalFund))) * 100).toFixed(0)}%</span>
             </div>
           </div>
         </NeoCardBody>
@@ -495,9 +484,8 @@ function ListTab<T extends { id?: string }>({
   if (isLoading) return <NeoSkeleton lines={5} className="py-4" />;
   if (!data || data.length === 0) {
     return (
-      <div className="neo-card p-8 text-center">
-        <p className="text-4xl mb-2">📭</p>
-        <p className="text-gray-500">No data yet</p>
+      <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-8 text-center">
+        <p className="font-bold text-gray-500">No data yet</p>
       </div>
     );
   }

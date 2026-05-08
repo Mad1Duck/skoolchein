@@ -4,15 +4,9 @@
   "version": "1.0.0",
   "scripts": {
     "active-node": "hardhat node --show-stack-traces",
-    "deploy": "bun hardhat ignition deploy ignition/modules/scholarship-manager.ts --network localhost",
-    "deploy-v2": "bun hardhat ignition deploy ignition/modules/scholarship-manager-v2.ts --network localhost",
-    "deploy-v2-lisk": "bun hardhat ignition deploy ignition/modules/scholarship-manager-v2.ts --network liskSepolia --verify",
-    "deploy-lisk": "bun hardhat ignition deploy ignition/modules/scholarship-manager.ts --network liskSepolia --verify",
-    "deploy-v4": "bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network localhost && bun scripts/sync-deployments.ts 31337",
-    "deploy-v4-reset": "bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network localhost --reset && bun scripts/sync-deployments.ts 31337",
-    "deploy-v4-lisk": "bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network liskSepolia --verify && bun scripts/sync-deployments.ts 4202",
-    "sync": "bun scripts/sync-deployments.ts 31337",
-    "sync:lisk": "bun scripts/sync-deployments.ts 4202",
+    "deploy-v4": "bun scripts/clean-deployments.ts 31337 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network localhost && bun scripts/sync-deployments.ts 31337",
+    "deploy-v4-reset": "bun scripts/clean-deployments.ts 31337 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network localhost --reset && bun scripts/sync-deployments.ts 31337",
+    "deploy-v4-lisk": "bun scripts/clean-deployments.ts 4202 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network liskSepolia --verify && bun scripts/sync-deployments.ts 4202",
     "compile": "hardhat compile",
     "compile:sync": "hardhat compile && bun scripts/sync-deployments.ts --abi-only",
     "test": "hardhat test"

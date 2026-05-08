@@ -58,7 +58,6 @@ export function InitiatorPanel({
         {programs.length === 0 ? (
           <NeoCard hoverable={false} className="bg-skpink-light/30 border-dashed col-span-2">
             <NeoCardBody className="py-12 text-center">
-              <p className="text-5xl mb-4">🚀</p>
               <h3 className="font-paytone text-2xl mb-2 text-skpink-dark">Launch Your Program</h3>
               <p className="text-gray-600 mb-6 max-w-sm mx-auto">
                 Ready to fund some talent? Create your first scholarship program and set up your own committee.
@@ -255,7 +254,7 @@ function InitiatorProgramCard({
 
           {!isFinal && (
             <NeoButton
-              label="🏛 Committee"
+              label="Manage Committee"
               variant="secondary"
               fullWidth
               onClick={onManageCommittee}
@@ -324,7 +323,6 @@ export function StudentPanel({
         {scholarships.length === 0 ? (
           <NeoCard hoverable={false} className="bg-skblue-light/30 border-dashed">
             <NeoCardBody className="py-10 text-center">
-              <p className="text-4xl mb-2">🎓</p>
               <p className="font-bold text-lg mb-1">No Active Scholarships</p>
               <p className="text-sm text-gray-500 mb-4">Find and apply to programs that match your educational path.</p>
               <Link to="/programs">
@@ -420,7 +418,7 @@ function ScholarCard({
           <div className="flex flex-col gap-2 w-full md:w-52">
             {scholar.status === 'FROZEN' ? (
               <div className="bg-red-100 p-2 border-2 border-red-500 rounded text-red-700 text-sm font-bold text-center">
-                ❄️ Frozen until{' '}
+                FROZEN until 
                 {scholar.freezeUntil ? new Date(scholar.freezeUntil).toLocaleDateString() : '—'}
               </div>
             ) : nextPending ? (
@@ -438,7 +436,7 @@ function ScholarCard({
                 
                 {isVerified ? (
                   <NeoButton
-                    label={isSubmitting ? 'Verifying...' : `Claim Milestone #${nextPending.blockchainId} ✓`}
+                    label={isSubmitting ? 'Verifying...' : `Claim Milestone #${nextPending.blockchainId}`}
                     variant="success"
                     fullWidth
                     loading={isSubmitting}
@@ -468,7 +466,7 @@ function ScholarCard({
                 )}
               </div>
             ) : (
-              <NeoButton label="All Milestones Done ✓" variant="ghost" disabled fullWidth />
+              <NeoButton label="All Milestones Done" variant="ghost" disabled fullWidth />
             )}
 
             {executables.map((m) => (
@@ -573,7 +571,6 @@ export function VoterPanel({
       {votes.length === 0 && stakes.length === 0 ? (
         <NeoCard hoverable={false} className="bg-skpurple-light/30 border-dashed">
           <NeoCardBody className="py-12 text-center">
-            <p className="text-5xl mb-4">🗳️</p>
             <h3 className="font-paytone text-2xl mb-2 text-skpurple-dark">Shape the Future</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               You haven't cast any votes yet. Participating in selection and staking on scholars helps maintain the protocol's integrity.
@@ -665,7 +662,6 @@ export function BountyHunterPanel({
       {disputes.length === 0 ? (
         <NeoCard hoverable={false} className="bg-skgreen-light/30 border-dashed mb-6">
           <NeoCardBody className="py-12 text-center">
-            <p className="text-5xl mb-4">⚖️</p>
             <h3 className="font-paytone text-2xl mb-2 text-skgreen-dark">Guard the Protocol</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               Bounty Hunters keep the protocol safe by flagging fraud. Stake your USDC to challenge suspicious milestones and earn rewards.
@@ -763,7 +759,7 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
 
         {canAutoGuilty && (
           <NeoButton
-            label={triggering ? 'Triggering…' : '⚡ Trigger Auto-Guilty'}
+            label={triggering ? 'Triggering…' : 'Trigger Auto-Guilty'}
             variant="danger"
             size="sm"
             fullWidth
@@ -803,7 +799,6 @@ export function CommitteePanel({
       {programIds.length === 0 ? (
         <NeoCard hoverable={false} className="bg-skyellow-light/30 border-dashed">
           <NeoCardBody className="py-12 text-center">
-            <p className="text-5xl mb-4">🏛️</p>
             <h3 className="font-paytone text-2xl mb-2 text-skyellow-dark">Committee Seat</h3>
             <p className="text-gray-600 mb-4 max-w-md mx-auto">
               You are not a member of any scholarship committee yet. Committee members manage applications and approve milestones.
@@ -930,7 +925,7 @@ function CommitteeMilestoneVoteRow({
       </div>
       <div className="flex gap-1">
         <NeoButton
-          label="✓ Approve"
+          label="Approve"
           variant="success"
           size="sm"
           loading={isPending}
@@ -938,7 +933,7 @@ function CommitteeMilestoneVoteRow({
           onClick={() => voteOnMilestone(BigInt(milestone.blockchainId), BigInt(programId), true)}
         />
         <NeoButton
-          label="✕ Reject"
+          label="Reject"
           variant="danger"
           size="sm"
           loading={isPending}

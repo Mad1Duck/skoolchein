@@ -42,7 +42,6 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
     return (
       <NeoModal isOpen={isOpen} onClose={handleClose} title="Vote Cast Successfully!">
         <div className="text-center py-10 space-y-4">
-          <p className="text-6xl">🗳️</p>
           <h2 className="font-paytone text-2xl">Your vote has been recorded!</h2>
           <p className="text-gray-600">
             You successfully voted for <span className="font-bold">{candidateName ?? candidateAddress}</span> using{' '}
@@ -63,7 +62,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
         {step === 'choose' && (
           <>
             <div className="bg-skblue-light border-2 border-black rounded-xl p-4 text-sm">
-              <p className="font-bold mb-1">🗳️ Dual-Mode Participation</p>
+              <p className="font-bold mb-1">Dual-Mode Participation</p>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Choose how you want to support this candidate. You can use your global protocol reputation or the voting power you earned from donations.
               </p>
@@ -101,7 +100,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
 
             {useReputationMode && repData?.isVotingLocked && (
               <div className="bg-red-50 border-2 border-red-500 rounded-xl p-3 text-xs text-red-700 flex items-center gap-2">
-                <span>⚠️ Your voting power is currently locked due to a pending dispute or cooldown.</span>
+                <span>Your voting power is currently locked due to a pending dispute or cooldown.</span>
               </div>
             )}
           </>
@@ -109,8 +108,8 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
 
         {step === 'voting' && (
           <div className="text-center py-10 space-y-4">
-            <p className="text-4xl animate-bounce">📨</p>
-            <p className="font-bold text-lg">Submitting Vote…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skblue mx-auto animate-pulse mb-2" />
+            <p className="font-bold text-lg">Submitting Vote</p>
             <p className="text-sm text-gray-600">
               Please confirm the transaction in your wallet to cast your vote for <strong>{candidateName ?? candidateAddress}</strong>.
             </p>

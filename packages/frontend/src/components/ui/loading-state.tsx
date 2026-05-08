@@ -1,279 +1,88 @@
 import { appStateInjection } from "@/hooks/inject/app-state";
 import { createPortal } from "react-dom";
-import gsap from "gsap";
-import { useEffect, useRef, useState } from "react";
-import { Button } from "../Button";
+import { useEffect, useState } from "react";
+import { NeoButton } from "../ui/NeoButton";
 
 function WaitWallet() {
   return (
-    <>
-      <h2 className="font-paytone text-2xl">Waiting for Wallet Confirmation</h2>
-      <div className="text-gray-500 w-100">
-        Hold on! We’re waiting for your wallet to approve the transaction.
-        Please check your wallet and confirm to continue.
-      </div>
-      <svg
-        className="animate-spin mx-auto"
-        xmlns="http://www.w3.org/2000/svg"
-        width="100"
-        height="100"
-        viewBox="0 0 56 56"
-        fill="none"
-      >
-        <rect x="4" y="4" width="48" height="48" rx="24" fill="#FEF0C7" />
-        <rect
-          x="4"
-          y="4"
-          width="48"
-          height="48"
-          rx="24"
-          stroke="#FFFAEB"
-          stroke-width="8"
-        />
-        <path
-          d="M33.7524 32.8642C35.3994 34.6785 35.548 36.8828 35.548 39.5267H20.3965C20.3965 36.8828 20.5451 34.6785 22.1921 32.8642C23.8392 31.05 25.1642 30.4246 25.8392 29.7683C26.0946 29.5988 26.3041 29.3688 26.4491 29.0987C26.594 28.8286 26.6699 28.5269 26.6699 28.2203C26.6699 27.9138 26.594 27.612 26.4491 27.3419C26.3041 27.0718 26.0946 26.8418 25.8392 26.6723C25.1642 26.016 23.833 25.3844 22.1921 23.5764C20.5513 21.7684 20.3965 19.5579 20.3965 16.9139H35.548C35.548 19.5579 35.3994 21.7684 33.7524 23.5764C32.1053 25.3844 30.7803 26.016 30.1054 26.6723C29.8499 26.8418 29.6404 27.0718 29.4954 27.3419C29.3505 27.612 29.2746 27.9138 29.2746 28.2203C29.2746 28.5269 29.3505 28.8286 29.4954 29.0987C29.6404 29.3688 29.8499 29.5988 30.1054 29.7683C30.4707 30.1212 31.0341 30.4742 31.7276 31.0067C32.4575 31.5632 33.1352 32.1849 33.7524 32.8642Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.6"
-          d="M33.7524 32.8642C35.3994 34.6785 35.548 36.8828 35.548 39.5267H20.3965C20.3965 36.8828 20.5451 34.6785 22.1921 32.8642C23.8392 31.05 25.1642 30.4246 25.8392 29.7683C26.0946 29.5988 26.3041 29.3688 26.4491 29.0987C26.594 28.8286 26.6699 28.5269 26.6699 28.2203C26.6699 27.9138 26.594 27.612 26.4491 27.3419C26.3041 27.0718 26.0946 26.8418 25.8392 26.6723C25.1642 26.016 23.833 25.3844 22.1921 23.5764C20.5513 21.7684 20.3965 19.5579 20.3965 16.9139H35.548C35.548 19.5579 35.3994 21.7684 33.7524 23.5764C32.1053 25.3844 30.7803 26.016 30.1054 26.6723C29.8499 26.8418 29.6404 27.0718 29.4954 27.3419C29.3505 27.612 29.2746 27.9138 29.2746 28.2203C29.2746 28.5269 29.3505 28.8286 29.4954 29.0987C29.6404 29.3688 29.8499 29.5988 30.1054 29.7683C30.4707 30.1212 31.0341 30.4742 31.7276 31.0067C32.4575 31.5632 33.1352 32.1849 33.7524 32.8642Z"
-          fill="white"
-        />
-        <path
-          opacity="0.5"
-          d="M20.8237 39.217C20.7827 39.217 20.7433 39.2007 20.7143 39.1717C20.6853 39.1426 20.6689 39.1033 20.6689 39.0622C20.6689 36.8393 20.8299 34.7279 22.3965 32.9694C23.2023 32.0874 24.1059 31.3001 25.09 30.6227C25.4225 30.3994 25.739 30.1531 26.0373 29.8858C26.3145 29.6931 26.5409 29.4362 26.6973 29.137C26.8536 28.8378 26.9353 28.5052 26.9353 28.1676C26.9353 27.83 26.8536 27.4974 26.6973 27.1982C26.5409 26.899 26.3145 26.6421 26.0373 26.4493C25.74 26.1834 25.4256 25.9373 25.0961 25.7125C24.1103 25.0327 23.2046 24.2433 22.3965 23.3596C20.8299 21.632 20.6875 19.4958 20.6689 17.273C20.6689 17.2319 20.6853 17.1925 20.7143 17.1635C20.7433 17.1345 20.7827 17.1182 20.8237 17.1182C20.8632 17.1182 20.901 17.1338 20.9288 17.1617C20.9567 17.1896 20.9724 17.2274 20.9724 17.2668C20.9724 19.4339 21.1271 21.5082 22.6194 23.1614C23.4125 24.0255 24.3016 24.7962 25.2695 25.4586C25.6043 25.695 25.9229 25.9536 26.2231 26.2326C26.5276 26.4551 26.7753 26.7462 26.9461 27.0825C27.1168 27.4187 27.2058 27.7905 27.2058 28.1676C27.2058 28.5447 27.1168 28.9165 26.9461 29.2527C26.7753 29.5889 26.5276 29.8801 26.2231 30.1025C25.915 30.3807 25.5881 30.6372 25.2447 30.8703C24.2755 31.5334 23.3862 32.3063 22.5946 33.1737C21.1024 34.8208 20.9662 36.8889 20.9476 39.0622C20.9483 39.0984 20.9363 39.1337 20.9137 39.162C20.8911 39.1903 20.8592 39.2098 20.8237 39.217Z"
-          fill="white"
-        />
-        <path
-          d="M33.0835 33.4338C34.3219 34.7898 34.582 36.5298 34.6253 38.5297H21.3623C21.4056 36.4988 21.6224 34.7775 22.9041 33.4338C24.1858 32.0902 25.7647 31.502 27.9938 31.502C28.928 31.47 29.8591 31.6243 30.733 31.956C31.6068 32.2877 32.4059 32.7901 33.0835 33.4338Z"
-          fill="#FAFAFA"
-        />
-        <path
-          d="M34.5633 19.0378C34.5168 20.4552 33.9957 21.8158 33.0834 22.9016C32.309 23.7468 31.4406 24.5009 30.4952 25.1492C30.1364 25.3958 29.7951 25.6669 29.4735 25.9603C29.1487 26.2327 28.8832 26.5689 28.6937 26.9481C28.5041 27.3273 28.3944 27.7413 28.3714 28.1647C28.3714 28.9077 28.2475 29.0996 27.9937 29.0996C27.7398 29.0996 27.616 28.9263 27.616 28.1647C27.593 27.7413 27.4833 27.3273 27.2937 26.9481C27.1041 26.5689 26.8386 26.2327 26.5138 25.9603C26.1945 25.6668 25.8552 25.3958 25.4983 25.1492C24.5496 24.5027 23.679 23.7485 22.9039 22.9016C22.6195 22.5877 22.3741 22.2405 22.1733 21.8675C22.1596 21.8402 22.154 21.8096 22.1571 21.7793C22.1601 21.749 22.1717 21.7201 22.1905 21.6961C22.2093 21.6721 22.2346 21.6539 22.2633 21.6437C22.2921 21.6335 22.3231 21.6317 22.3529 21.6384C23.5484 21.9234 24.7786 22.036 26.0061 21.9728C28.4457 21.8242 29.5416 21.4155 31.071 20.1152C31.9874 19.3474 32.6809 18.2576 33.2939 18.0223C33.4463 17.9382 33.6203 17.9011 33.7937 17.9159C33.9672 17.9307 34.1324 17.9966 34.2683 18.1054C34.4043 18.2141 34.5049 18.3608 34.5574 18.5268C34.6099 18.6928 34.6119 18.8707 34.5633 19.0378Z"
-          fill="#FAFAFA"
-        />
-        <path
-          d="M27.993 30.6352C28.2427 30.6352 28.445 30.4328 28.445 30.1832C28.445 29.9335 28.2427 29.7312 27.993 29.7312C27.7434 29.7312 27.541 29.9335 27.541 30.1832C27.541 30.4328 27.7434 30.6352 27.993 30.6352Z"
-          fill="#FAFAFA"
-        />
-        <path
-          opacity="0.3"
-          d="M31.727 31.0066C32.4568 31.5631 33.1345 32.1848 33.7517 32.8641C35.3988 34.6783 35.5474 36.8827 35.5474 39.5266H22.1357C24.1605 39.5266 29.8261 38.5792 31.8508 36.5978C33.9932 34.4864 32.9406 32.6969 31.727 31.0066Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.3"
-          d="M35.5476 16.9326C35.5476 19.5766 35.399 21.7871 33.752 23.5951C32.1049 25.4031 30.7799 26.0347 30.105 26.691C29.8495 26.8605 29.64 27.0905 29.495 27.3606C29.35 27.6307 29.2742 27.9325 29.2742 28.239C29.2742 28.5455 29.35 28.8473 29.495 29.1174C29.64 29.3875 29.8495 29.6175 30.105 29.787C27.8821 28.4371 28.2474 27.0811 28.656 26.1771C29.0647 25.2731 31.8387 23.5641 31.6839 21.0626C31.5291 18.5611 27.6344 16.9512 23.9316 16.9512L35.5476 16.9326Z"
-          fill="#6A88F8"
-        />
-        <path
-          d="M36.916 14.9015C36.916 15.2578 36.7744 15.5996 36.5224 15.8516C36.2704 16.1036 35.9287 16.2451 35.5723 16.2451H20.4208C20.0644 16.2451 19.7227 16.1036 19.4707 15.8516C19.2187 15.5996 19.0771 15.2578 19.0771 14.9015H36.916Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.2"
-          d="M30.786 14.9015C30.7844 15.2584 30.6414 15.6002 30.3885 15.852C30.1355 16.1038 29.7931 16.2451 29.4362 16.2451H20.4208C20.0644 16.2451 19.7227 16.1036 19.4707 15.8516C19.2187 15.5996 19.0771 15.2578 19.0771 14.9015H30.786Z"
-          fill="white"
-        />
-        <path
-          d="M37.9874 13.236V13.7561C37.9874 14.0599 37.8667 14.3513 37.6519 14.5661C37.4371 14.781 37.1457 14.9016 36.8419 14.9016H19.1641C18.8603 14.9016 18.5689 14.781 18.3541 14.5661C18.1392 14.3513 18.0186 14.0599 18.0186 13.7561V13.236C18.0202 13.1731 18.0463 13.1132 18.0914 13.0693C18.1366 13.0253 18.1971 13.0007 18.26 13.0007H37.7335C37.7659 12.9982 37.7985 13.0023 37.8293 13.013C37.86 13.0237 37.8882 13.0406 37.912 13.0627C37.9359 13.0848 37.9549 13.1116 37.9679 13.1415C37.9808 13.1713 37.9875 13.2035 37.9874 13.236Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.15"
-          d="M37.9503 13.236V13.7561C37.9503 14.0599 37.8296 14.3513 37.6147 14.5661C37.3999 14.781 37.1086 14.9016 36.8048 14.9016H19.1455C18.8417 14.9016 18.5503 14.781 18.3355 14.5661C18.1207 14.3513 18 14.0599 18 13.7561V13.236C18 13.1736 18.0248 13.1138 18.0689 13.0696C18.113 13.0255 18.1729 13.0007 18.2353 13.0007H37.7088C37.7718 13.0007 37.8323 13.0253 37.8774 13.0693C37.9225 13.1132 37.9486 13.1731 37.9503 13.236Z"
-          fill="black"
-        />
-        <path
-          d="M32.8915 13.236V13.7561C32.8915 14.0599 32.7708 14.3513 32.556 14.5661C32.3411 14.781 32.0498 14.9016 31.746 14.9016H19.1641C18.8603 14.9016 18.5689 14.781 18.3541 14.5661C18.1392 14.3513 18.0186 14.0599 18.0186 13.7561V13.236C18.0202 13.1731 18.0463 13.1132 18.0914 13.0693C18.1366 13.0253 18.1971 13.0007 18.26 13.0007H32.6562C32.7186 13.0007 32.7784 13.0255 32.8226 13.0696C32.8667 13.1138 32.8915 13.1736 32.8915 13.236Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.2"
-          d="M21.0527 14.9016C20.8306 14.6347 20.709 14.2984 20.709 13.9512C20.709 13.6039 20.8306 13.2677 21.0527 13.0007H25.1084C25.3339 13.2661 25.4578 13.6029 25.4578 13.9512C25.4578 14.2994 25.3339 14.6363 25.1084 14.9016H21.0527Z"
-          fill="white"
-        />
-        <path
-          opacity="0.2"
-          d="M21.7398 16.2451C21.5907 16.0529 21.5098 15.8166 21.5098 15.5733C21.5098 15.33 21.5907 15.0937 21.7398 14.9015H24.4271C24.5762 15.0937 24.6572 15.33 24.6572 15.5733C24.6572 15.8166 24.5762 16.0529 24.4271 16.2451H21.7398Z"
-          fill="white"
-        />
-        <path
-          d="M19.0771 41.4276C19.0771 41.0712 19.2187 40.7295 19.4707 40.4775C19.7227 40.2255 20.0644 40.084 20.4208 40.084H35.5723C35.9287 40.084 36.2704 40.2255 36.5224 40.4775C36.7744 40.7295 36.916 41.0712 36.916 41.4276H19.0771Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.2"
-          d="M25.207 41.4276C25.207 41.0712 25.3486 40.7295 25.6006 40.4775C25.8526 40.2255 26.1943 40.084 26.5507 40.084H35.5723C35.9286 40.084 36.2704 40.2255 36.5223 40.4775C36.7743 40.7295 36.9159 41.0712 36.9159 41.4276H25.207Z"
-          fill="white"
-        />
-        <path
-          d="M18.0186 43.0931V42.573C18.0186 42.2692 18.1392 41.9778 18.3541 41.763C18.5689 41.5482 18.8603 41.4275 19.1641 41.4275H36.8233C37.1271 41.4275 37.4185 41.5482 37.6333 41.763C37.8481 41.9778 37.9688 42.2692 37.9688 42.573V43.0931C37.9696 43.1245 37.9642 43.1558 37.9527 43.1851C37.9413 43.2143 37.9241 43.241 37.9021 43.2635C37.8802 43.286 37.854 43.3039 37.825 43.3161C37.7961 43.3283 37.7649 43.3346 37.7335 43.3346H18.26C18.196 43.3346 18.1346 43.3092 18.0893 43.2639C18.044 43.2186 18.0186 43.1572 18.0186 43.0931Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.15"
-          d="M18.0186 43.0931V42.573C18.0186 42.2692 18.1392 41.9778 18.3541 41.763C18.5689 41.5482 18.8603 41.4275 19.1641 41.4275H36.8233C37.1271 41.4275 37.4185 41.5482 37.6333 41.763C37.8481 41.9778 37.9688 42.2692 37.9688 42.573V43.0931C37.9696 43.1245 37.9642 43.1558 37.9527 43.1851C37.9413 43.2143 37.9241 43.241 37.9021 43.2635C37.8802 43.286 37.854 43.3039 37.825 43.3161C37.7961 43.3283 37.7649 43.3346 37.7335 43.3346H18.26C18.196 43.3346 18.1346 43.3092 18.0893 43.2639C18.044 43.2186 18.0186 43.1572 18.0186 43.0931Z"
-          fill="black"
-        />
-        <path
-          d="M23.1271 43.0931V42.573C23.1271 42.2692 23.2478 41.9778 23.4626 41.763C23.6774 41.5482 23.9688 41.4275 24.2726 41.4275H36.8545C37.1583 41.4275 37.4496 41.5482 37.6645 41.763C37.8793 41.9778 38 42.2692 38 42.573V43.0931C38.0008 43.1245 37.9953 43.1558 37.9839 43.1851C37.9724 43.2143 37.9552 43.241 37.9333 43.2635C37.9114 43.286 37.8851 43.3039 37.8562 43.3161C37.8272 43.3283 37.7961 43.3346 37.7647 43.3346H23.3376C23.2785 43.3284 23.2239 43.3 23.1849 43.2552C23.1458 43.2104 23.1252 43.1525 23.1271 43.0931Z"
-          fill="#6A88F8"
-        />
-        <path
-          opacity="0.2"
-          d="M34.9343 41.4275C35.1591 41.6943 35.2824 42.0321 35.2824 42.381C35.2824 42.73 35.1591 43.0677 34.9343 43.3346H30.8786C30.656 43.0667 30.5342 42.7293 30.5342 42.381C30.5342 42.0327 30.656 41.6954 30.8786 41.4275H34.9343Z"
-          fill="white"
-        />
-        <path
-          opacity="0.2"
-          d="M34.2725 40.084C34.4216 40.2762 34.5025 40.5125 34.5025 40.7558C34.5025 40.999 34.4216 41.2354 34.2725 41.4276H31.579C31.4309 41.235 31.3506 40.9988 31.3506 40.7558C31.3506 40.5128 31.4309 40.2766 31.579 40.084H34.2725Z"
-          fill="white"
-        />
-      </svg>
-    </>
+    <div className="space-y-4 text-center">
+      <div className="w-12 h-12 border-2 border-black bg-skyellow mx-auto animate-pulse" />
+      <h2 className="font-paytone text-xl">Waiting for Wallet</h2>
+      <p className="text-sm text-gray-600">
+        Confirm the transaction in your wallet to continue.
+      </p>
+    </div>
   );
 }
 
 function WaitConfirmation() {
   return (
-    <>
-      <h2 className="font-paytone text-2xl w-100">
-        Processing your scholarship on the blockchain…
-      </h2>
-      <div className="text-gray-500 w-100">
-        This may take a few seconds. Think of it like printing the receipt—only
-        smarter and on-chain.
+    <div className="space-y-4 text-center">
+      <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse" />
+      <h2 className="font-paytone text-xl">Processing on Chain</h2>
+      <p className="text-sm text-gray-600">
+        The transaction is being mined. This usually takes a few seconds.
+      </p>
+      <div className="w-full h-3 border-2 border-black bg-gray-100">
+        <div className="h-full bg-skyellow animate-pulse" />
       </div>
-      <div className="w-100 rounded-md h-5 neo-shadow">
-        <div className="w-full bg-skyellow rounded-md h-5 animate-pulse"></div>
-      </div>
-    </>
+    </div>
   );
 }
 
 function Success() {
-  const {
-    loading: { loading, setLoading },
-  } = appStateInjection.use();
+  const { loading: { loading, setLoading } } = appStateInjection.use();
   return (
-    <>
-      <h2 className="font-paytone text-2xl w-100 text-skgreen">Success…</h2>
-      <div className="text-gray-500 w-100">
-        {loading.message ?? "No message"}
-      </div>
-      <div className="flex justify-end">
-        <Button onClick={() => setLoading({ type: "none" })} label="Close" />
-      </div>
-    </>
+    <div className="space-y-4 text-center">
+      <div className="w-12 h-12 border-2 border-black bg-skgreen mx-auto" />
+      <h2 className="font-paytone text-xl text-black">Success</h2>
+      <p className="text-sm text-gray-600">{loading.message ?? "Transaction confirmed."}</p>
+      <NeoButton label="Close" variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
+    </div>
   );
 }
+
 function Error() {
-  const {
-    loading: { loading, setLoading },
-  } = appStateInjection.use();
+  const { loading: { loading, setLoading } } = appStateInjection.use();
   return (
-    <>
-      <h2 className="font-paytone text-2xl w-100 text-skred">Error…</h2>
-      <div className="text-gray-500 w-100">
-        {loading.message ?? "No message"}
-      </div>
-      <div className="flex justify-end">
-        <Button onClick={() => setLoading({ type: "none" })} label="Close" />
-      </div>
-    </>
+    <div className="space-y-4 text-center">
+      <div className="w-12 h-12 border-2 border-black bg-skred mx-auto" />
+      <h2 className="font-paytone text-xl text-black">Error</h2>
+      <p className="text-sm text-gray-600">{loading.message ?? "Transaction failed."}</p>
+      <NeoButton label="Close" variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
+    </div>
   );
 }
 
 export function LoadingState() {
-  const {
-    loading: { loading },
-  } = appStateInjection.use();
-
-  const backdropRef = useRef(null);
-  const modalRef = useRef(null);
+  const { loading: { loading } } = appStateInjection.use();
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Handle mount animation
   useEffect(() => {
     if (loading.type !== "none" && !shouldRender) {
       setShouldRender(true);
-      setIsVisible(true);
+      requestAnimationFrame(() => setIsVisible(true));
     }
-  }, [loading.type, shouldRender]);
-
-  // Handle unmount animation
-  useEffect(() => {
     if (loading.type === "none" && shouldRender) {
       setIsVisible(false);
-      // Delay the actual unmount until animation completes
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 300); // Match animation duration
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => setShouldRender(false), 100);
+      return () => clearTimeout(t);
     }
   }, [loading.type, shouldRender]);
 
-  // GSAP fade animations
-  useEffect(() => {
-    if (backdropRef.current && modalRef.current) {
-      if (isVisible) {
-        // Fade in animation
-        gsap.set([backdropRef.current, modalRef.current], { 
-          opacity: 0,
-          scale: 0.9 
-        });
-        
-        gsap.to(backdropRef.current, {
-          opacity: 1,
-          duration: 0.3,
-          scale: 1,
-          ease: "power2.out",
-        });
-        
-        gsap.to(modalRef.current, {
-          opacity: 1,
-          scale: 1,
-          duration: 0.3,
-          ease: "back.out(1.7)"
-        });
-      } else {
-        // Fade out animation
-        gsap.to(backdropRef.current, {
-          opacity: 0,
-          duration: 0.3,
-          scale: 0.9,
-          ease: "power2.in"
-        });
-        
-        gsap.to(modalRef.current, {
-          opacity: 0,
-          scale: 0.9,
-          duration: 0.3,
-          ease: "back.in(1.7)"
-        });
-      }
-    }
-  }, [isVisible]);
+  if (!shouldRender) return null;
 
-  return (
-    shouldRender &&
-    createPortal(
-      <div ref={backdropRef} className="backdrop-blur-sm inset-0 fixed z-10 grid place-content-center loading-state-back h-screen w-screen">
-        <div ref={modalRef} className="bg-white rounded-2xl p-6 space-y-4 neo-shadow loading-state">
-          {loading.type === "proccessing" ? (
-            <WaitWallet />
-          ) : loading.type === "confirmation" ? (
-            <WaitConfirmation />
-          ) : loading.type === "success" ? (
-            <Success />
-          ) : (
-            <Error />
-          )}
-        </div>
-      </div>,
-      document.body
-    )
+  return createPortal(
+    <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-100 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="relative z-10 bg-white border-2 border-black shadow-[4px_4px_0_0_#000] rounded-md p-6 w-full max-w-sm mx-4">
+        {loading.type === "proccessing" ? <WaitWallet />
+          : loading.type === "confirmation" ? <WaitConfirmation />
+          : loading.type === "success" ? <Success />
+          : <Error />}
+      </div>
+    </div>,
+    document.body
   );
 }

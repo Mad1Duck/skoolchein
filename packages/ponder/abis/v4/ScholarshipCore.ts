@@ -1416,6 +1416,19 @@ export const scholarshipCoreAbi = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "fraudNFT",
+    "outputs": [
+      {
+        "internalType": "contract ICredentialNFT",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -1997,6 +2010,11 @@ export const scholarshipCoreAbi = [
       {
         "internalType": "address",
         "name": "_studentNFT",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_fraudNFT",
         "type": "address"
       },
       {
@@ -2605,6 +2623,19 @@ export const scholarshipCoreAbi = [
       }
     ],
     "name": "setBounty",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_fraudNFT",
+        "type": "address"
+      }
+    ],
+    "name": "setFraudNFT",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -110,7 +110,7 @@ export function AdminControlModal({
               ))}
             </select>
             <p className="text-[10px] text-red-500 font-bold mt-1 uppercase italic">
-              ⚠️ Warning: Side-effects (like fund locking) may not run during forced bypass.
+              Warning: Side-effects (like fund locking) may not run during forced bypass.
             </p>
           </div>
 

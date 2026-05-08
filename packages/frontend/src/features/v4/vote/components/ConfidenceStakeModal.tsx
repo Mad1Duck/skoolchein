@@ -38,7 +38,6 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
     return (
       <NeoModal isOpen={isOpen} onClose={onClose} title="Stake Confirmed">
         <div className="text-center py-8">
-          <p className="text-6xl mb-4">💎</p>
           <h2 className="text-2xl font-paytone mb-2">Confidence Staked!</h2>
           <p className="text-gray-600 mb-6">You've successfully backed this candidate.</p>
           <NeoButton label="Close" onClick={onClose} fullWidth />
@@ -73,7 +72,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
 
         {step === "approve" && (
           <div className="text-center py-12">
-            <p className="text-4xl mb-4">💰</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-4" />
             <p className="font-bold">Approve USDC</p>
             <p className="text-sm text-gray-600">Please approve the transfer of {amount} USDC.</p>
           </div>
@@ -81,7 +80,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
 
         {step === "stake" && (
           <div className="text-center py-12">
-            <p className="text-4xl mb-4">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">Confirm Stake On-chain</p>
             <p className="text-sm text-gray-600">Please sign the staking transaction.</p>
           </div>

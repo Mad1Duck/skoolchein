@@ -63,14 +63,14 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose, dashboardData }
       <div className="space-y-4">
         {step === 'uploading' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-spin mb-4">⏳</p>
-            <p className="font-bold">Uploading evidence to IPFS…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
+            <p className="font-bold">Uploading evidence to IPFS</p>
           </div>
         )}
 
         {step === 'tx' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-bounce mb-4">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">Confirm Transaction in Wallet</p>
             <p className="text-sm text-gray-600 mt-1">Sign to raise your dispute and stake USDC.</p>
           </div>
@@ -79,7 +79,7 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose, dashboardData }
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-skyellow-light border-2 border-black rounded p-3 text-sm">
-              <p className="font-bold">⚠️ Bounty Hunting Rules</p>
+              <p className="font-bold">Bounty Hunting Rules</p>
               <ul className="list-disc ml-5 mt-1 text-gray-700 text-xs text-left">
                 <li>You must stake 10% of the program's total target fund.</li>
                 <li>If your dispute is valid, the student is slashed and you earn a portion of the penalty plus your stake back.</li>

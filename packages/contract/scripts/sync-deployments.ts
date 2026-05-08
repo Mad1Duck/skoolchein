@@ -14,7 +14,6 @@ const CHAIN_DIR = path.join(ROOT, "ignition", "deployments", `chain-${chainId}`)
 // ── Output dirs ─────────────────────────────────────────────────────────────
 const PONDER_ABI_DIR = path.resolve(MONO_ROOT, "packages/ponder/abis/v4");
 const PONDER_ENV = path.resolve(MONO_ROOT, "packages/ponder/.env");
-const PONDER_ENV_LOCAL = path.resolve(MONO_ROOT, "packages/ponder/.env.local");
 const FE_CONSTANTS = path.resolve(MONO_ROOT, "packages/frontend/src/constants");
 
 // ── Contract map: Ignition key → short name ──────────────────────────────────
@@ -27,6 +26,7 @@ const CONTRACT_MAP: Record<string, string> = {
   "ScholarshipV4#MilestoneManager": "MilestoneManager",
   "ScholarshipV4#ScholarshipAdmin": "ScholarshipAdmin",
   "ScholarshipV4#MockUSDC": "MockUSDC",
+  "ScholarshipV4#FraudNFT": "FraudNFT",
 };
 
 // Short name → env key (for ponder .env)
@@ -39,6 +39,7 @@ const ENV_KEY_MAP: Record<string, string> = {
   MilestoneManager: "CONTRACT_MILESTONE_MANAGER",
   ScholarshipAdmin: "CONTRACT_ADMIN",
   MockUSDC: "CONTRACT_USDC",
+  FraudNFT: "CONTRACT_FRAUD_NFT",
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -133,7 +134,6 @@ if (!abiOnly) {
   console.log(`\n🔧  Updating packages/ponder/.env`);
 
   let envContent = fs.existsSync(PONDER_ENV) ? fs.readFileSync(PONDER_ENV, "utf8") : "";
-  let envlocalContent = fs.existsSync(PONDER_ENV_LOCAL) ? fs.readFileSync(PONDER_ENV_LOCAL, "utf8") : "";
 
   // Get start block from journal
   let startBlock = "0";
@@ -172,11 +172,6 @@ if (!abiOnly) {
   console.log(`    ✅  START_BLOCK=${startBlock}`);
 
   fs.writeFileSync(PONDER_ENV, envContent);
-  if (envlocalContent) {
-    fs.writeFileSync(PONDER_ENV_LOCAL, upsertEnvVar(envlocalContent, "START_BLOCK", startBlock));
-  } else {
-    fs.writeFileSync(PONDER_ENV_LOCAL, envContent);
-  }
 } else {
   console.log(`\n🔧  Skipping ponder .env update (ABI-only mode)`);
 }

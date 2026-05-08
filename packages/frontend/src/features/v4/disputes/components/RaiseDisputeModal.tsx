@@ -34,7 +34,6 @@ export function RaiseDisputeModal({
     return (
       <NeoModal isOpen={isOpen} onClose={onClose} title="Dispute Raised">
         <div className="text-center py-8">
-          <p className="text-6xl mb-4">🚨</p>
           <h2 className="text-2xl font-paytone mb-2">Dispute Active!</h2>
           <p className="text-gray-600 mb-6">The student must now defend against your claim.</p>
           <NeoButton label="Close" onClick={onClose} fullWidth variant="primary" />
@@ -69,14 +68,14 @@ export function RaiseDisputeModal({
 
         {step === "uploading" && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-spin mb-4">⏳</p>
-            <p className="font-bold">Uploading Evidence to IPFS...</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
+            <p className="font-bold">Uploading Evidence to IPFS</p>
           </div>
         )}
 
         {step === "tx" && (
           <div className="text-center py-12">
-            <p className="text-4xl mb-4">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">Confirm Transaction</p>
             <p className="text-sm text-gray-600">Please sign the smart contract interaction.</p>
           </div>

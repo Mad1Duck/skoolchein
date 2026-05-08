@@ -85,20 +85,20 @@ export function AdminProtocolConfig() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Donation Settings */}
-        <ConfigSection title="💰 Donation & Fees">
+        <ConfigSection title="Donation & Fees">
           {renderInput("Min Donation", "minDonation", "usdc")}
           {renderInput("Protocol Fee", "transactionFee", "usdc", "Flat fee per donation")}
         </ConfigSection>
 
         {/* Program Mechanics */}
-        <ConfigSection title="🏗️ Program Mechanics">
+        <ConfigSection title="Program Mechanics">
           {renderInput("Min Candidates", "minCandidates", "number")}
           {renderInput("Max Candidates", "maxCandidates", "number")}
           {renderInput("Max Retries", "maxRetry", "number", "Application attempts")}
         </ConfigSection>
 
         {/* Bounty Hunter / Dispute */}
-        <ConfigSection title="⚔️ Bounty Hunter & Disputes">
+        <ConfigSection title="Bounty Hunter & Disputes">
           {renderInput("Defense Window", "defenseWindow", "duration", "Counter-evidence time")}
           {renderInput("BH Stake %", "bhStakePercent", "number", "Percentage of program balance")}
           <div className="grid grid-cols-2 gap-2">
@@ -108,27 +108,27 @@ export function AdminProtocolConfig() {
         </ConfigSection>
 
         {/* Frozen Durations */}
-        <ConfigSection title="❄️ Freeze Durations">
+        <ConfigSection title="Freeze Durations">
           {renderInput("Freeze Light", "freezeLight", "duration")}
           {renderInput("Freeze Milestone", "freezeMilestone", "duration")}
           {renderInput("Freeze Heavy", "freezeHeavy", "duration")}
         </ConfigSection>
 
         {/* Scoring & Governance */}
-        <ConfigSection title="🗳️ Scoring & Quorum">
+        <ConfigSection title="Scoring & Quorum">
           {renderInput("Max Raw Score", "scoreMax", "number")}
           {renderInput("Shortlist Threshold", "screeningThreshold", "number")}
           {renderInput("Quorum %", "quorumPercent", "number", "Min turnout to select winners")}
         </ConfigSection>
 
         {/* Confidence Stakes */}
-        <ConfigSection title="💎 Confidence Stakes">
+        <ConfigSection title="Confidence Stakes">
           {renderInput("Slash %", "confidenceSlashPct", "number")}
           {renderInput("Bonus %", "confidenceBonusPct", "number")}
         </ConfigSection>
 
         {/* Limits */}
-        <ConfigSection title="📏 Protocol Limits">
+        <ConfigSection title="Protocol Limits">
           {renderInput("Max Committee", "maxCommitteeMembers", "number")}
           {renderInput("Max Mandatory Milestones", "maxMandatoryMilestones", "number")}
           {renderInput("Max Optional Milestones", "maxOptionalMilestones", "number")}

@@ -42,7 +42,6 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
     return (
       <NeoModal isOpen={isOpen} onClose={handleClose} title="Stake Successful!">
         <div className="text-center py-10 space-y-4">
-          <p className="text-6xl">💎</p>
           <h2 className="font-paytone text-2xl">Confidence Stake Placed!</h2>
           <p className="text-gray-600">
             You successfully staked <span className="font-bold">{amount} USDC</span> on{' '}
@@ -62,7 +61,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
         {step === 'form' && (
           <>
             <div className="bg-skpurple-light border-2 border-black rounded-xl p-4 text-sm">
-              <p className="font-bold mb-1">💎 Stake and Earn</p>
+              <p className="font-bold mb-1">Stake and Earn</p>
               <p className="text-xs text-gray-700 leading-relaxed">
                 Staking confidence on a scholar allows you to earn a share of protocol fees if they successfully complete their program.
               </p>
@@ -92,8 +91,8 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
 
         {step === 'staking' && (
           <div className="text-center py-10 space-y-4">
-            <p className="text-4xl animate-pulse">💎</p>
-            <p className="font-bold text-lg">Staking Confidence…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
+            <p className="font-bold text-lg">Staking Confidence</p>
             <p className="text-sm text-gray-600">
               Confirm the transaction to stake <strong>{amount} USDC</strong> on <strong>{scholarName ?? scholarAddress}</strong>.
             </p>

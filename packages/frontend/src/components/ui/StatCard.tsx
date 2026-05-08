@@ -19,13 +19,15 @@ const colorMap = {
 
 export function StatCard({ label, value, icon, color = "purple", subtitle }: StatCardProps) {
   return (
-    <div className="neo-card p-4 flex items-start gap-4">
-      <div className={`w-12 h-12 rounded-xl ${colorMap[color]} flex items-center justify-center text-xl border-2 border-black neo-shadow-sm shrink-0`}>
-        {icon ?? "📊"}
-      </div>
+    <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-4 flex items-start gap-3">
+      {icon && (
+        <div className={`w-10 h-10 rounded-md ${colorMap[color]} flex items-center justify-center text-lg border-2 border-black shadow-[2px_2px_0_0_#000] shrink-0`}>
+          {icon}
+        </div>
+      )}
       <div className="flex flex-col min-w-0">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</span>
-        <span className="text-2xl font-paytone truncate">{value}</span>
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+        <span className="text-xl font-data font-bold truncate">{value}</span>
         {subtitle && <span className="text-xs text-gray-500">{subtitle}</span>}
       </div>
     </div>

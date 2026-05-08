@@ -66,7 +66,7 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Resolve Shortlist — Program #${programId}`}>
       <div className="space-y-4">
         <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
-          <p className="font-bold">📋 Instructions</p>
+          <p className="font-bold">Instructions</p>
           <p className="text-gray-700 mt-1">
             Applicants are auto-sorted by score.
             <strong> Batching:</strong> Resolution is processed in groups of {BATCH_SIZE} to save gas.

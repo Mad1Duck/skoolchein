@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { usePrograms } from '@/lib/api/hooks';
-import { NeoCard } from '@/components/ui/NeoCard';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { ProgramVoteSelector } from '../components/ProgramVoteSelector';
 import { CandidateList } from '../components/CandidateList';
@@ -13,10 +12,10 @@ export function VotePage() {
   const selectedProgram = programs.find((p) => p.id === selectedProgramId);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="mb-8">
-        <h1 className="font-paytone text-4xl mb-2">Vote for Candidates</h1>
-        <p className="text-gray-600 text-lg">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-10">
+      <div className="mb-6">
+        <h1 className="font-paytone text-3xl md:text-4xl mb-2">Vote for Candidates</h1>
+        <p className="text-gray-600 text-base md:text-lg">
           Use your voting power to select the next generation of scholars.
         </p>
       </div>
@@ -24,15 +23,13 @@ export function VotePage() {
       {loadingPrograms ? (
         <NeoSkeleton lines={3} />
       ) : programs.length === 0 ? (
-        <NeoCard className="p-8 text-center text-gray-500">
-          <p className="text-4xl mb-4">📭</p>
-          <p>No programs are currently in the voting phase.</p>
-        </NeoCard>
+        <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-10 text-center">
+          <p className="font-bold text-gray-500">No programs are currently in the voting phase.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Sidebar: Programs in Voting */}
-          <div className="md:col-span-1 space-y-4">
-            <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-1 space-y-3">
+            <h3 className="font-bold text-xs text-gray-500 uppercase tracking-wider">
               Active Programs
             </h3>
             {programs.map((p) => (
@@ -45,11 +42,10 @@ export function VotePage() {
             ))}
           </div>
 
-          {/* Main Area: Candidates */}
           <div className="md:col-span-3">
             {!selectedProgram ? (
-              <div className="p-12 text-center text-gray-500 border-2 border-dashed border-gray-300 rounded-xl">
-                <p>Select a program from the left to view candidates.</p>
+              <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-10 text-center">
+                <p className="text-gray-500 font-bold">Select a program to view candidates.</p>
               </div>
             ) : (
               <CandidateList program={selectedProgram} />

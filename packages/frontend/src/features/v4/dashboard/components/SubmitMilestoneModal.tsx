@@ -52,14 +52,14 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
       <div className="space-y-5">
         {step === 'uploading' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-spin mb-4">⏳</p>
-            <p className="font-bold">Uploading proof to IPFS…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
+            <p className="font-bold">Uploading proof to IPFS</p>
           </div>
         )}
 
         {step === 'tx' && (
           <div className="text-center py-12">
-            <p className="text-4xl animate-bounce mb-4">📝</p>
+            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">Confirm Transaction in Wallet</p>
             <p className="text-sm text-gray-600 mt-1">Sign to submit your milestone proof.</p>
           </div>
@@ -68,7 +68,7 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="bg-skyellow-light border-2 border-black rounded-xl p-3 text-sm">
-              <p className="font-bold">📋 Submit Proof Document</p>
+              <p className="font-bold">Submit Proof Document</p>
               <p className="text-gray-700 mt-1 text-xs">
                 Since this is an OPTIONAL/NEGOTIATED milestone, you are required to submit concrete proof. This text will be permanently stored on IPFS.
               </p>

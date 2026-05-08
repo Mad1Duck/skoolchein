@@ -2,11 +2,11 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   DESIGN SYSTEM — Polished Neobrutalism
+   DESIGN SYSTEM — Neo-Brutalism
    ══════════════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* ── Core palette ─────────────────────────────────────────────────────────── */
+  /* ── Core palette (exact values preserved) ───────────────────────────────── */
   --color-skpurple: #6a88f8;
   --color-skpurple-hover: #4565dd;
   --color-skpurple-light: #e8edff;
@@ -31,105 +31,92 @@
   --color-success-container: #d9fbb0;
   --color-on-success-container: #1a5a1a;
 
-  /* ── Typography ───────────────────────────────────────────────────────────── */
+  /* ── Typography (exact) ───────────────────────────────────────────────────── */
   --font-nunito: "Nunito Sans", sans-serif;
   --font-paytone: "Paytone One", sans-serif;
 
-  /* ── Shadows ──────────────────────────────────────────────────────────────── */
-  --inset-shadow-sksm: inset 0 -1px 1px 0px rgba(0, 0, 0, 0.1);
-  --inset-shadow-pressed: inset 8px 8px 8px 0 rgba(0, 0, 0, 0.25);
-
-  /* ── Animations ───────────────────────────────────────────────────────────── */
-  @keyframes slide-up-fade-in {
-    0% { transform: translateY(100%); opacity: 0; }
+  /* ── Animations (deliberate, fast) ───────────────────────────────────────── */
+  @keyframes slide-up {
+    0% { transform: translateY(8px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
-  @keyframes slide-down-fade-out {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(100%); opacity: 0; }
-  }
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(106, 136, 248, 0.4); }
-    50% { box-shadow: 0 0 12px 4px rgba(106, 136, 248, 0.2); }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-6px); }
+  @keyframes skeleton-stripe {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
   }
 
-  --animate-slideUp-fadeIn: slide-up-fade-in 0.6s ease-in-out forwards;
-  --animate-slideDown-fadeOut: slide-down-fade-out 0.6s ease-in-out forwards;
-  --animate-shimmer: shimmer 2s infinite linear;
-  --animate-pulse-glow: pulse-glow 2s infinite ease-in-out;
-  --animate-float: float 3s ease-in-out infinite;
+  --animate-slide-up: slide-up 0.1s ease-out forwards;
+  --animate-skeleton: skeleton-stripe 1.2s infinite ease-in-out;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   NEOBRUTALISM UTILITIES
+   NEOBRUTALISM UTILITIES — hard shadows, flat surfaces, no blur
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Shadows ──────────────────────────────────────────────────────────────── */
-.neo-shadow-sm { box-shadow: 2px 2px 0 0 rgba(0, 0, 0); }
-.neo-shadow    { box-shadow: 4px 4px 0 0 rgba(0, 0, 0); }
-.neo-shadow-md { box-shadow: 4px 4px 0 0 rgba(0, 0, 0); }
-.neo-shadow-lg { box-shadow: 6px 6px 0 0 rgba(0, 0, 0); }
+/* Hard-offset shadows. No blur radius. Solid black. */
+.neo-shadow-sm { box-shadow: 2px 2px 0 0 #000; }
+.neo-shadow    { box-shadow: 3px 3px 0 0 #000; }
+.neo-shadow-md { box-shadow: 4px 4px 0 0 #000; }
+.neo-shadow-lg { box-shadow: 6px 6px 0 0 #000; }
 
-/* ── Interactive shadow — lifts on hover, sinks on press ──────────────────── */
+/* Interactive: press collapses shadow + translates. 100ms max. */
 .neo-interactive {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0);
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+  box-shadow: 3px 3px 0 0 #000;
 }
 .neo-interactive:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 #000;
 }
 .neo-interactive:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 0 rgba(0, 0, 0);
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 0 #000;
 }
 
-/* ── Neo border (thick black) ─────────────────────────────────────────────── */
-.neo-border   { border: 2px solid black; }
-.neo-border-3 { border: 3px solid black; }
+.neo-border   { border: 2px solid #000; }
+.neo-border-3 { border: 3px solid #000; }
 
-/* ── Card container ───────────────────────────────────────────────────────── */
+/* Card: thick border, hard shadow, flat. Hover lifts. */
 .neo-card {
-  border: 2px solid black;
-  border-radius: 1rem;
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0);
-  background: white;
+  border: 2px solid #000;
+  border-radius: 0.75rem;
+  box-shadow: 3px 3px 0 0 #000;
+  background: #fff;
   overflow: hidden;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
 }
 .neo-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 #000;
 }
 
-/* ── Tag / badge ──────────────────────────────────────────────────────────── */
+/* Badge: pill with hard shadow */
 .neo-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border: 2px solid black;
+  border: 2px solid #000;
   border-radius: 9999px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0);
+  letter-spacing: 0.04em;
+  box-shadow: 2px 2px 0 0 #000;
 }
 
-/* ── Skeleton loader ──────────────────────────────────────────────────────── */
+/* Skeleton: flat blocks, no gradients */
 .neo-skeleton {
-  background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite linear;
-  border-radius: 0.5rem;
+  background: #e5e5e5;
+  border-radius: 0.25rem;
+  animation: skeleton-stripe 1.2s infinite ease-in-out;
+}
+
+/* On-chain data: always monospace */
+.font-data {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -142,23 +129,24 @@
 }
 ::-webkit-scrollbar { display: none; }
 
-input, textarea {
-  background-color: white;
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0);
-  border: 2px solid black;
-  padding: 8px 12px;
-  border-radius: 1rem;
+input, textarea, select {
+  background-color: #fff;
+  box-shadow: 3px 3px 0 0 #000;
+  border: 2px solid #000;
+  padding: 10px 14px;
+  border-radius: 0.5rem;
   font-family: var(--font-nunito);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  font-size: 1rem;
+  line-height: 1.5;
+  transition: box-shadow 0.08s ease-out;
 }
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--color-skpurple);
-  box-shadow: 4px 4px 0 0 var(--color-skpurple);
+  box-shadow: 3px 3px 0 0 var(--color-skpurple);
 }
 
-/* ── Selection ────────────────────────────────────────────────────────────── */
 ::selection {
   background-color: var(--color-skyellow);
-  color: black;
+  color: #000;
 }

@@ -50,18 +50,14 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-6 py-8">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-5xl font-black mb-2 flex items-center gap-3">
-            <span>🛠️</span> Protocol Admin
-          </h1>
-          <p className="text-gray-500 font-bold">Global oversight and matrix control.</p>
-        </div>
+    <div className="max-w-7xl mx-auto w-full px-4 md:px-6 py-8">
+      <div className="mb-6">
+        <h1 className="font-paytone text-4xl md:text-5xl mb-2">Protocol Admin</h1>
+        <p className="text-gray-500 font-bold text-sm">Global oversight and matrix control.</p>
       </div>
 
       {overview && (
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
           <StatCard title="Programs" value={overview.totalPrograms} color="bg-blue-200" />
           <StatCard title="Creators" value={overview.totalCreators} color="bg-yellow-200" />
           <StatCard title="Applicants" value={overview.totalApplicants} color="bg-green-200" />
@@ -71,64 +67,54 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b-4 border-black mb-6">
-        <button 
-          className={`py-3 px-6 font-black text-xl border-t-4 border-l-4 border-r-4 border-black rounded-t-xl transition-colors ${activeTab === 'programs' ? 'bg-black text-white' : 'bg-gray-100 hover:bg-gray-200 text-black'}`}
-          onClick={() => setActiveTab("programs")}
-        >
-          Programs List
-        </button>
-        <button 
-          className={`py-3 px-6 font-black text-xl border-t-4 border-l-4 border-r-4 border-black rounded-t-xl transition-colors ${activeTab === 'users' ? 'bg-black text-white' : 'bg-gray-100 hover:bg-gray-200 text-black'}`}
-          onClick={() => setActiveTab("users")}
-        >
-          Users & Roles 
-        </button>
-        <button 
-          className={`py-3 px-6 font-black text-xl border-t-4 border-l-4 border-r-4 border-black rounded-t-xl transition-colors ${activeTab === 'treasury' ? 'bg-black text-white' : 'bg-gray-100 hover:bg-gray-200 text-black'}`}
-          onClick={() => setActiveTab("treasury")}
-        >
-          Treasury
-        </button>
-        <button 
-          className={`py-3 px-6 font-black text-xl border-t-4 border-l-4 border-r-4 border-black rounded-t-xl transition-colors ${activeTab === 'config' ? 'bg-black text-white' : 'bg-gray-100 hover:bg-gray-200 text-black'}`}
-          onClick={() => setActiveTab("config")}
-        >
-          Protocol Config
-        </button>
+      <div className="flex flex-wrap gap-1 border-b-2 border-black mb-6">
+        {(["programs","users","treasury","config"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`
+              px-4 py-2 font-bold text-sm border-2 border-b-0 border-black rounded-t-md
+              transition-all duration-100
+              ${activeTab === tab
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-black hover:bg-gray-200'
+              }
+            `}
+          >
+            {tab === 'programs' ? 'Programs' : tab === 'users' ? 'Users & Roles' : tab === 'treasury' ? 'Treasury' : 'Protocol Config'}
+          </button>
+        ))}
       </div>
 
       {activeTab === "programs" && (
-        <div className="bg-white border-4 border-black rounded-b-2xl rounded-tr-2xl neo-shadow-sm overflow-hidden">
+        <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-gray-100 border-b-4 border-black">
-                  <th className="p-4 font-black border-r-2 border-black">ID</th>
-                  <th className="p-4 font-black border-r-2 border-black">Status</th>
-                  <th className="p-4 font-black border-r-2 border-black">Fund</th>
-                  <th className="p-4 font-black border-r-2 border-black">Date Range</th>
-                  <th className="p-4 font-black border-r-2 border-black">Initiator</th>
-                  <th className="p-4 font-black text-center">Admin</th>
+                <tr className="bg-gray-100 border-b-2 border-black">
+                  <th className="p-3 font-black border-r-2 border-black">ID</th>
+                  <th className="p-3 font-black border-r-2 border-black">Status</th>
+                  <th className="p-3 font-black border-r-2 border-black">Fund</th>
+                  <th className="p-3 font-black border-r-2 border-black">Date Range</th>
+                  <th className="p-3 font-black border-r-2 border-black">Initiator</th>
+                  <th className="p-3 font-black text-center">Admin</th>
                 </tr>
               </thead>
               <tbody>
                 {programsData?.data.map((p) => (
-                  <tr key={p.id} className="border-b-[1px] border-gray-300 hover:bg-gray-50 transition-colors">
-                    <td className="p-4 font-bold border-r-2 border-black text-center">{p.blockchainId}</td>
-                    <td className="p-4 font-bold border-r-2 border-black">
-                      <span className="bg-black text-white px-2 py-1 rounded-md text-xs">{p.status}</span>
+                  <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors duration-100">
+                    <td className="p-3 font-bold font-data border-r-2 border-black text-center">{p.blockchainId}</td>
+                    <td className="p-3 font-bold border-r-2 border-black">
+                      <span className="bg-black text-white px-2 py-0.5 text-[10px] font-bold uppercase">{p.status}</span>
                     </td>
-                    <td className="p-4 font-bold border-r-2 border-black">${formatUnits(BigInt(p.totalFund || "0"), 6)}</td>
-                    <td className="p-4 text-xs font-bold border-r-2 border-black text-gray-600">
-                      {p.applicationStart ? new Date(p.applicationStart).toLocaleDateString() : "N/A"} -<br/>
-                      {p.votingEnd ? new Date(p.votingEnd).toLocaleDateString() : "N/A"}
+                    <td className="p-3 font-bold font-data border-r-2 border-black">${formatUnits(BigInt(p.totalFund || "0"), 6)}</td>
+                    <td className="p-3 text-xs font-bold border-r-2 border-black text-gray-600 font-data">
+                      {p.applicationStart ? new Date(p.applicationStart).toLocaleDateString() : "N/A"} - {p.votingEnd ? new Date(p.votingEnd).toLocaleDateString() : "N/A"}
                     </td>
-                    <td className="p-4 font-bold text-xs border-r-2 border-black text-blue-600 underline">
+                    <td className="p-3 font-bold text-xs border-r-2 border-black text-blue-600 font-data">
                       {p.initiator.slice(0,6)}...{p.initiator.slice(-4)}
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-3 text-center">
                       <NeoButton label="Override" variant="secondary" size="sm" onClick={() => setSelectedProgram(p)} />
                     </td>
                   </tr>
@@ -140,17 +126,17 @@ export function AdminDashboardPage() {
       )}
 
       {activeTab === "users" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border-4 border-black rounded-2xl neo-shadow-sm overflow-hidden">
-            <h2 className="text-xl font-black p-4 border-b-4 border-black bg-yellow-200">System Creators / Initiators</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md overflow-hidden">
+            <h2 className="text-lg font-black p-3 border-b-2 border-black bg-yellow-200">System Creators</h2>
             <div className="overflow-y-auto max-h-[500px]">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <tbody>
                   {Array.from(new Set(programsData?.data.map(p => p.initiator) || [])).map((wallet, i) => (
-                    <tr key={i} className="border-b-2 border-gray-200 text-sm">
-                      <td className="p-3 font-bold">{wallet.slice(0,10)}...{wallet.slice(-8)}</td>
+                    <tr key={i} className="border-b border-gray-200">
+                      <td className="p-3 font-bold font-data">{wallet.slice(0,10)}...{wallet.slice(-8)}</td>
                       <td className="p-3">
-                        <span className="bg-yellow-100 text-yellow-800 font-bold text-xs px-2 py-1 rounded border border-yellow-800">Has CORE_ROLE Authority</span>
+                        <span className="bg-yellow-100 text-yellow-800 font-bold text-[10px] px-2 py-0.5 border border-yellow-800">CORE_ROLE</span>
                       </td>
                     </tr>
                   ))}
@@ -158,17 +144,17 @@ export function AdminDashboardPage() {
               </table>
             </div>
           </div>
-          <div className="bg-white border-4 border-black rounded-2xl neo-shadow-sm overflow-hidden">
-            <h2 className="text-xl font-black p-4 border-b-4 border-black bg-green-200">Global Applicants</h2>
+          <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md overflow-hidden">
+            <h2 className="text-lg font-black p-3 border-b-2 border-black bg-green-200">Global Applicants</h2>
             <div className="overflow-y-auto max-h-[500px]">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <tbody>
                   {applicantsData?.map((a, i) => (
-                    <tr key={i} className="border-b-2 border-gray-200 text-sm">
-                      <td className="p-3 font-bold">{a.applicant.wallet.slice(0,8)}...</td>
-                      <td className="p-3 font-bold text-gray-500">Prog #{a.program?.pid}</td>
+                    <tr key={i} className="border-b border-gray-200">
+                      <td className="p-3 font-bold font-data">{a.applicant.wallet.slice(0,8)}...</td>
+                      <td className="p-3 font-bold text-gray-500 font-data">Prog #{a.program?.pid}</td>
                       <td className="p-3">
-                        <span className="bg-black text-white text-xs px-2 py-1 rounded">{a.applicant.status}</span>
+                        <span className="bg-black text-white text-[10px] px-2 py-0.5 font-bold uppercase">{a.applicant.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -176,16 +162,16 @@ export function AdminDashboardPage() {
               </table>
             </div>
           </div>
-          <div className="bg-white border-4 border-black rounded-2xl neo-shadow-sm overflow-hidden">
-            <h2 className="text-xl font-black p-4 border-b-4 border-black bg-skpurple text-white">Global Scholars</h2>
+          <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md overflow-hidden">
+            <h2 className="text-lg font-black p-3 border-b-2 border-black bg-skpurple text-white">Global Scholars</h2>
             <div className="overflow-y-auto max-h-[500px]">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <tbody>
                   {scholarsData?.map((s, i) => (
-                    <tr key={i} className="border-b-2 border-gray-200 text-sm">
-                      <td className="p-3 font-bold">{s.scholar.wallet.slice(0,8)}...</td>
-                      <td className="p-3 font-bold text-gray-500">Prog #{s.program?.pid}</td>
-                      <td className="p-3 font-bold text-green-600 border-l-2 pl-3">
+                    <tr key={i} className="border-b border-gray-200">
+                      <td className="p-3 font-bold font-data">{s.scholar.wallet.slice(0,8)}...</td>
+                      <td className="p-3 font-bold text-gray-500 font-data">Prog #{s.program?.pid}</td>
+                      <td className="p-3 font-bold text-green-600 border-l-2 pl-3 font-data">
                         ${formatUnits(BigInt(s.scholar.totalReceived || "0"), 6)}
                       </td>
                     </tr>
@@ -198,27 +184,27 @@ export function AdminDashboardPage() {
       )}
 
       {activeTab === "treasury" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-[#eef2ff] border-4 border-black rounded-2xl p-6 neo-shadow-sm">
-            <h2 className="text-3xl font-black mb-6">Treasury Overview</h2>
-            <div className="space-y-4">
-              <div className="bg-white border-2 border-black p-4 rounded-xl flex justify-between items-center">
-                <span className="font-bold text-gray-600 tracking-wider">TOTAL BACKING (USDC)</span>
-                <span className="text-3xl font-black text-green-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-[#eef2ff] border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-5">
+            <h2 className="text-2xl font-black mb-4">Treasury Overview</h2>
+            <div className="space-y-3">
+              <div className="bg-white border-2 border-black p-3 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+                <span className="font-bold text-gray-600 text-xs uppercase tracking-wider">Total Backing (USDC)</span>
+                <span className="text-2xl font-black font-data text-green-600">
                   ${treasuryBalance !== undefined ? formatUnits(treasuryBalance as bigint, 6) : "0.0"}
                 </span>
               </div>
-              <div className="bg-white border-2 border-black p-4 rounded-xl flex justify-between items-center">
-                <span className="font-bold text-gray-600 tracking-wider">PROTOCOL REVENUE</span>
-                <span className="text-2xl font-black text-blue-600">
+              <div className="bg-white border-2 border-black p-3 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
+                <span className="font-bold text-gray-600 text-xs uppercase tracking-wider">Protocol Revenue</span>
+                <span className="text-xl font-black font-data text-blue-600">
                   ${protocolFee !== undefined ? formatUnits(protocolFee as bigint, 6) : "0.0"}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#fff7ed] border-4 border-black rounded-2xl p-6 neo-shadow-sm">
-            <h2 className="text-3xl font-black mb-6">Contract Registry</h2>
+          <div className="bg-[#fff7ed] border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md p-5">
+            <h2 className="text-2xl font-black mb-4">Contract Registry</h2>
             <div className="space-y-3">
               <ContractItem label="ScholarshipCore" address={v4Addresses.ScholarshipCore} />
               <ContractItem label="TreasuryVault" address={v4Addresses.ScholarshipTreasury} />
@@ -227,10 +213,10 @@ export function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="md:col-span-2 bg-white border-4 border-black rounded-2xl neo-shadow-sm overflow-hidden">
-            <h2 className="text-xl font-black p-4 border-b-4 border-black bg-blue-100">Revenue Breakdown by Program</h2>
+          <div className="md:col-span-2 bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-md overflow-hidden">
+            <h2 className="text-lg font-black p-3 border-b-2 border-black bg-blue-100">Revenue Breakdown by Program</h2>
             <div className="max-h-[400px] overflow-y-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-gray-50 border-b-2 border-black">
                   <tr className="text-xs uppercase font-black text-gray-500">
                     <th className="p-3">Prog ID</th>
@@ -241,12 +227,12 @@ export function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {programsData?.data.filter(p => Number(p.protocolFeeCollected) > 0).sort((a, b) => Number(b.protocolFeeCollected) - Number(a.protocolFeeCollected)).map(p => (
-                    <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                      <td className="p-3 font-bold">#{p.blockchainId}</td>
-                      <td className="p-3 text-right font-paytone text-blue-600">${formatUnits(BigInt(p.protocolFeeCollected), 6)}</td>
-                      <td className="p-3 text-right text-sm text-gray-600">${formatUnits(BigInt(p.totalFund), 6)}</td>
+                    <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors duration-100">
+                      <td className="p-3 font-bold font-data">#{p.blockchainId}</td>
+                      <td className="p-3 text-right font-data text-blue-600">${formatUnits(BigInt(p.protocolFeeCollected), 6)}</td>
+                      <td className="p-3 text-right text-xs text-gray-600 font-data">${formatUnits(BigInt(p.totalFund), 6)}</td>
                       <td className="p-3 text-right">
-                        <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                        <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 border border-blue-200">
                           {((Number(p.protocolFeeCollected) / Number(p.totalFund)) * 100).toFixed(2)}%
                         </span>
                       </td>
@@ -254,7 +240,7 @@ export function AdminDashboardPage() {
                   ))}
                   {programsData?.data.filter(p => Number(p.protocolFeeCollected) > 0).length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-gray-400 italic">No revenue collected yet.</td>
+                      <td colSpan={4} className="p-8 text-center text-gray-500 font-bold">No revenue collected yet.</td>
                     </tr>
                   )}
                 </tbody>
@@ -281,9 +267,9 @@ export function AdminDashboardPage() {
 
 function StatCard({ title, value, color }: { title: string; value: number; color: string }) {
   return (
-    <div className={`${color} border-2 border-black rounded-xl p-4 flex flex-col justify-center items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}>
-      <div className="text-3xl font-black mb-1">{value}</div>
-      <div className="text-xs font-bold uppercase tracking-wider opacity-80">{title}</div>
+    <div className={`${color} border-2 border-black rounded-md p-3 flex flex-col justify-center items-center shadow-[3px_3px_0_0_#000]`}>
+      <div className="text-2xl font-black mb-1 font-data">{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">{title}</div>
     </div>
   );
 }
@@ -291,8 +277,8 @@ function StatCard({ title, value, color }: { title: string; value: number; color
 function ContractItem({ label, address }: { label: string; address: string }) {
   return (
     <div className="flex justify-between items-center border-b-2 border-gray-300 pb-2">
-      <span className="font-bold">{label}</span>
-      <span className="bg-gray-100 text-gray-600 font-mono text-xs p-1 rounded border border-gray-300">
+      <span className="font-bold text-sm">{label}</span>
+      <span className="bg-gray-100 text-gray-600 font-data text-xs p-1 border border-gray-300">
         {address.slice(0, 10)}...{address.slice(-8)}
       </span>
     </div>

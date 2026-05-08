@@ -49,7 +49,6 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
     return (
       <NeoModal isOpen={isOpen} onClose={handleClose} title="Donation Successful!">
         <div className="text-center py-10 space-y-4">
-          <p className="text-6xl">🎉</p>
           <h2 className="font-paytone text-2xl">Thank you for your contribution!</h2>
           <p className="text-gray-600">
             You donated <span className="font-bold">{amount} USDC</span> to{' '}
@@ -67,7 +66,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
         {step === 'form' && (
           <>
             <div className="bg-skgreen-light border-2 border-black rounded-xl p-4 text-sm">
-              <p className="font-bold mb-1">💡 How Donations Work</p>
+              <p className="font-bold mb-1">How Donations Work</p>
               <ul className="text-gray-700 space-y-1 text-xs list-disc list-inside">
                 <li>Your donation gives you <strong>voting power</strong> equal to the net amount</li>
                 <li>A 1 USDC fee is deducted from all donations</li>
@@ -107,8 +106,8 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
 
         {step === 'approve' && (
           <div className="text-center py-10 space-y-3">
-            <p className="text-4xl animate-pulse">💰</p>
-            <p className="font-bold text-lg">Approving USDC…</p>
+            <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
+            <p className="font-bold text-lg">Approving USDC</p>
             <p className="text-sm text-gray-600">
               Approving <strong>{amount} USDC</strong> for transfer. Please confirm in your wallet.
             </p>
@@ -117,7 +116,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
 
         {step === 'donate' && (
           <div className="text-center py-10 space-y-3">
-            <p className="text-4xl animate-bounce">🎁</p>
+            <div className="w-10 h-10 border-2 border-black bg-skgreen mx-auto animate-pulse mb-2" />
             <p className="font-bold text-lg">Confirm Donation</p>
             <p className="text-sm text-gray-600">
               Sign the transaction to donate <strong>{amount} USDC</strong> and receive your Donor NFT.

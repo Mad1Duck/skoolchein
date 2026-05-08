@@ -1,14 +1,14 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const ROLES = {
-  UPGRADER_ROLE:   "0x189ab7a9244df0848122154315af71fe140f3db0fe014031783b0946b8c9d2e3",
-  CORE_ROLE:       "0x502d3d275257923b2bea6ea25d9631f12369fb532871f13eb85eb09dc0fb4842",
-  BOUNTY_ROLE:     "0x0303601fb32aa3ffc89171916fb42b72e41ae580d3fb71ada99aa461e6c55660",
-  COMMITTEE_ROLE:  "0x794daa56950487582951e8db2fdbcbee68c2223c65641d0aa02a3afc64f9a86f",
-  RESOLVER_ROLE:   "0x92a19c77d2ea87c7f81d50c74403cb2f401780f3ad919571121efe2bdb427eb1",
-  MINTER_ROLE:     "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
-  BURNER_ROLE:     "0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848",
-  LOCKER_ROLE:     "0xaf9a8bb3cbd6b84fbccefa71ff73e26e798553c6914585a84886212a46a90279",
+  UPGRADER_ROLE: "0x189ab7a9244df0848122154315af71fe140f3db0fe014031783b0946b8c9d2e3",
+  CORE_ROLE: "0x502d3d275257923b2bea6ea25d9631f12369fb532871f13eb85eb09dc0fb4842",
+  BOUNTY_ROLE: "0x0303601fb32aa3ffc89171916fb42b72e41ae580d3fb71ada99aa461e6c55660",
+  COMMITTEE_ROLE: "0x794daa56950487582951e8db2fdbcbee68c2223c65641d0aa02a3afc64f9a86f",
+  RESOLVER_ROLE: "0x92a19c77d2ea87c7f81d50c74403cb2f401780f3ad919571121efe2bdb427eb1",
+  MINTER_ROLE: "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+  BURNER_ROLE: "0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848",
+  LOCKER_ROLE: "0xaf9a8bb3cbd6b84fbccefa71ff73e26e798553c6914585a84886212a46a90279",
   GOVERNANCE_ROLE: "0x71840dc4906352362b0cdaf79870196c8e42acafade72d5d5a6d59291253ceb1", // keccak256("GOVERNANCE_ROLE")
 };
 
@@ -28,6 +28,7 @@ export default buildModule("ScholarshipV4", (m) => {
   // ── STEP 2 — NFTs ──────────────────────────────────────────────────────────
   const donorNFT = m.contract("DonorNFT");
   const studentNFT = m.contract("StudentNFT");
+  const fraudNFT = m.contract("FraudNFT");
 
   // ── STEP 3 — ScholarshipReputation (UUPS) ──────────────────────────────────
   const reputationImpl = m.contract("ScholarshipReputation", [], { id: "ScholarshipReputation_Impl" });
@@ -63,7 +64,7 @@ export default buildModule("ScholarshipV4", (m) => {
   const coreProxy = m.contract("ERC1967Proxy", [
     coreImpl,
     m.encodeFunctionCall(coreImpl, "initialize", [
-      deployer, usdc, treasuryProxy, reputationProxy, donorNFT, studentNFT, milestoneManagerProxy, ZERO,
+      deployer, usdc, treasuryProxy, reputationProxy, donorNFT, studentNFT, fraudNFT, milestoneManagerProxy, ZERO,
     ]),
   ], { id: "ScholarshipCore_Proxy", after: [milestoneManagerProxy] });
   const core = m.contractAt("ScholarshipCore", coreProxy, { id: "ScholarshipCore" });
@@ -120,7 +121,7 @@ export default buildModule("ScholarshipV4", (m) => {
   // Committee Access (Bounty)
   m.call(bounty, "grantRole", [ROLES.RESOLVER_ROLE, committeeProxy], { id: "bounty_grantResolverRole", ...afterAll });
 
-  return { 
-    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee 
+  return {
+    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee
   };
 });
