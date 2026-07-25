@@ -16,10 +16,9 @@ interface TimelineProps {
   title?: string;
   items: TimelineItem[];
   className?: string;
-  rate?: number;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ title, items, className = '', rate }) => {
+const Timeline: React.FC<TimelineProps> = ({ title, items, className = '' }) => {
   const [openPopperId, setOpenPopperId] = useState<number | null>(null);
   const referenceRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const popperRefs = useRef<Record<number, HTMLDivElement | null>>({});

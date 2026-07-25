@@ -39,12 +39,12 @@ export function useExtendVotingDeadline() {
 export function useUpdateProtocolConfig() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
 
-  const updateProtocolConfig = (config: any) => {
+  const updateProtocolConfig = (config: unknown) => {
     writeContract({
       address: ADMIN_ADDRESS,
       abi: scholarshipAdminAbi,
       functionName: "setProtocolConfig",
-      args: [config],
+      args: [config as never],
     });
   };
 

@@ -28,6 +28,7 @@ export function WalletAvatar({
 }
 
 /** Truncate an address to 0x1234…abcd format */
+// eslint-disable-next-line react-refresh/only-export-components
 export function shortenAddress(address: string, chars = 4): string {
   if (!address) return "";
   return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`;

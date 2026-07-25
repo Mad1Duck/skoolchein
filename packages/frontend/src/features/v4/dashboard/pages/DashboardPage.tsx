@@ -23,10 +23,9 @@ export function DashboardPage() {
   // ── Committee membership detection ───────────────────────────────────────────
   // Use DB-backed data from Ponder (committeePrograms) — this covers ALL programs
   // where the wallet is an active member, not just programs the user created.
-  const committeePrograms = dashboard?.committeePrograms ?? [];
   const committeeProgramIds = useMemo(
-    () => committeePrograms.map((p) => p.pid),
-    [committeePrograms],
+    () => (dashboard?.committeePrograms ?? []).map((p) => p.pid),
+    [dashboard?.committeePrograms],
   );
 
   // ── Role detection ────────────────────────────────────────────────────────────
@@ -141,7 +140,7 @@ export function DashboardPage() {
 
         <VoterPanel votes={votes} stakes={stakes} dashboardData={dashboard} />
 
-        <BountyHunterPanel disputes={disputes} dashboardData={dashboard} />
+        <BountyHunterPanel disputes={disputes} />
 
         <CommitteePanel
           programIds={committeeProgramIds}

@@ -70,7 +70,7 @@ export function InitiatorPanel({
             <InitiatorProgramCard
               key={p.id}
               program={p}
-              onManageCommittee={() => setManageCommitteeFor(p.blockchainId)}
+              onManageCommittee={() => setManageCommitteeFor(p.pid)}
               onResolveShortlist={() => setResolveShortlistFor(p)}
               onSelectWinners={() => setSelectWinnersFor(p)}
             />
@@ -385,7 +385,8 @@ function ScholarCard({
     nextPending?.externalId ?? undefined
   );
 
-  const isVerified = (externalProg as any)?.progress >= 100 || (externalProg as any)?.status === 'COMPLETED';
+  const progItem = Array.isArray(externalProg) ? externalProg[0] : externalProg;
+  const isVerified = (progItem?.progress ?? 0) >= 100 || progItem?.status === 'COMPLETED';
   const providerLabel = nextPending?.provider === 'hackquest' ? 'HackQuest' : nextPending?.provider === 'udemy' ? 'Udemy' : nextPending?.provider;
 
   return (
@@ -638,10 +639,8 @@ export function VoterPanel({
 
 export function BountyHunterPanel({
   disputes,
-  dashboardData,
 }: {
   disputes: DashboardData['disputes'];
-  dashboardData: DashboardData;
 }) {
   const [raiseDisputeOpen, setRaiseDisputeOpen] = useState(false);
 
@@ -707,10 +706,9 @@ export function BountyHunterPanel({
       )}
 
       {raiseDisputeOpen && (
-        <BountyHunterRaiseDisputeModal 
-          isOpen 
-          onClose={() => setRaiseDisputeOpen(false)} 
-          dashboardData={dashboardData} 
+        <BountyHunterRaiseDisputeModal
+          isOpen
+          onClose={() => setRaiseDisputeOpen(false)}
         />
       )}
     </section>

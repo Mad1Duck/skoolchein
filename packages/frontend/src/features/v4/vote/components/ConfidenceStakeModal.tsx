@@ -21,7 +21,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
   const handleNext = () => {
     if (step === "form") {
       setStep("approve");
-      approve((v4Addresses as any).ScholarshipCoreProxy as `0x${string}`, amount);
+      approve(v4Addresses.ScholarshipCore, amount);
     } else if (step === "approve") {
       setStep("stake");
       stake(BigInt(programId), candidateWallet as `0x${string}`, amount);

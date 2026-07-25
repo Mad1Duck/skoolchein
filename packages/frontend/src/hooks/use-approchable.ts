@@ -9,7 +9,7 @@ function mouseMove(this: HTMLElement, event: MouseEvent) {
   });
 }
 
-function mouseLeave(this: HTMLElement, event: MouseEvent) {
+function mouseLeave(this: HTMLElement) {
   gsap.to(this, { x: 0, y: 0 });
 }
 
@@ -33,7 +33,7 @@ export function useApproachable<T extends null | HTMLElement>() {
 
     return () => {
       el.removeEventListener("mousemove", mouseMove);
-      el.addEventListener("mouseleave", mouseLeave);
+      el.removeEventListener("mouseleave", mouseLeave);
     };
   }, []);
 

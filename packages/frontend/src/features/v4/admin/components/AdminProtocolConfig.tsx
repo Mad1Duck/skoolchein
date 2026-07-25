@@ -14,11 +14,11 @@ export function AdminProtocolConfig() {
   });
 
   const { updateProtocolConfig, isPending, isSuccess } = useUpdateProtocolConfig();
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<Record<string, bigint | number> | null>(null);
 
   useEffect(() => {
     if (config) {
-      setFormData(config);
+      setFormData(config as Record<string, bigint | number>);
     }
   }, [config]);
 
@@ -30,17 +30,18 @@ export function AdminProtocolConfig() {
 
   if (isLoading || !formData) return <div className="p-8 text-center font-bold">Loading Protocol Matrix...</div>;
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: bigint | number) => {
     setFormData({ ...formData, [field]: value });
   };
 
   const handleSave = () => {
-    updateProtocolConfig(formData);
+    updateProtocolConfig(formData as Record<string, bigint | number>);
   };
 
   const renderInput = (label: string, field: string, type: 'number' | 'duration' | 'usdc', help?: string) => {
-    let value = formData[field];
-    
+    const value = formData[field];
+    const valueNum = typeof value === 'bigint' ? Number(value) : (typeof value === 'number' ? value : 0);
+
     return (
       <div className="flex flex-col gap-1">
         <label className="text-xs font-bold uppercase text-gray-500">{label}</label>
@@ -48,14 +49,10 @@ export function AdminProtocolConfig() {
           <input
             type="number"
             className="flex-1 font-data"
-            value={type === 'usdc' ? formatUnits(BigInt(value), 6) : value.toString()}
+            value={type === 'usdc' ? formatUnits(BigInt(value ?? 0), 6) : valueNum.toString()}
             onChange={(e) => {
-              let newVal: any = e.target.value;
-              if (type === 'usdc') {
-                newVal = parseUnits(newVal, 6);
-              } else {
-                newVal = Number(newVal);
-              }
+              const raw = e.target.value;
+              const newVal = type === 'usdc' ? parseUnits(raw, 6) : Number(raw);
               handleChange(field, newVal);
             }}
           />

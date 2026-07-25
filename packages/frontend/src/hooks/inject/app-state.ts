@@ -1,4 +1,3 @@
-import { wait } from "@/util/supense";
 import { createInjection } from "../../util/create-inject";
 import { useRef, useState } from "react";
 

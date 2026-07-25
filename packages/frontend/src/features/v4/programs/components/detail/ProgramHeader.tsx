@@ -11,7 +11,7 @@ interface ProgramHeaderProps {
   meta?: ProgramMetadata;
   onDonate: () => void;
   onSelectWinners: () => void;
-  onTabChange: (tab: any) => void;
+  onTabChange: (tab: string) => void;
 }
 
 export function ProgramHeader({

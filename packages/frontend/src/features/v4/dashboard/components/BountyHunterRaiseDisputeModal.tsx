@@ -7,10 +7,9 @@ import { useRaiseDispute } from '@/lib/contracts/write-hooks';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  dashboardData: any;
 }
 
-export function BountyHunterRaiseDisputeModal({ isOpen, onClose, dashboardData }: Props) {
+export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
   const [programId, setProgramId] = useState('');
   const [scholarAddress, setScholarAddress] = useState('');
   const [milestoneId, setMilestoneId] = useState('');

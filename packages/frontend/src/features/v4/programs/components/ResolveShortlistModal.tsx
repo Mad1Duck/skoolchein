@@ -24,7 +24,9 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
 
   // Progress tracking
   // Using a fallback for blockchainProgress while the API is updated
-  const blockchainProgress = (program as any)?.blockchainProgress || 0; 
+  const blockchainProgress = program && typeof program === 'object' && 'blockchainProgress' in program
+    ? (program as { blockchainProgress?: number }).blockchainProgress ?? 0
+    : 0; 
   const BATCH_SIZE = 50;
 
   useEffect(() => {

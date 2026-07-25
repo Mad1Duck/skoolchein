@@ -67,7 +67,7 @@ export function ApplyPage() {
       setStep('tx');
 
       apply({
-        pid: BigInt(program?.pid!),
+        pid: BigInt(program?.pid ?? 0),
         profileCID,
         documentCID,
         essayCID,
