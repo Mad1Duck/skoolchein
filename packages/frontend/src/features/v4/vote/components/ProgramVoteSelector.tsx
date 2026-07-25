@@ -28,7 +28,7 @@ export function ProgramVoteSelector({
           ? 'border-black bg-skpink text-black translate-x-1'
           : 'border-gray-200 bg-white hover:border-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_rgba(0,0,0)]'
       }`}>
-      <div className="font-bold">{meta?.name ?? `Program #${program.id}`}</div>
+      <div className="font-bold">{meta?.name ?? `Program #${program.pid}`}</div>
       <div className="text-xs mt-1 opacity-80">{program.shortlistedCount} shortlisted</div>
     </button>
   );
