@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db } from "@/db";
-import { v4Milestones, v4Scholars } from "@/db/schema";
+import { v4Milestones, v4Programs, v4Scholars } from "@/db/schema";
 import { eq, desc, asc, sql } from "drizzle-orm";
 
 export const milestonesRoute = new Hono();
@@ -34,9 +34,13 @@ milestonesRoute.get("/", async (c) => {
         status: v4Scholars.status,
         totalReceived: v4Scholars.totalReceived,
       },
+      program: {
+        pid: v4Programs.pid,
+      },
     })
       .from(v4Milestones)
       .leftJoin(v4Scholars, eq(v4Milestones.scholarId, v4Scholars.id))
+      .leftJoin(v4Programs, eq(v4Milestones.programId, v4Programs.id))
       .where(where)
       .orderBy(asc(v4Milestones.blockchainId))
       .limit(limit)

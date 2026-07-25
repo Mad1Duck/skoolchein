@@ -33,12 +33,14 @@ export const uploadController = async (c: Context) => {
   }
 
   const type = typeof body.type === "string" ? body.type : "metadata";
-  const rawName = typeof body.name === "string" ? body.name : "untitled";
-  
-  // Enforce Skoolchein naming convention
-  const finalName = rawName.startsWith("skoolchein-") 
-    ? rawName 
-    : `skoolchein-${type}-${rawName}`;
+  const rawName = typeof body.name === "string"
+    ? body.name
+    : `untitled-${Date.now()}`;
+
+  // Enforce Skoolchein naming convention: skoolchein_<feature>_<uniqname>
+  const finalName = rawName.startsWith("skoolchein_")
+    ? rawName
+    : `skoolchein_${type}_${rawName}`;
 
   const metadata = {
     name:        finalName,
@@ -59,12 +61,14 @@ export const uploadERC721Controller = async (c: Context) => {
     return c.json({ error: "File is required and must be a valid image." }, 400);
   }
 
-  const rawName = typeof body.name === "string" ? body.name : "untitled";
-  
-  // Enforce Skoolchein naming convention for NFTs
-  const nftName = rawName.startsWith("skoolchein-nft-") 
-    ? rawName 
-    : `skoolchein-nft-${rawName}`;
+  const rawName = typeof body.name === "string"
+    ? body.name
+    : `untitled-${Date.now()}`;
+
+  // Enforce Skoolchein naming convention for NFTs: skoolchein_nft_<uniqname>
+  const nftName = rawName.startsWith("skoolchein_")
+    ? rawName
+    : `skoolchein_nft_${rawName}`;
 
   const name = typeof body.name === "string" ? body.name : "Untitled NFT";
   const description = typeof body.description === "string" ? body.description : "";

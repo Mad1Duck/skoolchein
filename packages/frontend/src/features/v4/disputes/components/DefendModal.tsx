@@ -19,7 +19,8 @@ export function DefendModal({
     if (step === "form") {
       setStep("uploading");
       try {
-        const res = await uploadToIPFS({ meta: { content: evidenceText } });
+        const suffix = `${dispute.blockchainId}-${Date.now()}`;
+        const res = await uploadToIPFS({ meta: { content: evidenceText }, type: 'dispute-defense', name: suffix });
         const cid = res?.metaCID || "QmDefenseFallbackCID123";
         setStep("tx");
         submitDefense(BigInt(dispute.blockchainId), cid);

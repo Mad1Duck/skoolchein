@@ -38,7 +38,8 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
 
     try {
       // Upload description to IPFS
-      const res = await uploadToIPFS({ meta: { content: description } });
+      const suffix = `${programId}-${Date.now()}`;
+      const res = await uploadToIPFS({ meta: { content: description }, type: 'milestone-propose', name: suffix });
       const descCID = res?.metaCID || `QmDesc-${Date.now()}`;
 
       setStep('tx');

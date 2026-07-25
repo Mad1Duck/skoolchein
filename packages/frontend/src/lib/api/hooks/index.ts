@@ -157,7 +157,7 @@ export function useMilestones(params?: { scholar?: string; status?: string }) {
   return useQuery({
     queryKey: queryKeys.milestones(params),
     queryFn: async () => {
-      const { data } = await api.get<{ data: Array<{ milestone: Milestone; scholar: Partial<Scholar> | null }> }>("/milestones", { params });
+      const { data } = await api.get<{ data: Array<{ milestone: Milestone; scholar: Partial<Scholar> | null; program: { pid: number } | null }> }>("/milestones", { params });
       return data.data;
     },
   });

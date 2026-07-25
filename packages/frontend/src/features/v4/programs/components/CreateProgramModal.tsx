@@ -59,7 +59,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
         description: formData.description,
         organization: formData.organization,
       };
-      const res = await uploadToIPFS({ meta, type: 'program' });
+      const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'program';
+      const res = await uploadToIPFS({ meta, type: 'program', name: `${slug}-${Date.now()}` });
       const cid = res?.metaCID || 'QmFallbackTestingCID1234567890abcdefg';
       setMetaCID(cid);
       setStep('approve');

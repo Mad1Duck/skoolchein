@@ -5,10 +5,10 @@ import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
 import type { Milestone } from "@/lib/api/types";
 
-export function RaiseDisputeModal({ 
-  isOpen, onClose, milestone 
-}: { 
-  isOpen: boolean; onClose: () => void; milestone: Milestone 
+export function RaiseDisputeModal({
+  isOpen, onClose, milestone, programPid
+}: {
+  isOpen: boolean; onClose: () => void; milestone: Milestone; programPid?: number | null;
 }) {
   const [evidenceText, setEvidenceText] = useState("");
   const [step, setStep] = useState<"form" | "uploading" | "tx">("form");
@@ -19,10 +19,17 @@ export function RaiseDisputeModal({
     if (step === "form") {
       setStep("uploading");
       try {
-        const res = await uploadToIPFS({ meta: { content: evidenceText } });
+        const suffix = `${milestone.blockchainId}-${Date.now()}`;
+        const res = await uploadToIPFS({ meta: { content: evidenceText }, type: 'dispute-evidence', name: suffix });
         const cid = res?.metaCID || "QmDisputeFallbackCID123";
         setStep("tx");
-        raiseDispute(BigInt(milestone.blockchainId), cid);
+        raiseDispute(
+          BigInt(programPid ?? 0),
+          milestone.scholarWallet as `0x${string}`,
+          BigInt(milestone.blockchainId),
+          1, // MILESTONE_FRAUD
+          cid
+        );
       } catch (err) {
         console.error(err);
         setStep("form");

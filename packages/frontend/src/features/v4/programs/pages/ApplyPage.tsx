@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useProgram } from '@/lib/api/hooks';
 import { fetchProgramMeta, uploadToIPFS } from '@/lib/ipfs';
 import { useApplyProgram } from '@/lib/contracts/write-hooks';
+import { useAccount } from 'wagmi';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
@@ -19,6 +20,7 @@ export function ApplyPage() {
   });
 
   const { apply, isPending: isApplying, isSuccess: applied } = useApplyProgram();
+  const { address: applicantAddress } = useAccount();
 
   const [step, setStep] = useState<'form' | 'uploading' | 'tx'>('form');
   const [formData, setFormData] = useState({
@@ -43,17 +45,19 @@ export function ApplyPage() {
     setStep('uploading');
 
     try {
+      const suffix = `${applicantAddress ?? 'anonymous'}-${Date.now()}`;
       // Mock uploading parts to IPFS
-      const pRes = await uploadToIPFS({ 
-        meta: { 
+      const pRes = await uploadToIPFS({
+        meta: {
           content: formData.profileText,
           hackquestId: formData.hackquestId, // Link student identity
-        }, 
-        type: 'application-profile' 
+        },
+        type: 'application-profile',
+        name: `profile-${suffix}`,
       });
-      const eRes = await uploadToIPFS({ meta: { content: formData.essayText }, type: 'application-essay' });
-      const dRes = await uploadToIPFS({ meta: { content: formData.documentText }, type: 'application-doc' });
-      const rRes = await uploadToIPFS({ meta: { content: formData.recommendText }, type: 'application-recommend' });
+      const eRes = await uploadToIPFS({ meta: { content: formData.essayText }, type: 'application-essay', name: `essay-${suffix}` });
+      const dRes = await uploadToIPFS({ meta: { content: formData.documentText }, type: 'application-doc', name: `document-${suffix}` });
+      const rRes = await uploadToIPFS({ meta: { content: formData.recommendText }, type: 'application-recommend', name: `recommendation-${suffix}` });
 
       const profileCID = pRes?.metaCID || 'QmProfileFallback123';
       const essayCID = eRes?.metaCID || 'QmEssayFallback123';

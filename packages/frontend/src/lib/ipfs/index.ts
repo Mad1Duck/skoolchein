@@ -36,6 +36,7 @@ export async function fetchApplicantProfile(cid: string): Promise<ApplicantProfi
 export async function uploadToIPFS(payload: {
   meta: unknown;
   type?: string;
+  name?: string;
 }): Promise<{ metaCID: string } | null> {
   try {
     const { data } = await rawApi.post("/ipfs/upload", payload);

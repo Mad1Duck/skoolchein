@@ -8,7 +8,7 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { RaiseDisputeModal } from "../components/RaiseDisputeModal";
 import { DefendModal } from "../components/DefendModal";
-import type { Milestone, Dispute } from "@/lib/api/types";
+import type { Milestone, Dispute, Scholar } from "@/lib/api/types";
 
 export function DisputesPage() {
   const { address } = useAccount();
@@ -25,7 +25,7 @@ export function DisputesPage() {
   const pastDisputes = disputes.filter(d => d.dispute.status !== "ACTIVE");
 
 
-  const [raiseModalTarget, setRaiseModalTarget] = useState<Milestone | null>(null);
+  const [raiseModalTarget, setRaiseModalTarget] = useState<{ milestone: Milestone; scholar: Partial<Scholar> | null; program: { pid: number } | null } | null>(null);
   const [defendModalTarget, setDefendModalTarget] = useState<Dispute | null>(null);
 
   return (
@@ -52,29 +52,32 @@ export function DisputesPage() {
                 <p className="text-gray-500 text-sm">No submitted milestones currently pending review.</p>
               </div>
             ) : (
-              milestones.map(({ milestone }) => (
-                <NeoCard key={milestone.id}>
-                  <NeoCardBody className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-base">Milestone <span className="font-data">#{milestone.blockchainId}</span></h4>
-                      <p className="text-xs text-gray-500 mb-1 font-data">{formatShort(milestone.scholarWallet)}</p>
-                      <p className="text-xs bg-gray-100 p-1.5 border border-black font-data break-all inline-block line-clamp-1 max-w-[240px]" title={milestone.proofCID}>
-                        {milestone.proofCID}
-                      </p>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2 shrink-0">
-                      <p className="font-data font-bold text-skgreen text-lg">${formatUnits(BigInt(milestone.amount), 6)}</p>
-                      <NeoButton
-                        label="Raise Dispute"
-                        variant="danger"
-                        size="sm"
-                        onClick={() => setRaiseModalTarget(milestone)}
-                        disabled={milestone.scholarWallet.toLowerCase() === address?.toLowerCase()}
-                      />
-                    </div>
-                  </NeoCardBody>
-                </NeoCard>
-              ))
+              milestones.map((item) => {
+                const { milestone } = item;
+                return (
+                  <NeoCard key={milestone.id}>
+                    <NeoCardBody className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-base">Milestone <span className="font-data">#{milestone.blockchainId}</span></h4>
+                        <p className="text-xs text-gray-500 mb-1 font-data">{formatShort(milestone.scholarWallet)}</p>
+                        <p className="text-xs bg-gray-100 p-1.5 border border-black font-data break-all inline-block line-clamp-1 max-w-[240px]" title={milestone.proofCID}>
+                          {milestone.proofCID}
+                        </p>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-2 shrink-0">
+                        <p className="font-data font-bold text-skgreen text-lg">${formatUnits(BigInt(milestone.amount), 6)}</p>
+                        <NeoButton
+                          label="Raise Dispute"
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setRaiseModalTarget(item)}
+                          disabled={milestone.scholarWallet.toLowerCase() === address?.toLowerCase()}
+                        />
+                      </div>
+                    </NeoCardBody>
+                  </NeoCard>
+                );
+              })
             )}
           </div>
         </section>
@@ -151,10 +154,11 @@ export function DisputesPage() {
       </div>
 
       {raiseModalTarget && (
-        <RaiseDisputeModal 
-          isOpen={!!raiseModalTarget} 
-          onClose={() => setRaiseModalTarget(null)} 
-          milestone={raiseModalTarget} 
+        <RaiseDisputeModal
+          isOpen={!!raiseModalTarget}
+          onClose={() => setRaiseModalTarget(null)}
+          milestone={raiseModalTarget.milestone}
+          programPid={raiseModalTarget.program?.pid}
         />
       )}
       

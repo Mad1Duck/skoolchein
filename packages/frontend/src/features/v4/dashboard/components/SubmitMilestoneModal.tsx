@@ -31,7 +31,8 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
 
     try {
       // Upload proof description to IPFS
-      const res = await uploadToIPFS({ meta: { content: proofDescription } });
+      const suffix = `${milestone.blockchainId}-${Date.now()}`;
+      const res = await uploadToIPFS({ meta: { content: proofDescription }, type: 'milestone-proof', name: suffix });
       const proofCID = res?.metaCID || `QmProof-${Date.now()}`;
 
       setStep('tx');

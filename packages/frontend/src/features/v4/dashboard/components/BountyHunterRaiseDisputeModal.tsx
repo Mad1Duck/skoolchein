@@ -3,7 +3,6 @@ import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useRaiseDispute } from '@/lib/contracts/write-hooks';
-import type { Program } from '@/lib/api/types';
 
 interface Props {
   isOpen: boolean;
@@ -36,15 +35,16 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose, dashboardData }
 
     try {
       // Upload evidence document/link to IPFS
-      const res = await uploadToIPFS({ meta: { content: evidenceText } });
+      const suffix = `${programId}-${scholarAddress}-${milestoneId || '0'}-${Date.now()}`;
+      const res = await uploadToIPFS({ meta: { content: evidenceText }, type: 'bounty-evidence', name: suffix });
       const evidenceCID = res?.metaCID || `QmEvidence-${Date.now()}`;
 
       setStep('tx');
       raiseDispute(
         BigInt(programId),
         scholarAddress as `0x${string}`,
-        disputeType,
         BigInt(milestoneId || '0'),
+        disputeType,
         evidenceCID
       );
     } catch (err) {

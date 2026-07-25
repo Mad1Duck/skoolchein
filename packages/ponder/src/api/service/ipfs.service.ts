@@ -22,9 +22,13 @@ async function uploadFile(file: File): Promise<string> {
 
 async function uploadJson(data: object): Promise<string> {
   const json = JSON.stringify(data);
+  const rawName = (data as Record<string, unknown>).name;
+  const fileName = typeof rawName === "string" && rawName.length > 0
+    ? `${rawName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`
+    : 'metadata.json';
 
   if (usePinata) {
-    const file = new File([json], 'metadata.json', { type: 'application/json' });
+    const file = new File([json], fileName, { type: 'application/json' });
     const result = await pinata.upload.public.file(file);
     return result.cid;
   } else {
