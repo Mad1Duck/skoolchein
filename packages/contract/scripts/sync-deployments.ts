@@ -14,6 +14,7 @@ const CHAIN_DIR = path.join(ROOT, "ignition", "deployments", `chain-${chainId}`)
 // ── Output dirs ─────────────────────────────────────────────────────────────
 const PONDER_ABI_DIR = path.resolve(MONO_ROOT, "packages/ponder/abis/v4");
 const PONDER_ENV = path.resolve(MONO_ROOT, "packages/ponder/.env");
+const ROOT_ENV = path.resolve(MONO_ROOT, ".env");
 const FE_CONSTANTS = path.resolve(MONO_ROOT, "packages/frontend/src/constants");
 
 // ── Contract map: Ignition key → short name ──────────────────────────────────
@@ -172,6 +173,21 @@ if (!abiOnly) {
   console.log(`    ✅  START_BLOCK=${startBlock}`);
 
   fs.writeFileSync(PONDER_ENV, envContent);
+
+  // Also write to root .env so docker-compose uses the same addresses
+  if (fs.existsSync(ROOT_ENV)) {
+    console.log(`\n🔧  Updating root .env (docker-compose source of truth)`);
+    let rootEnvContent = fs.readFileSync(ROOT_ENV, "utf8");
+    for (const [name, address] of Object.entries(v4Addresses)) {
+      const envKey = ENV_KEY_MAP[name];
+      if (!envKey) continue;
+      rootEnvContent = upsertEnvVar(rootEnvContent, envKey, address);
+      console.log(`    ✅  ${envKey}=${address}`);
+    }
+    rootEnvContent = upsertEnvVar(rootEnvContent, "START_BLOCK", startBlock);
+    console.log(`    ✅  START_BLOCK=${startBlock}`);
+    fs.writeFileSync(ROOT_ENV, rootEnvContent);
+  }
 } else {
   console.log(`\n🔧  Skipping ponder .env update (ABI-only mode)`);
 }
@@ -227,7 +243,10 @@ const syncedItems = [
   "Ponder ABIs  → packages/ponder/abis/v4/",
   "Frontend     → packages/frontend/src/constants/contractsV4.ts",
 ];
-if (!abiOnly) syncedItems.unshift("Ponder .env  → packages/ponder/.env");
+if (!abiOnly) {
+  syncedItems.unshift("Ponder .env  → packages/ponder/.env");
+  if (fs.existsSync(ROOT_ENV)) syncedItems.push("Root .env    → .env (docker-compose)");
+}
 
 console.log(`
 ✨  Sync complete!${abiOnly ? " (ABI-only)" : ""}
@@ -237,4 +256,5 @@ ${syncedItems.map(s => `   ${s}`).join("\n")}
 Next steps:
    1. cd packages/ponder && bun run dev
    2. cd packages/frontend && bun run dev
+   3. docker compose up -d --build  (if using docker-compose with root .env)
 `);

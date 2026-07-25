@@ -1,0 +1,90 @@
+# Env vars are read from .env in project root (or per-package .env if configured)
+name: skoolcein
+
+networks:
+  nawasena-network:
+    external: true
+    name: nawasena-network
+
+services:
+
+  # ── PostgreSQL (Ponder DB) ─────────────────────────────────────────────────────
+  scholarship-postgres:
+    image: postgres:15-alpine
+    container_name: scholarship-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-scholarship_v4}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - scholarship-pgdata:/var/lib/postgresql/data
+    networks:
+      - nawasena-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-scholarship_v4}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Indexer + API (Ponder) ─────────────────────────────────────────────────────
+  scholarship-ponder:
+    build:
+      context: .
+      dockerfile: packages/ponder/Dockerfile
+    container_name: scholarship-ponder
+    ports:
+      - "127.0.0.1:42069:42069"
+    env_file:
+      - .env
+    environment:
+      PORT: 42069
+      DATABASE_URL: ${DATABASE_URL}
+      PONDER_RPC_URL_LISK: ${PONDER_RPC_URL_LISK}
+      PONDER_RPC_URL_NAWASENA: ${PONDER_RPC_URL_NAWASENA}
+      CHAIN: ${CHAIN:-nawasena}
+      START_BLOCK: ${START_BLOCK:-0}
+      CONTRACT_CORE: ${CONTRACT_CORE}
+      CONTRACT_TREASURY: ${CONTRACT_TREASURY}
+      CONTRACT_BOUNTY: ${CONTRACT_BOUNTY}
+      CONTRACT_REPUTATION: ${CONTRACT_REPUTATION}
+      CONTRACT_COMMITTEE: ${CONTRACT_COMMITTEE}
+      CONTRACT_MILESTONE_MANAGER: ${CONTRACT_MILESTONE_MANAGER}
+      NODE_ENV: production
+    networks:
+      - nawasena-network
+    depends_on:
+      scholarship-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:42069/health-server-indexer || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Frontend (Vite + Nginx) ────────────────────────────────────────────────────
+  scholarship-frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+      args:
+        VITE_BACKEND_HOST: ${VITE_BACKEND_HOST}
+        VITE_IPFS_GATEWAY: ${VITE_IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
+    container_name: scholarship-frontend
+    ports:
+      - "127.0.0.1:3100:80"
+    environment:
+      NODE_ENV: production
+    networks:
+      - nawasena-network
+    depends_on:
+      scholarship-ponder:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  scholarship-pgdata:

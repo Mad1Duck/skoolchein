@@ -1,0 +1,54 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: skoolcein
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: [self-hosted, skoolcein, production]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      # .env stored at ~/apps/skoolcein/.env on the runner host, never committed to git
+      - name: Inject .env
+        run: cp $HOME/apps/skoolcein/.env .env
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Run DB migrations
+        run: |
+          set -x
+          export $(grep -v '^#' .env | grep DATABASE_URL | xargs)
+          # If drizzle migration files exist, apply them. If they fail (e.g. DB
+          # already in sync from a previous push), the deploy continues anyway.
+          # Otherwise fall back to db:push for first-time deploys.
+          docker compose run --rm --no-deps \
+            -e DATABASE_URL \
+            scholarship-ponder \
+            sh -c 'if [ -d drizzle ] && [ "$(ls -A drizzle)" ]; then bun run db:migrate || true; else bun run db:push -- --force || true; fi'
+
+      - name: Deploy containers
+        run: docker compose up -d --remove-orphans
+
+      - name: Show running containers
+        run: docker compose ps
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Prune old images
+        run: docker image prune -f

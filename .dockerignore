@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+*/node_modules
+*/*/node_modules
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Local env files
+.env
+.env.local
+packages/ponder/.env.local
+packages/frontend/.env.local
+packages/contract/.env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+README.md
+CHANGELOG.md
+LICENSE
+docs
+scratch
+packages/contract/cache
+packages/contract/artifacts
+packages/contract/ignition/deployments/*/journal.json
+packages/frontend/storybook-static

@@ -55,12 +55,13 @@ const config = {
       url: hardhat.rpcUrls.default.http[0],
       chainId: hardhat.id,
     },
-    ganache: {
+    nawasena: {
       type: "http",
-      url: "http://127.0.0.1:8545",
-      chainId: 1337,
+      chainId: 31338,
+      url: "http://100.73.196.95:8550",
       accounts: {
-        mnemonic: process.env.MNEMONIC ?? "THE HECK IS THIS",
+        mnemonic: "test test test test test test test test test test test junk",
+        count: 5,
       },
     },
   },

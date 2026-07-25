@@ -14,11 +14,17 @@ dotenv.config();
  *
  * CHAIN toggle via .env:
  *   CHAIN=localhost  → Hardhat node at 127.0.0.1:8545 (chain id 31337)
+ *   CHAIN=nawasena   → Nawasena fork at PONDER_RPC_URL_NAWASENA (chain id 31338)
  *   CHAIN=lisk       → Lisk Sepolia via PONDER_RPC_URL_LISK  (default)
  */
 
 const startBlock = Number(process.env.START_BLOCK ?? 0);
-const chain = process.env.CHAIN === "localhost" ? "localhost" : "lisk";
+const chain =
+  process.env.CHAIN === "nawasena"
+    ? "nawasena"
+    : process.env.CHAIN === "localhost"
+      ? "localhost"
+      : "lisk";
 
 export default createConfig({
   chains: {
@@ -29,6 +35,10 @@ export default createConfig({
     localhost: {
       id: 31337,
       rpc: "http://127.0.0.1:8545",
+    },
+    nawasena: {
+      id: 31338,
+      rpc: process.env.PONDER_RPC_URL_NAWASENA!,
     },
   },
   contracts: {
