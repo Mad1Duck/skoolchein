@@ -17,7 +17,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
       POSTGRES_DB: ${DB_NAME:-scholarship_v4}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - scholarship-pgdata:/var/lib/postgresql/data
     networks:
@@ -76,7 +76,7 @@ services:
         VITE_IPFS_GATEWAY: ${VITE_IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
     container_name: scholarship-frontend
     ports:
-      - "127.0.0.1:3100:80"
+      - "127.0.0.1:${FRONTEND_PORT:-3102}:80"
     environment:
       NODE_ENV: production
     networks:
