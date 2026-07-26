@@ -21,6 +21,7 @@ services:
     environment:
       PORT: 42069
       DATABASE_URL: ${DATABASE_URL}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-skoolcein}
       PONDER_RPC_URL_LISK: ${PONDER_RPC_URL_LISK}
       PONDER_RPC_URL_NAWASENA: ${PONDER_RPC_URL_NAWASENA}
       CHAIN: ${CHAIN:-nawasena}
