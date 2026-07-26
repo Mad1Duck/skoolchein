@@ -8,27 +8,6 @@ networks:
 
 services:
 
-  # ── PostgreSQL (Ponder DB) ─────────────────────────────────────────────────────
-  scholarship-postgres:
-    image: postgres:15-alpine
-    container_name: scholarship-postgres
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: ${DB_NAME:-scholarship_v4}
-    ports:
-      - "127.0.0.1:${DB_PORT:-5433}:5432"
-    volumes:
-      - scholarship-pgdata:/var/lib/postgresql/data
-    networks:
-      - nawasena-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-scholarship_v4}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   # ── Indexer + API (Ponder) ─────────────────────────────────────────────────────
   scholarship-ponder:
     build:
@@ -55,9 +34,6 @@ services:
       NODE_ENV: production
     networks:
       - nawasena-network
-    depends_on:
-      scholarship-postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:42069/health-server-indexer || exit 1"]
       interval: 30s
@@ -85,6 +61,3 @@ services:
       scholarship-ponder:
         condition: service_healthy
     restart: unless-stopped
-
-volumes:
-  scholarship-pgdata:
