@@ -54,6 +54,9 @@ jobs:
 
       - name: Deploy v4 to ${{ inputs.network }}
         working-directory: packages/contract
+        env:
+          HARDHAT_IGNITION_CONFIRM_DEPLOYMENT: "false"
+          HARDHAT_IGNITION_CONFIRM_RESET: "false"
         run: |
           bun hardhat ignition deploy \
             ignition/modules/scholarship-v4.ts \

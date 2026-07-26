@@ -71,7 +71,7 @@ export function DisputesPage() {
                           variant="danger"
                           size="sm"
                           onClick={() => setRaiseModalTarget(item)}
-                          disabled={milestone.scholarWallet.toLowerCase() === address?.toLowerCase()}
+                          disabled={!item.program || milestone.scholarWallet.toLowerCase() === address?.toLowerCase()}
                         />
                       </div>
                     </NeoCardBody>
