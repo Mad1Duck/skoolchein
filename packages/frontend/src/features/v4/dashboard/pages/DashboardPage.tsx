@@ -311,6 +311,7 @@ export function DashboardPage() {
                   <DashboardNftCollections
                     address={address}
                     dashboard={dashboard}
+                    variant="provider"
                   />
                 </div>
               </DashboardTabsContent>
@@ -349,6 +350,7 @@ export function DashboardPage() {
                   <DashboardNftCollections
                     address={address}
                     dashboard={dashboard}
+                    variant="student"
                   />
                 </div>
               </DashboardTabsContent>

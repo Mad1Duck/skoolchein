@@ -9,16 +9,17 @@ import type { DashboardData } from "@/lib/api/types";
 interface DashboardNftCollectionsProps {
   address?: `0x${string}`;
   dashboard?: DashboardData;
+  variant?: "provider" | "student";
 }
 
 export function DashboardNftCollections({
   address,
   dashboard,
+  variant = "student",
 }: DashboardNftCollectionsProps) {
   const [claiming, setClaiming] = useState(false);
   const { claim, isPending } = useClaimStudentNFT();
 
-  const hasDonated = (dashboard?.votes.length ?? 0) > 0 || (dashboard?.stakes.length ?? 0) > 0;
   const completedScholarship = dashboard?.scholarships.find(
     (s) => s.scholar.status === "COMPLETED"
   );
@@ -54,62 +55,25 @@ export function DashboardNftCollections({
       <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpurple pl-4 leading-none">
         NFT Collections
       </h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Credential NFTs are soulbound and minted automatically by the protocol.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* DonorNFT — minted by ScholarshipCore.donate() */}
-        <DashboardCard className="flex flex-col">
-          <div className="h-24 -mx-4 -mt-4 rounded-t-xl border-b-4 border-black bg-skyellow" />
-          <div className="pt-4 space-y-2 grow flex flex-col">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <img
-                  src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}-donor`}
-                  alt="Donor Badge"
-                  className="size-8 rounded-full border-2 border-black"
-                />
-                <h3 className="font-bold text-lg">Donor Badge</h3>
-              </div>
-              <span
-                className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 border border-black rounded ${
-                  hasDonated ? "bg-skgreen text-black" : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                DonorNFT
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 grow">
-              Minted automatically when your donation to a program is accepted.
-            </p>
-            {hasDonated ? (
-              <NeoButton label="Earned" variant="secondary" size="sm" disabled fullWidth />
-            ) : (
-              <Link to="/programs" className="contents">
-                <NeoButton label="Donate to Earn" variant="primary" size="sm" fullWidth />
-              </Link>
-            )}
+      {variant === "student" ? (
+        <DashboardCard className="flex flex-col overflow-hidden border-skcyan">
+          <div className="h-48 -mx-4 -mt-4 bg-skcyan border-b-4 border-black flex items-center justify-center relative">
+            <span className="absolute top-3 left-3 bg-black text-white text-xs font-extrabold px-2 py-1 rounded border border-black">
+              #001
+            </span>
+            <img
+              src={`https://api.dicebear.com/9.x/notionists/svg?seed=${seed}-student&backgroundColor=c0aede`}
+              alt="Student NFT"
+              className="size-40 drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
+            />
           </div>
-        </DashboardCard>
-
-        {/* StudentNFT — defined but auto-mint not wired in current v4 */}
-        <DashboardCard className="flex flex-col">
-          <div className="h-24 -mx-4 -mt-4 rounded-t-xl border-b-4 border-black bg-skcyan" />
-          <div className="pt-4 space-y-2 grow flex flex-col">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <img
-                  src={`https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}-student`}
-                  alt="Scholarship Hero"
-                  className="size-8 rounded-full border-2 border-black"
-                />
-                <h3 className="font-bold text-lg">Scholarship Hero</h3>
+          <div className="pt-5 space-y-3 grow flex flex-col">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-paytone text-xl">Student NFT</h3>
+                <p className="text-sm text-gray-600">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Scholar"}</p>
               </div>
-              <span
-                className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 border border-black rounded ${
-                  isScholar ? "bg-skgreen text-black" : "bg-gray-100 text-gray-600"
-                }`}
-              >
+              <span className="bg-skgreen text-black text-[10px] font-extrabold uppercase px-2 py-1 border border-black rounded">
                 StudentNFT
               </span>
             </div>
@@ -126,8 +90,8 @@ export function DashboardNftCollections({
                 loading={claiming || isPending}
                 disabled={claiming || isPending}
               />
-            ) : isScholar ? (
-              <NeoButton label="In Progress" variant="secondary" size="sm" disabled fullWidth />
+            ) : completedScholarship ? (
+              <NeoButton label="Eligible" variant="secondary" size="sm" disabled fullWidth />
             ) : (
               <Link to="/programs" className="contents">
                 <NeoButton label="Apply to Become Eligible" variant="primary" size="sm" fullWidth />
@@ -135,7 +99,37 @@ export function DashboardNftCollections({
             )}
           </div>
         </DashboardCard>
-      </div>
+      ) : (
+        <DashboardCard className="flex flex-col overflow-hidden border-skyellow">
+          <div className="h-48 -mx-4 -mt-4 bg-skyellow border-b-4 border-black flex items-center justify-center relative">
+            <span className="absolute top-3 left-3 bg-black text-white text-xs font-extrabold px-2 py-1 rounded border border-black">
+              #001
+            </span>
+            <img
+              src={`https://api.dicebear.com/9.x/bottts/svg?seed=${seed}-hero&backgroundColor=b6e3f4`}
+              alt="Changemaker NFT"
+              className="size-40 drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
+            />
+          </div>
+          <div className="pt-5 space-y-3 grow flex flex-col">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-paytone text-xl">Changemaker NFT Hero</h3>
+                <p className="text-sm text-gray-600">Impact Creator</p>
+              </div>
+              <span className="bg-skyellow text-black text-[10px] font-extrabold uppercase px-2 py-1 border border-black rounded">
+                Provider
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 grow">
+              Soulbound credential for program creators who fund and launch a scholarship round.
+            </p>
+            <Link to="/programs" className="contents">
+              <NeoButton label="Create Program to Earn" variant="primary" size="sm" fullWidth />
+            </Link>
+          </div>
+        </DashboardCard>
+      )}
     </section>
   );
 }
