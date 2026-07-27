@@ -241,6 +241,27 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "StudentNFTNotConfigured",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "scholar",
+        "type": "address"
+      }
+    ],
+    "name": "StudentNotCompleted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "TargetWinnersExceedsMax",
     "type": "error"
   },
@@ -1227,6 +1248,24 @@ export const scholarshipCoreAbi = [
       }
     ],
     "name": "cancelProgram",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "metadataURI",
+        "type": "string"
+      }
+    ],
+    "name": "claimStudentNFT",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
