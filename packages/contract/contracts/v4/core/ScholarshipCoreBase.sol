@@ -168,6 +168,8 @@ abstract contract ScholarshipCoreBase is Initializable {
     error ExtensionTooLong();
     error TooEarly();
     error PublicParticipationDisabled();
+    error StudentNotCompleted(uint256 pid, address scholar);
+    error StudentNFTNotConfigured();
 
     // ── Shared Helpers ───────────────────────────────────────────────────────
     function _requireProgramExists(uint256 pid) internal view { if (pid == 0 || pid > _nextProgramId) revert ProgramNotFound(); }

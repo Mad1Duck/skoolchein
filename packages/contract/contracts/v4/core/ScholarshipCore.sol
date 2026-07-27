@@ -351,6 +351,15 @@ contract ScholarshipCore is ScholarshipCoreBase {
         emit ProgramCancelled(pid);
     }
 
+    // NFT CREDENTIAL CLAIMS
+
+    function claimStudentNFT(uint256 pid, string calldata metadataURI) external nonReentrant programExists(pid) {
+        ScholarshipTypes.Scholar storage s = scholars[msg.sender][pid];
+        if (s.status != ScholarshipTypes.StudentStatus.COMPLETED) revert StudentNotCompleted(pid, msg.sender);
+        if (address(studentNFT) == address(0)) revert StudentNFTNotConfigured();
+        studentNFT.mint(msg.sender, pid, metadataURI);
+    }
+
     // ── Governance entry points ──────────────────────────────────────────────
 
     // ── Governance entry points (Restricted to ScholarshipAdmin) ──────────────
