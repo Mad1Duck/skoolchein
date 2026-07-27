@@ -1,32 +1,25 @@
 import { ponder } from "ponder:registry";
-import { db } from "@/db";
-import { v4CommitteeMembers, v4CommitteeDisputeVotes, v4CommitteeMilestoneVotes, v4Applicants } from "@/db/schema";
+import { v4CommitteeMembers, v4CommitteeDisputeVotes, v4CommitteeMilestoneVotes, v4Applicants } from "ponder:schema";
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
-import { sendSseToAll } from "@/api/controller/sse.controller";
-import { eq, and } from "drizzle-orm";
-import { findProgramUuid } from "./helpers";
+import { sendSseToAll } from "@/services/sse.notify.service";
 
 export const committeeGovernanceHandlers = () => {
 
   // ── CommitteeMemberAdded — new member assigned to program committee ────
 
-  ponder.on("CommitteeGovernance:CommitteeMemberAdded", async ({ event }) => {
+  ponder.on("CommitteeGovernance:CommitteeMemberAdded", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, member } = event.args;
-      const progUuid = await findProgramUuid(Number(pid));
 
       await db.insert(v4CommitteeMembers).values({
-        programId: progUuid ?? undefined,
         pid: Number(pid),
         memberAddress: String(member),
         isActive: true,
-      }).onConflictDoUpdate({
-        target: [v4CommitteeMembers.memberAddress, v4CommitteeMembers.pid],
-        set: { isActive: true, removedAt: null, addedAt: new Date() },
-      });
+      }).onConflictDoUpdate({ isActive: true, removedAt: null, addedAt: new Date() });
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:CommitteeMemberAdded" });
+      await insertBlock({ db, event, eventName: "CommitteeGovernance:CommitteeMemberAdded" });
       await sendSseToAll("main", { step: "CommitteeMemberAdded", data: { pid, member }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "CommitteeMemberAdded handler error");
@@ -35,18 +28,15 @@ export const committeeGovernanceHandlers = () => {
 
   // ── CommitteeMemberRemoved — member removed from program committee ────
 
-  ponder.on("CommitteeGovernance:CommitteeMemberRemoved", async ({ event }) => {
+  ponder.on("CommitteeGovernance:CommitteeMemberRemoved", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, member } = event.args;
 
-      await db.update(v4CommitteeMembers)
-        .set({ isActive: false, removedAt: new Date() })
-        .where(and(
-          eq(v4CommitteeMembers.pid, Number(pid)),
-          eq(v4CommitteeMembers.memberAddress, String(member)),
-        ));
+      await db.update(v4CommitteeMembers, { pid: Number(pid), memberAddress: String(member) })
+        .set({ isActive: false, removedAt: new Date() });
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:CommitteeMemberRemoved" });
+      await insertBlock({ db, event, eventName: "CommitteeGovernance:CommitteeMemberRemoved" });
       await sendSseToAll("main", { step: "CommitteeMemberRemoved", data: { pid, member }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "CommitteeMemberRemoved handler error");
@@ -55,21 +45,18 @@ export const committeeGovernanceHandlers = () => {
 
   // ── ScoreSubmitted — committee member submitted a score for an applicant ─
 
-  ponder.on("CommitteeGovernance:ScoreSubmitted", async ({ event }) => {
+  ponder.on("CommitteeGovernance:ScoreSubmitted", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, applicant, score } = event.args;
 
-      await db.update(v4Applicants)
+      await db.update(v4Applicants, { pid: Number(pid), wallet: String(applicant) })
         .set({
           screeningScore: String(score),
           updatedAt: new Date(),
-        })
-        .where(and(
-          eq(v4Applicants.pid, Number(pid)),
-          eq(v4Applicants.wallet, String(applicant)),
-        ));
+        });
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:ScoreSubmitted" });
+      await insertBlock({ db, event, eventName: "CommitteeGovernance:ScoreSubmitted" });
       await sendSseToAll("main", { step: "ScoreSubmitted", data: { pid, applicant, score: String(score) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScoreSubmitted handler error");
@@ -78,20 +65,18 @@ export const committeeGovernanceHandlers = () => {
 
   // ── DisputeVoteCast — individual committee member votes on dispute ─────
 
-  ponder.on("CommitteeGovernance:DisputeVoteCast", async ({ event }) => {
+  ponder.on("CommitteeGovernance:DisputeVoteCast", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { disputeId, member, upholdDispute } = event.args;
 
       await db.insert(v4CommitteeDisputeVotes).values({
         disputeId: Number(disputeId),
         memberAddress: String(member),
         upholdDispute: upholdDispute,
-      }).onConflictDoUpdate({
-        target: [v4CommitteeDisputeVotes.disputeId, v4CommitteeDisputeVotes.memberAddress],
-        set: { upholdDispute: upholdDispute },
-      });
+      }).onConflictDoUpdate({ upholdDispute: upholdDispute });
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:DisputeVoteCast" });
+      await insertBlock({ db, event, eventName: "CommitteeGovernance:DisputeVoteCast" });
       await sendSseToAll("main", { step: "DisputeVoteCast", data: { disputeId, member, upholdDispute }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DisputeVoteCast handler error");
@@ -100,20 +85,18 @@ export const committeeGovernanceHandlers = () => {
 
   // ── MilestoneVoteCast — committee member votes on optional milestone ───
 
-  ponder.on("CommitteeGovernance:MilestoneVoteCast", async ({ event }) => {
+  ponder.on("CommitteeGovernance:MilestoneVoteCast", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { milestoneId, member, approve } = event.args;
 
       await db.insert(v4CommitteeMilestoneVotes).values({
         milestoneId: Number(milestoneId),
         memberAddress: String(member),
         approve: approve,
-      }).onConflictDoUpdate({
-        target: [v4CommitteeMilestoneVotes.milestoneId, v4CommitteeMilestoneVotes.memberAddress],
-        set: { approve: approve },
-      });
+      }).onConflictDoUpdate({ approve: approve });
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:MilestoneVoteCast" });
+      await insertBlock({ db, event, eventName: "CommitteeGovernance:MilestoneVoteCast" });
       await sendSseToAll("main", { step: "MilestoneVoteCast", data: { milestoneId, member, approve }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "MilestoneVoteCast handler error");
@@ -122,11 +105,11 @@ export const committeeGovernanceHandlers = () => {
 
   // ── MilestoneVoteResolved — committee majority reached on milestone ────
 
-  ponder.on("CommitteeGovernance:MilestoneVoteResolved", async ({ event }) => {
+  ponder.on("CommitteeGovernance:MilestoneVoteResolved", async ({ event, context }) => {
     try {
       const { milestoneId, approved } = event.args;
 
-      await insertBlock({ event, eventName: "CommitteeGovernance:MilestoneVoteResolved" });
+      await insertBlock({ db: context.db, event, eventName: "CommitteeGovernance:MilestoneVoteResolved" });
       await sendSseToAll("main", { step: "MilestoneVoteResolved", data: { milestoneId, approved }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "MilestoneVoteResolved handler error");

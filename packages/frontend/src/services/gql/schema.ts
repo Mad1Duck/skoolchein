@@ -19,7 +19,8 @@ const typeDefs = `
   }
 ` as const;
 
+// GraphQL is served directly by Ponder (the indexer), not by the REST backend.
 export const mobius = new Mobius<typeof typeDefs>({
-  url: `${import.meta.env.VITE_BACKEND_HOST}/graphql`,
+  url: `${import.meta.env.VITE_INDEXER_HOST}/graphql`,
   typeDefs,
 });

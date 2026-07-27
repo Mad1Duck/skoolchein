@@ -27,7 +27,6 @@ export type DisputeStatus =
 // ── Models ───────────────────────────────────────────────────────────────────
 
 export interface Program {
-  id: string;
   pid: number;
   initiator: string;
   metadataCID: string;
@@ -65,8 +64,6 @@ export interface ProgramDetail extends Program {
 }
 
 export interface Applicant {
-  id: string;
-  programId: string | null;
   pid: number;
   wallet: string;
   status: ApplicationStatus;
@@ -81,8 +78,6 @@ export interface Applicant {
 }
 
 export interface Scholar {
-  id: string;
-  programId: string | null;
   pid: number;
   wallet: string;
   status: ScholarStatus;
@@ -96,16 +91,16 @@ export interface Scholar {
 }
 
 export interface Milestone {
-  id: string;
   blockchainId: number;
-  programId: string | null;
-  scholarId: string | null;
-  scholarWallet: string;
+  pid: number | null;
+  scholarWallet: string | null;
   kind: "MANDATORY" | "OPTIONAL" | "NEGOTIATED";
   requiresProof: boolean;
   amount: string;
   proofCID: string;
   status: MilestoneStatus;
+  proposedBy: string | null;
+  approvedBy: string | null;
   submittedAt: string | null;
   disputeDeadline: string | null;
   completedAt: string | null;
@@ -116,8 +111,6 @@ export interface Milestone {
 }
 
 export interface Vote {
-  id: string;
-  programId: string | null;
   pid: number;
   voterAddress: string;
   candidateAddress: string;
@@ -126,8 +119,6 @@ export interface Vote {
 }
 
 export interface ConfidenceStake {
-  id: string;
-  programId: string | null;
   pid: number;
   voterAddress: string;
   scholarAddress: string;
@@ -141,9 +132,8 @@ export interface ConfidenceStake {
 }
 
 export interface Dispute {
-  id: string;
   blockchainId: number;
-  programId: string | null;
+  pid: number | null;
   milestoneId: number | null;
   scholarAddress: string;
   bountyHunter: string;
@@ -157,12 +147,13 @@ export interface Dispute {
   raisedAt: string | null;
   defenseDeadline: string | null;
   resolvedAt: string | null;
+  isLateDispute: boolean;
+  griefingStakeOriginal: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Reputation {
-  id: string;
   address: string;
   repBalance: string;
   totalMinted: string;

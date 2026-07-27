@@ -147,7 +147,7 @@ export function ProgramDetailPage() {
             </button>
           )}
           {program.status === 'APPLICATION_OPEN' && (
-            <Link to="/apply/$id" params={{ id: program.id }}>
+            <Link to="/apply/$id" params={{ id: String(program.pid) }}>
               <NeoButton label="Apply Now" variant="primary" size="md" />
             </Link>
           )}
@@ -265,7 +265,7 @@ export function ProgramDetailPage() {
             data={applicantsQ.data}
             isLoading={applicantsQ.isLoading}
             renderItem={(a) => (
-              <div key={a.id} className="flex items-center justify-between p-4 md:p-5 gap-4">
+              <div key={a.wallet} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={a.wallet} size={32} />
                   <div className="min-w-0">
@@ -298,7 +298,7 @@ export function ProgramDetailPage() {
             data={scholarsQ.data}
             isLoading={scholarsQ.isLoading}
             renderItem={(s) => (
-              <div key={s.id} className="flex items-center justify-between p-4 md:p-5 gap-4">
+              <div key={s.wallet} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={s.wallet} size={32} />
                   <div className="min-w-0">
@@ -331,11 +331,11 @@ export function ProgramDetailPage() {
             data={milestonesQ.data}
             isLoading={milestonesQ.isLoading}
             renderItem={(m) => (
-              <div key={m.id} className="flex items-center justify-between p-4 md:p-5 gap-4">
+              <div key={m.blockchainId} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="min-w-0">
                   <p className="font-bold text-sm">Milestone <span className="font-data">#{m.blockchainId}</span></p>
                   <p className="text-[11px] text-gray-500 font-data mt-0.5">
-                    {shortenAddress(m.scholarWallet)} · ${formatUSDC(m.amount)}
+                    {m.scholarWallet ? shortenAddress(m.scholarWallet) : '—'} · ${formatUSDC(m.amount)}
                   </p>
                 </div>
                 <NeoBadge status={m.status} />
@@ -348,7 +348,7 @@ export function ProgramDetailPage() {
             data={votesQ.data}
             isLoading={votesQ.isLoading}
             renderItem={(v) => (
-              <div key={v.id} className="flex items-center justify-between p-4 md:p-5 gap-4">
+              <div key={v.voterAddress} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <WalletAvatar address={v.voterAddress} size={28} />
                   <div className="min-w-0">
@@ -371,7 +371,7 @@ export function ProgramDetailPage() {
             data={disputesQ.data}
             isLoading={disputesQ.isLoading}
             renderItem={(d) => (
-              <div key={d.id} className="flex items-center justify-between p-4 md:p-5 gap-4">
+              <div key={d.blockchainId} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="min-w-0">
                   <p className="font-bold text-sm">
                     Dispute <span className="font-data">#{d.blockchainId}</span>{' '}
@@ -484,7 +484,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
   );
 }
 
-function ListTab<T extends { id?: string }>({
+function ListTab<T>({
   data,
   isLoading,
   renderItem,
@@ -510,7 +510,7 @@ function ListTab<T extends { id?: string }>({
 }
 
 function SelectWinnersForProgram({ program, onClose }: { program: any; onClose: () => void }) {
-  const { data: applicants = [] } = useProgramApplicants(program.id);
+  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
   const shortlisted = applicants.filter((a) => a.status === 'SHORTLISTED');
   return (
     <SelectWinnersModal

@@ -1,0 +1,14 @@
+export { HealthController } from "./health/health.controller";
+export { IpfsController } from "./ipfs/ipfs.controller";
+export { SseController } from "./sse/sse.controller";
+export { WebhooksController } from "./webhooks/webhooks.controller";
+export { LearningController } from "./learning/learning.controller";
+export { ProgramsController } from "./programs/programs.controller";
+export { ApplicantsController } from "./applicants/applicants.controller";
+export { ScholarsController } from "./scholars/scholars.controller";
+export { MilestonesController } from "./milestones/milestones.controller";
+export { VotesController } from "./votes/votes.controller";
+export { DisputesController } from "./disputes/disputes.controller";
+export { ReputationController } from "./reputation/reputation.controller";
+export { DashboardController } from "./dashboard/dashboard.controller";
+export { AdminController } from "./admin/admin.controller";

@@ -46,7 +46,7 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
     );
   }
 
-  const programMilestones = milestones.filter((m) => m.programId === program.id);
+  const programMilestones = milestones.filter((m) => m.pid === program.pid);
 
   return (
     <div className="space-y-4 w-full">
@@ -78,7 +78,7 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
               m.status === "SUBMITTED" && disputeDeadline !== null && disputeDeadline < Date.now();
 
             return (
-              <DashboardCard key={m.id} className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <DashboardCard key={m.blockchainId} className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="grow space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold">#{m.blockchainId}</span>

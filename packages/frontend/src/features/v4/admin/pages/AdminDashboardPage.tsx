@@ -107,7 +107,7 @@ export function AdminDashboardPage() {
               </thead>
               <tbody>
                 {programsData?.data.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-200">
+                  <tr key={p.pid} className="border-b border-gray-200">
                     <td className="p-3 font-bold font-data border-r-2 border-black text-center">{p.pid}</td>
                     <td className="p-3 font-bold border-r-2 border-black">
                       <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black bg-black text-white">{p.status.replace(/_/g, ' ')}</span>
@@ -232,7 +232,7 @@ export function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {programsData?.data.filter(p => Number(p.protocolFeeCollected) > 0).sort((a, b) => Number(b.protocolFeeCollected) - Number(a.protocolFeeCollected)).map(p => (
-                    <tr key={p.id} className="border-b border-gray-200">
+                    <tr key={p.pid} className="border-b border-gray-200">
                       <td className="p-3 font-bold font-data">#{p.pid}</td>
                       <td className="p-3 text-right font-data text-skpurple">${formatUnits(BigInt(p.protocolFeeCollected), 6)}</td>
                       <td className="p-3 text-right text-xs text-gray-600 font-data">${formatUnits(BigInt(p.totalFund), 6)}</td>

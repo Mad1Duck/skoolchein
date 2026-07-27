@@ -62,11 +62,11 @@ export function DisputesPage() {
               milestones.map((item) => {
                 const { milestone } = item;
                 return (
-                  <NeoCard key={milestone.id}>
+                  <NeoCard key={milestone.blockchainId}>
                     <NeoCardBody className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                       <div className="min-w-0">
                         <h4 className="font-bold text-base">Milestone <span className="font-data">#{milestone.blockchainId}</span></h4>
-                        <p className="text-xs text-gray-500 mb-1 font-data">{formatShort(milestone.scholarWallet)}</p>
+                        <p className="text-xs text-gray-500 mb-1 font-data">{formatShort(milestone.scholarWallet ?? "")}</p>
                         <p className="text-xs bg-gray-100 p-1.5 border border-black font-data break-all inline-block line-clamp-1 max-w-[240px]" title={milestone.proofCID}>
                           {milestone.proofCID}
                         </p>
@@ -78,7 +78,7 @@ export function DisputesPage() {
                           variant="danger"
                           size="sm"
                           onClick={() => setRaiseModalTarget(item)}
-                          disabled={!item.program || milestone.scholarWallet.toLowerCase() === address?.toLowerCase()}
+                          disabled={!item.program || milestone.scholarWallet?.toLowerCase() === address?.toLowerCase()}
                         />
                       </div>
                     </NeoCardBody>
@@ -107,7 +107,7 @@ export function DisputesPage() {
                 const isMyDispute = dispute.scholarAddress.toLowerCase() === address?.toLowerCase();
 
                 return (
-                  <NeoCard key={dispute.id} fill="red">
+                  <NeoCard key={dispute.blockchainId} fill="red">
                     <NeoCardBody>
                       <div className="flex justify-between items-start mb-3 gap-3">
                         <div className="min-w-0">
@@ -149,7 +149,7 @@ export function DisputesPage() {
                <h3 className="font-paytone text-xl mb-3 text-gray-400">Resolved Disputes</h3>
                <div className="space-y-2">
                  {pastDisputes.map(({ dispute }) => (
-                   <div key={dispute.id} className="flex justify-between items-center p-3 bg-white border-2 border-black shadow-[2px_2px_0_0_#000] text-sm">
+                   <div key={dispute.blockchainId} className="flex justify-between items-center p-3 bg-white border-2 border-black shadow-[2px_2px_0_0_#000] text-sm">
                      <span className="font-bold font-data text-gray-600">#{dispute.blockchainId}</span>
                      <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black bg-gray-100">{dispute.status.replace(/_/g, ' ')}</span>
                    </div>

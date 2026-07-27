@@ -92,7 +92,7 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
         <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
           {ranked.map((a, idx) => (
             <div
-              key={a.id}
+              key={a.wallet}
               draggable
               onDragStart={() => handleDragStart(idx)}
               onDragOver={(e) => handleDragOver(e, idx)}

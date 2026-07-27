@@ -9,9 +9,9 @@ import { NeoButton } from '@/components/ui/NeoButton';
 export function VotePage() {
   const { data: programsData, isLoading: loadingPrograms } = usePrograms({ status: 'VOTING' });
   const programs = programsData?.data ?? [];
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
 
-  const selectedProgram = programs.find((p) => p.id === selectedProgramId);
+  const selectedProgram = programs.find((p) => p.pid === selectedProgramId);
 
   return (
     <main className="relative isolate">
@@ -71,10 +71,10 @@ export function VotePage() {
                 </h3>
                 {programs.map((p) => (
                   <ProgramVoteSelector
-                    key={p.id}
+                    key={p.pid}
                     program={p}
-                    isSelected={p.id === selectedProgramId}
-                    onClick={() => setSelectedProgramId(p.id)}
+                    isSelected={p.pid === selectedProgramId}
+                    onClick={() => setSelectedProgramId(p.pid)}
                   />
                 ))}
               </div>

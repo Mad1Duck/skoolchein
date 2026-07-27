@@ -9,6 +9,17 @@ import { milestoneManagerAbi } from "./abis/v4/MilestoneManager";
 
 dotenv.config();
 
+// Ponder's own CLI reads process.env.DATABASE_URL directly for its Postgres
+// connection — it has no concept of DATABASE_INDEXER_URL. When the indexer
+// is meant to use a genuinely separate database from packages/backend's
+// (see root .env.example section 3), this redirects it before Ponder's
+// bootstrap connects. Works identically in Docker and bare `bun dev`/`start`
+// (docker-compose.yml does the same redirect at the compose level, but that
+// only applies when actually running through Compose).
+if (process.env.DATABASE_INDEXER_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_INDEXER_URL;
+}
+
 /**
  * Ponder v4 Configuration
  *

@@ -78,7 +78,7 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
             ) : (
               filtered.map((program) => (
                 <ProgramCardV2
-                  key={program.id}
+                  key={program.pid}
                   program={program}
                   labelButton={
                     activeTab === 'vote'

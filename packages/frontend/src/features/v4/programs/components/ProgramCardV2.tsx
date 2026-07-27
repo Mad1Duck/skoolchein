@@ -216,7 +216,7 @@ export function ProgramCardV2({
             {!address ? (
               <NeoButton label="Connect Wallet" variant="connect" size="lg" />
             ) : (
-              <Link to="/apply/$id" params={{ id: program.id }}>
+              <Link to="/apply/$id" params={{ id: String(program.pid) }}>
                 <button
                   className="flex relative -left-1 -top-1 font-nunito px-6 py-3 text-2xl items-center gap-2.5 rounded-lg border-solid border-black bg-skpurple text-white hover:bg-skpurple-hover active:shadow-[inset_8px_8px_8px_0_rgba(0,0,0,0.25)] transition-transform active:translate-x-1 active:translate-y-1 border-2"
                   onClick={(e) => e.stopPropagation()}

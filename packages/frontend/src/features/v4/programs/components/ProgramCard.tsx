@@ -40,7 +40,7 @@ export function ProgramCard({ program, meta }: ProgramCardProps) {
   const fill = fillByStatus[program.status] ?? 'white';
 
   return (
-    <Link to="/programs/$id" params={{ id: program.id }} preload="intent" className="block h-full">
+    <Link to="/programs/$id" params={{ id: String(program.pid) }} preload="intent" className="block h-full">
       <NeoCard fill={fill} className="h-full flex flex-col">
         <NeoCardBody className="flex-1 space-y-3.5">
           {/* Header: badge + id */}

@@ -113,7 +113,7 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
 
         <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
           {winners.map((w, wi) => (
-            <div key={w.applicant.id} className="border-2 border-black overflow-hidden shadow-[3px_3px_0_0_#000]">
+            <div key={w.applicant.wallet} className="border-2 border-black overflow-hidden shadow-[3px_3px_0_0_#000]">
               {/* Winner header */}
               <div className="bg-skpink-light px-4 py-3 flex items-center gap-3 border-b-2 border-black">
                 <div className="w-6 h-6 bg-skpink text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">

@@ -56,7 +56,7 @@ export function ProgramHeader({
           </div>
         )}
         {program.status === 'APPLICATION_OPEN' && (
-          <Link to="/apply/$id" params={{ id: program.id }}>
+          <Link to="/apply/$id" params={{ id: String(program.pid) }}>
             <NeoButton label="Apply Now" variant="primary" size="md" />
           </Link>
         )}

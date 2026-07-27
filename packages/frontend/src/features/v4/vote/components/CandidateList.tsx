@@ -8,7 +8,7 @@ interface CandidateListProps {
 }
 
 export function CandidateList({ program }: CandidateListProps) {
-  const { data: applicants, isLoading } = useProgramApplicants(program.id);
+  const { data: applicants, isLoading } = useProgramApplicants(String(program.pid));
   const shortlisted = applicants?.filter((a) => a.status === 'SHORTLISTED') || [];
 
   if (isLoading) return <NeoSkeleton lines={6} />;
@@ -38,7 +38,7 @@ export function CandidateList({ program }: CandidateListProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {shortlisted.map((applicant) => (
-          <CandidateCard key={applicant.id} applicant={applicant} programId={program.pid} />
+          <CandidateCard key={applicant.wallet} applicant={applicant} programId={program.pid} />
         ))}
       </div>
     </div>

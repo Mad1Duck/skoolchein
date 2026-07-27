@@ -1,8 +1,8 @@
-import { db } from "@/db";
-import { indexedBlocks } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import type { Context } from "ponder:registry";
+import { indexedBlocks } from "ponder:schema";
 
 type InsertBlockArgs = {
+  db: Context["db"];
   eventName: string;
   event: {
     block: {
@@ -12,19 +12,16 @@ type InsertBlockArgs = {
   };
 };
 
-export const insertBlock = async ({ eventName, event }: InsertBlockArgs) => {
+export const insertBlock = async ({ db, eventName, event }: InsertBlockArgs) => {
   const blockNumber = Number(event.block.number);
   const timestamp = new Date(Number(event.block.timestamp) * 1000);
 
   await db.insert(indexedBlocks).values({
-    eventName,
     blockNumber,
+    eventName,
     timestamp,
   }).onConflictDoUpdate({
-    target: [indexedBlocks.blockNumber],
-    set: {
-      blockNumber,
-      timestamp,
-    },
+    eventName,
+    timestamp,
   });
 };

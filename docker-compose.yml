@@ -20,7 +20,11 @@ services:
       - .env
     environment:
       PORT: 42069
-      DATABASE_URL: ${DATABASE_URL}
+      # DATABASE_INDEXER_URL overrides the shared DATABASE_URL when the
+      # indexer points at a genuinely separate database from backend's
+      # (see root .env.example section 3). Falls back to DATABASE_URL
+      # otherwise (single Postgres, two schemas).
+      DATABASE_URL: ${DATABASE_INDEXER_URL:-${DATABASE_URL}}
       DATABASE_SCHEMA: ${DATABASE_SCHEMA:-skoolcein}
       PONDER_RPC_URL: ${PONDER_RPC_URL:-http://100.73.196.95:8550}
       CHAIN: ${CHAIN:-nawasena}
@@ -35,11 +39,53 @@ services:
     networks:
       - nawasena-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:42069/health-server-indexer || exit 1"]
+      # Ponder's own built-in /ready endpoint (separate from our Hono app) —
+      # 200 only once historical sync has caught up.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:42069/ready || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 60s
+    restart: unless-stopped
+
+  # ── REST API (Hono / hono-forge) ────────────────────────────────────────────────
+  scholarship-backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: scholarship-backend
+    ports:
+      - "127.0.0.1:3101:3001"
+    env_file:
+      - .env
+    environment:
+      PORT: 3001
+      # Backend owns the shared DATABASE_URL directly. Ponder uses this same
+      # value unless DATABASE_INDEXER_URL is set to point it at a genuinely
+      # separate database/instance instead — see root .env.example section 3.
+      DATABASE_URL: ${DATABASE_URL}
+      DB_SSL: ${DB_SSL:-false}
+      # Points @ponder/client at Ponder's SQL-over-HTTP endpoint (internal
+      # docker network hostname, not localhost — Ponder is the only writer/
+      # migration-owner for onchain tables, backend reads them over HTTP).
+      PONDER_SQL_URL: ${PONDER_SQL_URL:-http://scholarship-ponder:42069/sql}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PINATA_JWT: ${PINATA_JWT}
+      PINATA_GATEWAY: ${PINATA_GATEWAY}
+      IPFS_HOST: ${IPFS_HOST}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      NODE_ENV: production
+    networks:
+      - nawasena-network
+    depends_on:
+      scholarship-ponder:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   # ── Frontend (Vite + Nginx) ────────────────────────────────────────────────────
@@ -49,6 +95,7 @@ services:
       dockerfile: packages/frontend/Dockerfile
       args:
         VITE_BACKEND_HOST: ${VITE_BACKEND_HOST}
+        VITE_INDEXER_HOST: ${VITE_INDEXER_HOST}
         VITE_IPFS_GATEWAY: ${VITE_IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
         VITE_RPC_URL: ${VITE_RPC_URL:-http://100.73.196.95:8550}
     container_name: scholarship-frontend
@@ -60,5 +107,7 @@ services:
       - nawasena-network
     depends_on:
       scholarship-ponder:
+        condition: service_healthy
+      scholarship-backend:
         condition: service_healthy
     restart: unless-stopped

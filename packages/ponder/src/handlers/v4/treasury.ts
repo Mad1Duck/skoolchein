@@ -1,31 +1,28 @@
 import { ponder } from "ponder:registry";
-import { db } from "@/db";
-import { v4Programs, v4Donations, v4ConfidenceStakes, v4BountyHunters, v4Reputation, v4TreasuryWithdrawals } from "@/db/schema";
+import { v4Programs, v4Donations, v4ConfidenceStakes, v4BountyHunters, v4Reputation, v4TreasuryWithdrawals } from "ponder:schema";
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
-import { sendSseToAll } from "@/api/controller/sse.controller";
-import { eq, and } from "drizzle-orm";
-import { findProgramUuid, upsertReputation } from "./helpers";
+import { sendSseToAll } from "@/services/sse.notify.service";
+import { upsertReputation } from "./helpers";
 
 export const scholarshipTreasuryHandlers = () => {
 
   // ── FundDeposited — initiator depositing funds into program ────────────
 
-  ponder.on("ScholarshipTreasury:FundDeposited", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:FundDeposited", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, depositor, amount } = event.args;
 
-      const [prog] = await db.select({ totalFund: v4Programs.totalFund })
-        .from(v4Programs).where(eq(v4Programs.pid, Number(pid))).limit(1);
+      const prog = await db.find(v4Programs, { pid: Number(pid) });
 
       if (prog) {
         const prev = BigInt(prog.totalFund ?? "0");
-        await db.update(v4Programs)
-          .set({ totalFund: String(prev + BigInt(amount)), updatedAt: new Date() })
-          .where(eq(v4Programs.pid, Number(pid)));
+        await db.update(v4Programs, { pid: Number(pid) })
+          .set({ totalFund: String(prev + BigInt(amount)), updatedAt: new Date() });
       }
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:FundDeposited" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:FundDeposited" });
       await sendSseToAll("main", { step: "FundDeposited", data: { pid, depositor, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "FundDeposited handler error");
@@ -34,19 +31,19 @@ export const scholarshipTreasuryHandlers = () => {
 
   // ── DonationRecorded — individual donor donation tracked ──────────────
 
-  ponder.on("ScholarshipTreasury:DonationRecorded", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:DonationRecorded", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, donor, netAmount } = event.args;
-      const progUuid = await findProgramUuid(Number(pid));
 
       await db.insert(v4Donations).values({
-        programId: progUuid ?? undefined,
+        transactionHash: event.transaction.hash,
         pid: Number(pid),
         donor: String(donor),
         netAmount: String(netAmount),
-      });
+      }).onConflictDoNothing();
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:DonationRecorded" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:DonationRecorded" });
       await sendSseToAll("main", { step: "DonationRecorded", data: { pid, donor, netAmount: String(netAmount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DonationRecorded handler error");
@@ -55,21 +52,20 @@ export const scholarshipTreasuryHandlers = () => {
 
   // ── MilestoneDisbursed — funds sent to scholar on milestone approval ───
 
-  ponder.on("ScholarshipTreasury:MilestoneDisbursed", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:MilestoneDisbursed", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, scholar, milestoneId, amount } = event.args;
 
-      const [prog] = await db.select({ spentFund: v4Programs.spentFund })
-        .from(v4Programs).where(eq(v4Programs.pid, Number(pid))).limit(1);
+      const prog = await db.find(v4Programs, { pid: Number(pid) });
 
       if (prog) {
         const prev = BigInt(prog.spentFund ?? "0");
-        await db.update(v4Programs)
-          .set({ spentFund: String(prev + BigInt(amount)), updatedAt: new Date() })
-          .where(eq(v4Programs.pid, Number(pid)));
+        await db.update(v4Programs, { pid: Number(pid) })
+          .set({ spentFund: String(prev + BigInt(amount)), updatedAt: new Date() });
       }
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:MilestoneDisbursed" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:MilestoneDisbursed" });
       await sendSseToAll("main", { step: "MilestoneDisbursed", data: { pid, scholar, milestoneId, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "MilestoneDisbursed handler error");
@@ -78,34 +74,33 @@ export const scholarshipTreasuryHandlers = () => {
 
   // ── SlashDistributed — funds redistributed after slash ─────────────────
 
-  ponder.on("ScholarshipTreasury:SlashDistributed", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:SlashDistributed", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, scholar, bountyHunter, bhReward, treasuryAmount, protocolAmount } = event.args;
 
-      const [bh] = await db.select().from(v4BountyHunters)
-        .where(eq(v4BountyHunters.address, String(bountyHunter))).limit(1);
+      const bh = await db.find(v4BountyHunters, { address: String(bountyHunter) });
 
       if (bh) {
         const prevRewards = BigInt(bh.totalRewards ?? "0");
-        await db.update(v4BountyHunters)
+        await db.update(v4BountyHunters, { address: String(bountyHunter) })
           .set({
             totalRewards: String(prevRewards + BigInt(bhReward)),
             totalWins: (bh.totalWins ?? 0) + 1,
             updatedAt: new Date(),
-          })
-          .where(eq(v4BountyHunters.address, String(bountyHunter)));
+          });
       }
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:SlashDistributed" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:SlashDistributed" });
       await sendSseToAll("main", { step: "SlashDistributed", data: { pid, scholar, bountyHunter, bhReward: String(bhReward) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "SlashDistributed handler error");
     }
   });
 
-  ponder.on("ScholarshipTreasury:ConfidenceStakeDeposited", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:ConfidenceStakeDeposited", async ({ event, context }) => {
     try {
-      await insertBlock({ event, eventName: "ScholarshipTreasury:ConfidenceStakeDeposited" });
+      await insertBlock({ db: context.db, event, eventName: "ScholarshipTreasury:ConfidenceStakeDeposited" });
     } catch (err) {
       logger.error({ err }, "ConfidenceStakeDeposited handler error");
     }
@@ -113,23 +108,20 @@ export const scholarshipTreasuryHandlers = () => {
 
   // ── ConfidenceStakeResolved — settle confidence stakes ────────────────
 
-  ponder.on("ScholarshipTreasury:ConfidenceStakeResolved", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:ConfidenceStakeResolved", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, voter, returned, bonus, slashed } = event.args;
-      await db.update(v4ConfidenceStakes)
+      await db.update(v4ConfidenceStakes, { pid: Number(pid), voterAddress: String(voter) })
         .set({
           isResolved: true,
           wasSlashed: slashed,
           returnedAmount: String(returned),
           bonusAmount: String(bonus),
           updatedAt: new Date(),
-        })
-        .where(and(
-          eq(v4ConfidenceStakes.voterAddress, String(voter)),
-          eq(v4ConfidenceStakes.pid, Number(pid)),
-        ));
+        });
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:ConfidenceStakeResolved" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:ConfidenceStakeResolved" });
       await sendSseToAll("main", { step: "ConfidenceStakeResolved", data: { pid, voter, slashed }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ConfidenceStakeResolved handler error");
@@ -138,68 +130,68 @@ export const scholarshipTreasuryHandlers = () => {
 
   // ── YieldAdded — DeFi yield accrued to program ────────────────────────
 
-  ponder.on("ScholarshipTreasury:YieldAdded", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:YieldAdded", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { pid, amount } = event.args;
 
-      const [prog] = await db.select({ yieldAccrued: v4Programs.yieldAccrued })
-        .from(v4Programs).where(eq(v4Programs.pid, Number(pid))).limit(1);
+      const prog = await db.find(v4Programs, { pid: Number(pid) });
 
       if (prog) {
         const prev = BigInt(prog.yieldAccrued ?? "0");
-        await db.update(v4Programs)
-          .set({ yieldAccrued: String(prev + BigInt(amount)), updatedAt: new Date() })
-          .where(eq(v4Programs.pid, Number(pid)));
+        await db.update(v4Programs, { pid: Number(pid) })
+          .set({ yieldAccrued: String(prev + BigInt(amount)), updatedAt: new Date() });
       }
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:YieldAdded" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:YieldAdded" });
     } catch (err) {
       logger.error({ err }, "YieldAdded handler error");
     }
   });
 
-  ponder.on("ScholarshipTreasury:YieldDistributed", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:YieldDistributed", async ({ event, context }) => {
     try {
       const { pid, totalYield } = event.args;
-      await insertBlock({ event, eventName: "ScholarshipTreasury:YieldDistributed" });
+      await insertBlock({ db: context.db, event, eventName: "ScholarshipTreasury:YieldDistributed" });
       await sendSseToAll("main", { step: "YieldDistributed", data: { pid, totalYield: String(totalYield) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "YieldDistributed handler error");
     }
   });
 
-  ponder.on("ScholarshipTreasury:YieldClaimed", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:YieldClaimed", async ({ event, context }) => {
     try {
       const { pid, voter, amount } = event.args;
-      await insertBlock({ event, eventName: "ScholarshipTreasury:YieldClaimed" });
+      await insertBlock({ db: context.db, event, eventName: "ScholarshipTreasury:YieldClaimed" });
       await sendSseToAll("main", { step: "YieldClaimed", data: { pid, voter, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "YieldClaimed handler error");
     }
   });
 
-  ponder.on("ScholarshipTreasury:DonorRefunded", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:DonorRefunded", async ({ event, context }) => {
     try {
       const { pid, donor, amount } = event.args;
-      await insertBlock({ event, eventName: "ScholarshipTreasury:DonorRefunded" });
+      await insertBlock({ db: context.db, event, eventName: "ScholarshipTreasury:DonorRefunded" });
       await sendSseToAll("main", { step: "DonorRefunded", data: { pid, donor, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DonorRefunded handler error");
     }
   });
 
-  ponder.on("ScholarshipTreasury:TreasuryReserveWithdrawn", async ({ event }) => {
+  ponder.on("ScholarshipTreasury:TreasuryReserveWithdrawn", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { recipient, amount } = event.args;
-      
+
       await db.insert(v4TreasuryWithdrawals).values({
+        transactionHash: event.transaction.hash,
         recipient: String(recipient),
         amount: String(amount),
-        transactionHash: event.transaction.hash,
         timestamp: new Date(Number(event.block.timestamp) * 1000),
-      });
+      }).onConflictDoNothing();
 
-      await insertBlock({ event, eventName: "ScholarshipTreasury:TreasuryReserveWithdrawn" });
+      await insertBlock({ db, event, eventName: "ScholarshipTreasury:TreasuryReserveWithdrawn" });
       await sendSseToAll("main", { step: "TreasuryReserveWithdrawn", data: { recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "TreasuryReserveWithdrawn handler error");
@@ -209,38 +201,40 @@ export const scholarshipTreasuryHandlers = () => {
 
 export const scholarshipReputationHandlers = () => {
 
-  ponder.on("ScholarshipReputation:ReputationMinted", async ({ event }) => {
+  ponder.on("ScholarshipReputation:ReputationMinted", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { to, amount } = event.args;
-      await upsertReputation(String(to), BigInt(amount), true);
-      await insertBlock({ event, eventName: "ScholarshipReputation:ReputationMinted" });
+      await upsertReputation(db, String(to), BigInt(amount), true);
+      await insertBlock({ db, event, eventName: "ScholarshipReputation:ReputationMinted" });
     } catch (err) {
       logger.error({ err }, "ReputationMinted handler error");
     }
   });
 
-  ponder.on("ScholarshipReputation:ReputationBurned", async ({ event }) => {
+  ponder.on("ScholarshipReputation:ReputationBurned", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { from, amount } = event.args;
-      await upsertReputation(String(from), BigInt(amount), false);
-      await insertBlock({ event, eventName: "ScholarshipReputation:ReputationBurned" });
+      await upsertReputation(db, String(from), BigInt(amount), false);
+      await insertBlock({ db, event, eventName: "ScholarshipReputation:ReputationBurned" });
     } catch (err) {
       logger.error({ err }, "ReputationBurned handler error");
     }
   });
 
-  ponder.on("ScholarshipReputation:VotingPowerLocked", async ({ event }) => {
+  ponder.on("ScholarshipReputation:VotingPowerLocked", async ({ event, context }) => {
     try {
+      const { db } = context;
       const { voter, lockedUntil } = event.args;
       const lockDate = new Date(Number(lockedUntil) * 1000);
 
-      const existing = await db.select().from(v4Reputation).where(eq(v4Reputation.address, String(voter))).limit(1);
-      if (existing.length === 0) {
+      const existing = await db.find(v4Reputation, { address: String(voter) });
+      if (!existing) {
         await db.insert(v4Reputation).values({ address: String(voter), votingLockedUntil: lockDate });
       } else {
-        await db.update(v4Reputation)
-          .set({ votingLockedUntil: lockDate, updatedAt: new Date() })
-          .where(eq(v4Reputation.address, String(voter)));
+        await db.update(v4Reputation, { address: String(voter) })
+          .set({ votingLockedUntil: lockDate, updatedAt: new Date() });
       }
     } catch (err) {
       logger.error({ err }, "VotingPowerLocked handler error");

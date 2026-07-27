@@ -68,7 +68,7 @@ export function InitiatorPanel({
         ) : (
           programs.map((p) => (
             <InitiatorProgramCard
-              key={p.id}
+              key={p.pid}
               program={p}
               onManageCommittee={() => setManageCommitteeFor(p.pid)}
               onResolveShortlist={() => setResolveShortlistFor(p)}
@@ -110,7 +110,7 @@ function ResolveShortlistForProgram({
   program: Program;
   onClose: () => void;
 }) {
-  const { data: applicants = [] } = useProgramApplicants(program.id);
+  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
   return (
     <ResolveShortlistModal
       isOpen
@@ -122,7 +122,7 @@ function ResolveShortlistForProgram({
 }
 
 function SelectWinnersForProgram({ program, onClose }: { program: Program; onClose: () => void }) {
-  const { data: applicants = [] } = useProgramApplicants(program.id);
+  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
   const shortlisted = applicants.filter((a) => a.status === 'SHORTLISTED');
   return (
     <SelectWinnersModal
@@ -180,7 +180,7 @@ function InitiatorProgramCard({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Link to="/programs/$id" params={{ id: program.id }} className="col-span-2">
+          <Link to="/programs/$id" params={{ id: String(program.pid) }} className="col-span-2">
             <NeoButton label="View Program" variant="secondary" fullWidth />
           </Link>
 
@@ -332,10 +332,12 @@ export function StudentPanel({
           </NeoCard>
         ) : (
           scholarships.map(({ scholar }) => {
-            const myMilestones = dashboardData.milestones.filter((m) => m.scholarId === scholar.id);
+            const myMilestones = dashboardData.milestones.filter(
+              (m) => m.pid === scholar.pid && m.scholarWallet === scholar.wallet
+            );
             return (
               <ScholarCard
-                key={scholar.id}
+                key={`${scholar.pid}-${scholar.wallet}`}
                 scholar={scholar}
                 milestones={myMilestones}
                 onProposeMilestone={() => setProposeMilestoneFor(scholar.pid)}
@@ -472,7 +474,7 @@ function ScholarCard({
 
             {executables.map((m) => (
               <NeoButton
-                key={m.id}
+                key={m.blockchainId}
                 label={isExecuting ? 'Executing…' : `Execute #${m.blockchainId}`}
                 variant="success"
                 size="sm"
@@ -501,7 +503,7 @@ function ScholarCard({
             <div className="space-y-1">
               {milestones.map((m) => (
                 <div
-                  key={m.id}
+                  key={m.blockchainId}
                   className="flex items-center justify-between text-sm bg-white px-3 py-2.5 border-2 border-black shadow-[2px_2px_0_0_#000]">
                   <div>
                     <span className="font-bold">#{m.blockchainId}</span>
@@ -591,8 +593,8 @@ export function VoterPanel({
             ) : (
               <ul className="space-y-2 text-sm">
                 {votes.slice(0, 5).map((v) => (
-                  <li key={v.id} className="flex justify-between border-b border-gray-200 pb-1">
-                    <span>Prog #{v.programId}</span>
+                  <li key={`${v.pid}-${v.voterAddress}`} className="flex justify-between border-b border-gray-200 pb-1">
+                    <span>Prog #{v.pid}</span>
                     <span className="font-mono">{v.candidateAddress.slice(0, 6)}…</span>
                   </li>
                 ))}
@@ -609,7 +611,7 @@ export function VoterPanel({
             ) : (
               <ul className="space-y-2 text-sm">
                 {stakes.map((s) => (
-                  <li key={s.id} className="flex justify-between border-b border-gray-200 pb-1">
+                  <li key={`${s.pid}-${s.voterAddress}`} className="flex justify-between border-b border-gray-200 pb-1">
                     <span>Prog #{s.pid}</span>
                     <span
                       className={
@@ -699,7 +701,7 @@ export function BountyHunterPanel({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {disputes.map((d) => (
-              <BountyDisputeCard key={d.id} dispute={d} />
+              <BountyDisputeCard key={d.blockchainId} dispute={d} />
             ))}
           </div>
         </>
@@ -822,9 +824,8 @@ function CommitteeProgramSection({
   programId: number;
   dashboardData: DashboardData;
 }) {
-  const programRecord = dashboardData.committeePrograms.find((p) => p.pid === programId);
-  const { data: allApplicants = [] } = useProgramApplicants(programRecord?.id ?? '');
-  const { data: allMilestones = [] } = useProgramMilestones(programRecord?.id ?? '');
+  const { data: allApplicants = [] } = useProgramApplicants(String(programId));
+  const { data: allMilestones = [] } = useProgramMilestones(String(programId));
 
   const pendingApplicants = allApplicants.filter((a) => a.status === 'PENDING_REVIEW');
   const proposedMilestones = allMilestones.filter((m) => m.status === 'PROPOSED');
@@ -845,7 +846,7 @@ function CommitteeProgramSection({
             <div className="space-y-2">
               {pendingApplicants.slice(0, 5).map((a) => (
                 <div
-                  key={a.id}
+                  key={`${a.pid}-${a.wallet}`}
                   className="flex items-center justify-between bg-white border-2 border-black shadow-[2px_2px_0_0_#000] p-3">
                   <span className="font-mono text-sm">{a.wallet.slice(0, 8)}…</span>
                   <NeoButton
@@ -867,7 +868,7 @@ function CommitteeProgramSection({
             </p>
             <div className="space-y-2">
               {proposedMilestones.map((m) => (
-                <CommitteeMilestoneVoteRow key={m.id} milestone={m} programId={programId} />
+                <CommitteeMilestoneVoteRow key={m.blockchainId} milestone={m} programId={programId} />
               ))}
             </div>
           </div>
@@ -880,7 +881,7 @@ function CommitteeProgramSection({
             </p>
             <div className="space-y-2">
               {activeDisputes.map((d) => (
-                <CommitteeDisputeVoteRow key={d.id} dispute={d} programId={programId} />
+                <CommitteeDisputeVoteRow key={d.blockchainId} dispute={d} programId={programId} />
               ))}
             </div>
           </div>
