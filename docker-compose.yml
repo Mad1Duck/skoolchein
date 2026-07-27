@@ -50,6 +50,7 @@ services:
       args:
         VITE_BACKEND_HOST: ${VITE_BACKEND_HOST}
         VITE_IPFS_GATEWAY: ${VITE_IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
+        VITE_RPC_URL: ${VITE_RPC_URL:-http://100.73.196.95:8550}
     container_name: scholarship-frontend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3102}:80"

@@ -22,9 +22,11 @@ COPY packages/frontend/public ./public
 # VITE_* vars are baked into the bundle at build time — pass via docker-compose args
 ARG VITE_BACKEND_HOST=http://localhost:42069
 ARG VITE_IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs
+ARG VITE_RPC_URL=http://100.73.196.95:8550
 
 ENV VITE_BACKEND_HOST=$VITE_BACKEND_HOST \
-    VITE_IPFS_GATEWAY=$VITE_IPFS_GATEWAY
+    VITE_IPFS_GATEWAY=$VITE_IPFS_GATEWAY \
+    VITE_RPC_URL=$VITE_RPC_URL
 
 RUN bun run build
 

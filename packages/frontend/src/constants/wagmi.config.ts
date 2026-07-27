@@ -17,6 +17,20 @@ const ganacheLocal = defineChain({
   },
 });
 
+const nawasena = defineChain({
+  id: 31338,
+  name: "Nawasena",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: {
+      http: [import.meta.env.VITE_RPC_URL ?? "http://100.73.196.95:8550"],
+    },
+    public: {
+      http: [import.meta.env.VITE_RPC_URL ?? "http://100.73.196.95:8550"],
+    },
+  },
+});
+
 export const wagmiConfig = defaultConfig({
   appName: "Xellar",
   walletConnectProjectId: "383bde0d30cde408c7f223876495f1b1",
@@ -24,5 +38,5 @@ export const wagmiConfig = defaultConfig({
   xellarEnv: "sandbox",
   ssr: false,
   // @ts-expect-error ytta
-  chains: [lisk, liskSepolia, ganacheLocal],
+  chains: [lisk, liskSepolia, ganacheLocal, nawasena],
 });
