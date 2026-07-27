@@ -17,7 +17,9 @@ COPY packages/ponder/ponder.config.ts ./ponder.config.ts
 COPY packages/ponder/ponder.schema.ts ./ponder.schema.ts
 COPY packages/ponder/drizzle.config.ts ./drizzle.config.ts
 COPY packages/ponder/tsconfig.json ./tsconfig.json
+COPY packages/ponder/start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 EXPOSE 42069
 
-CMD ["bun", "--bun", "ponder", "start"]
+CMD ["./start.sh"]
