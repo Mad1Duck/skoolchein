@@ -102,17 +102,27 @@ export function ApplyPage() {
     );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-8 py-10 md:py-14">
-      <div className="mb-8">
-        <Link
-          to={`/programs/$id`}
-          params={{ id }}
-          className="text-skpurple font-bold text-sm hover:underline">
-          ← Back to Program
-        </Link>
-        <h1 className="font-paytone text-3xl md:text-5xl mt-4 leading-[0.95]">Apply for Scholarship</h1>
-        <p className="text-gray-600 text-base md:text-lg mt-2">{meta?.name ?? `Program #${id}`}</p>
-      </div>
+    <main className="min-h-screen bg-skyellow relative isolate">
+      <div
+        className="absolute top-0 right-0 left-0 h-[40vh] bg-skpink"
+        style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 88%, 0 100%)' }}
+      />
+      <div className="relative z-10 max-w-3xl mx-auto px-4 md:px-8 py-10 md:py-14">
+        <div className="mb-8 text-center md:text-left">
+          <Link
+            to={`/programs/$id`}
+            params={{ id }}
+            className="text-black font-bold text-sm hover:underline inline-block mb-3"
+          >
+            ← Back to Program
+          </Link>
+          <h1 className="font-paytone text-4xl md:text-5xl mt-4 leading-[0.95] text-black drop-shadow-[3px_3px_0_#fff]">
+            Apply for Scholarship
+          </h1>
+          <p className="text-black/70 text-lg md:text-xl mt-2 font-medium">
+            {meta?.name ?? `Program #${id}`}
+          </p>
+        </div>
 
       <NeoCard fill="cream">
         <NeoCardBody>
@@ -236,6 +246,7 @@ export function ApplyPage() {
           )}
         </NeoCardBody>
       </NeoCard>
-    </div>
+      </div>
+    </main>
   );
 }

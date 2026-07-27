@@ -247,3 +247,20 @@ export function useSetBounty() {
 
   return { setBounty, isPending, isSuccess, error, hash, reset };
 }
+
+// ── NFT Credentials ─────────────────────────────────────────────────────────────
+
+export function useClaimStudentNFT() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const claim = (pid: bigint, metadataURI: string) => {
+    writeContract({
+      address: CORE_ADDRESS,
+      abi: scholarshipCoreAbi,
+      functionName: "claimStudentNFT",
+      args: [pid, metadataURI],
+    });
+  };
+
+  return { claim, isPending, isSuccess, error, hash, reset };
+}

@@ -1,149 +1,223 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, memo } from 'react';
 import { usePrograms } from '@/lib/api/hooks';
-import { fetchProgramMeta } from '@/lib/ipfs';
 import { useSSE } from '@/lib/sse/useSSE';
-import type { Program, ProgramStatus } from '@/lib/api/types';
-import { ProgramCard } from '../components/ProgramCard';
-import { NeoCardSkeleton } from '@/components/ui/NeoSkeleton';
+import type { Program } from '@/lib/api/types';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { CreateProgramModal } from '../components/CreateProgramModal';
+import { ProgramTabs } from '../components/ProgramTabs';
+import SplitText from '@/components/ui/split-text';
+import { ApproachableWrapper } from '@/components/ornaments/ApproachableWrapper';
 
-const STATUS_TABS: Array<{ label: string; value: ProgramStatus | 'ALL' }> = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Open', value: 'APPLICATION_OPEN' },
-  { label: 'Screening', value: 'SCREENING' },
-  { label: 'Voting', value: 'VOTING' },
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Completed', value: 'COMPLETED' },
+const messages = [
+  'Looking for a fair, transparent way to fund your education?',
+  'Ready to turn your funds into real student success stories?',
 ];
 
-export function ProgramsPage() {
-  const [activeTab, setActiveTab] = useState<ProgramStatus | 'ALL'>('ALL');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+const TABS = [
+  {
+    id: 'active',
+    label: (
+      <span>
+        Active <span className="max-sm:sr-only">Scholarships</span>
+      </span>
+    ),
+    color: 'bg-skpurple',
+    filter: (p: Program) =>
+      p.status === 'APPLICATION_OPEN' || p.status === 'SCREENING' || p.status === 'ACTIVE',
+  },
+  {
+    id: 'vote',
+    label: 'On Voting',
+    color: 'bg-skred',
+    filter: (p: Program) => p.status === 'VOTING',
+  },
+  {
+    id: 'soon',
+    label: 'Coming Soon',
+    color: 'bg-skgreen',
+    filter: (p: Program) => p.status === 'CREATED',
+  },
+];
 
-  // SSE for real-time updates
+const Title = memo(function Title() {
+  return (
+    <div className="z-[20] max-lg:text-4xl max-sm:text-[32px]">
+      <h1>
+        <SplitText
+          text="Empower the Future."
+          delay={200}
+          duration={0.6}
+          ease="power3.out"
+          splitType="words"
+          from={{ opacity: 0, y: 40 }}
+          to={{ opacity: 1, y: 0 }}
+          threshold={0.1}
+          rootMargin="-100px"
+          textAlign="center"
+        />
+      </h1>
+      <h1>
+        <SplitText
+          text="or Be Empowered."
+          delay={200}
+          duration={0.6}
+          ease="power3.out"
+          splitType="words"
+          from={{ opacity: 0, y: 40 }}
+          to={{ opacity: 1, y: 0 }}
+          threshold={0.1}
+          rootMargin="-99px"
+          textAlign="center"
+        />
+      </h1>
+      <div className="font-nunito text-2xl max-sm:text-sm">
+        <SplitText
+          text="All scholarships are powered by smart contracts. "
+          delay={50}
+          duration={0.6}
+          ease="power3.out"
+          splitType="words"
+          from={{ opacity: 0, y: 40 }}
+          to={{ opacity: 1, y: 0 }}
+          threshold={0.1}
+          rootMargin="-100px"
+          textAlign="center"
+        />
+        <br />
+        <SplitText
+          text="Funds go directly to students, no middlemen."
+          delay={50}
+          duration={0.6}
+          ease="power3.out"
+          splitType="words"
+          from={{ opacity: 0, y: 40 }}
+          to={{ opacity: 1, y: 0 }}
+          threshold={0.1}
+          rootMargin="-100px"
+          textAlign="center"
+        />
+      </div>
+    </div>
+  );
+});
+
+export function ProgramsPage() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [messagesIndex, setMessagesIndex] = useState(0);
+  const [prevMessagesIndex, setPrevMessagesIndex] = useState<number | null>(null);
+
   const { data: sseEvent } = useSSE<{ step: string }>({
     url: `${import.meta.env.VITE_BACKEND_HOST}/sse`,
     event: 'main',
   });
 
-  // Fetch programs
-  const {
-    data: result,
-    isLoading,
-    refetch,
-  } = usePrograms(activeTab === 'ALL' ? undefined : { status: activeTab });
+  const { data: result, isLoading, refetch } = usePrograms();
+  const programs = result?.data ?? [];
 
-  // Refetch on SSE events
   useEffect(() => {
     if (sseEvent?.step === 'ProgramCreated' || sseEvent?.step === 'ProgramStatusChanged') {
       refetch();
     }
   }, [sseEvent, refetch]);
 
-  const programs = result?.data ?? [];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPrevMessagesIndex(messagesIndex);
+      setMessagesIndex((prev) => (prev + 1) % messages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [messagesIndex]);
 
   return (
-    <div className="w-full">
-      {/* ── Hero: asymmetric, editorial ──────────────────────────────────────── */}
-      <section className="px-4 md:px-8 lg:px-12 pt-12 md:pt-16 pb-14 md:pb-20 border-b-2 border-black bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div className="max-w-xl">
-              <span className="inline-block px-2 py-1 bg-skyellow border-2 border-black text-[10px] font-extrabold uppercase tracking-widest mb-4">
-                Scholarship Protocol v4
-              </span>
-              <h1 className="font-paytone text-4xl md:text-6xl leading-[0.95] mb-4">
-                Empower<br />the Future
-              </h1>
-              <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-md">
-                Transparent, on-chain scholarships. Funds flow directly to verified students with committee oversight.
-              </p>
-            </div>
-            <div className="shrink-0">
-              <NeoButton
-                label="Create Program"
-                variant="primary"
-                size="lg"
-                onClick={() => setIsCreateModalOpen(true)}
+    <div className="w-screen h-auto flex flex-col">
+      <div>
+        <div className="flex flex-col m-16 max-lg:mx-0 max-lg:mt-0 items-center gap-6 font-paytone text-[3.5rem] text-center">
+          <Title />
+        </div>
+      </div>
+
+      <div className="h-0">
+        <div className="relative z-[10] -top-80 max-lg:-top-40 max-sm:-top-0">
+          <div className="flex justify-between relative max-sm:-top-20">
+            <ApproachableWrapper className="relative -left-8 w-[8.625rem] h-40 max-sm:w-[117.277px] max-sm:h-[130px]">
+              <img src="/img/Flower.svg" alt="flower" className="w-full h-full" />
+            </ApproachableWrapper>
+
+            <ApproachableWrapper className="relative -right-1">
+              <img src="/img/Party.svg" alt="party" className="max-sm:size-[117px]" />
+            </ApproachableWrapper>
+          </div>
+          <div className="relative -top-36 flex w-full justify-between max-sm:-top-36">
+            <ApproachableWrapper className="relative -left-1">
+              <img
+                className="max-sm:size-[180px]"
+                src="/img/Illustration Provider.svg"
+                alt="Illustration Provider"
               />
-            </div>
+            </ApproachableWrapper>
+            <ApproachableWrapper className="relative -right-1">
+              <img
+                className="max-sm:size-[180px]"
+                src="/img/Illustration Student.svg"
+                alt="Illustration Student"
+              />
+            </ApproachableWrapper>
           </div>
         </div>
-      </section>
+        <div className="relative z-[1] -top-150 max-sm:-top-40">
+          <img src="/img/Ellipse 1.svg" alt="ellipse 1" className="w-screen" />
+          <div className="relative w-screen -top-1 bg-skyellow h-[33rem]"></div>
+        </div>
+      </div>
 
-      {/* ── Programs grid ───────────────────────────────────────────────────── */}
-      <section id="programs" className="px-4 md:px-8 lg:px-12 py-10 md:py-14 bg-skcream border-b-2 border-black">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-            <div>
-              <h2 className="font-paytone text-2xl md:text-3xl">All Programs</h2>
-              <p className="text-sm text-gray-500 mt-1">{programs.length} program{programs.length !== 1 ? 's' : ''} available</p>
-            </div>
+      <div className="relative z-[10] inline-flex flex-col items-center justify-center gap-5 m-44 max-sm:m-0 max-sm:mt-50">
+        <div className="relative h-12 w-full flex justify-center items-center overflow-hidden text-2xl max-sm:text-sm">
+          {prevMessagesIndex !== null && (
+            <span
+              key={`prev-${prevMessagesIndex}`}
+              className="absolute font-bold text-center animate-slideDown-fadeOut"
+            >
+              {messages[prevMessagesIndex]}
+            </span>
+          )}
+          <span
+            key={`curr-${messagesIndex}`}
+            className="absolute font-bold text-center animate-slideUp-fadeIn"
+          >
+            {messages[messagesIndex]}
+          </span>
+        </div>
+        <div className="flex items-center justify-center gap-7 self-stretch [&_button]:max-sm:text-sm max-sm:flex-col max-sm:gap-4">
+          <NeoButton label="Open Scholarships" size="lg" onClick={() => setIsCreateModalOpen(true)} />
+          <NeoButton
+            label="Explore Scholarships"
+            variant="secondary"
+            size="lg"
+            onClick={() => {
+              const section = document.getElementById('find-scholarship');
+              if (section) section.scrollIntoView({ behavior: 'smooth' });
+            }}
+          />
+        </div>
+      </div>
 
-            {/* Filter tabs */}
-            <div className="flex flex-wrap gap-2">
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setActiveTab(tab.value)}
-                  className={`
-                    px-3 py-1.5 border-2 border-black font-bold text-xs uppercase tracking-wider
-                    transition-all duration-75
-                    ${
-                      activeTab === tab.value
-                        ? 'bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]'
-                        : 'bg-white text-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]'
-                    }
-                  `}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Program grid */}
+      <div id="find-scholarship" className="px-9 py-12 z-[2] max-sm:px-3">
+        <div className="inline-flex flex-col justify-center items-start gap-3.5">
+          <h2 className="font-paytone text-5xl max-sm:text-[24px]">Find a Scholarship...</h2>
+          <p className="text-2xl max-sm:text-xs">Your Next Opportunity Starts Here</p>
+        </div>
+        <div className="py-7">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <NeoCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : programs.length === 0 ? (
-            <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-12 text-center">
-              <p className="font-paytone text-2xl mb-2">No programs found</p>
-              <p className="text-gray-500 text-sm mb-6">Adjust your filters or start something new.</p>
-              <NeoButton
-                label="Create Program"
-                variant="secondary"
-                size="md"
-                onClick={() => setIsCreateModalOpen(true)}
-              />
+            <div className="flex items-center justify-center py-20">
+              <div className="w-12 h-12 border-2 border-black bg-skyellow animate-pulse shadow-[3px_3px_0_0_#000]" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {programs.map((program) => (
-                <ProgramCardWithMeta key={program.id} program={program} />
-              ))}
-            </div>
+            <ProgramTabs programs={programs} tabs={TABS} />
           )}
         </div>
-      </section>
+      </div>
 
       <CreateProgramModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </div>
   );
-}
-
-/** Program card that fetches IPFS metadata */
-function ProgramCardWithMeta({ program }: { program: Program }) {
-  const { data: meta } = useQuery({
-    queryKey: ['ipfs-meta', program.metadataCID],
-    queryFn: () => fetchProgramMeta(program.metadataCID),
-    enabled: !!program.metadataCID,
-    staleTime: Infinity,
-  });
-
-  return <ProgramCard program={program} meta={meta ?? undefined} />;
 }

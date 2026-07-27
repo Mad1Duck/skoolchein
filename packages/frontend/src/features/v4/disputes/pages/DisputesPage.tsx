@@ -29,15 +29,22 @@ export function DisputesPage() {
   const [defendModalTarget, setDefendModalTarget] = useState<Dispute | null>(null);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-10">
-      <div className="mb-8">
-        <h1 className="font-paytone text-4xl md:text-5xl mb-2 text-skred">Bounty Board</h1>
-        <p className="text-gray-600 text-base md:text-lg max-w-2xl">
-          Protect the protocol. Find malicious applications or fake milestone proofs, raise a dispute, and earn rewards if they are slashed.
-        </p>
-      </div>
+    <main className="min-h-screen bg-skyellow relative isolate">
+      <div
+        className="absolute top-0 right-0 left-0 h-[45vh] bg-skred"
+        style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 88%, 0 100%)' }}
+      />
+      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-10">
+        <div className="mb-10 text-center md:text-left pt-8">
+          <h1 className="font-paytone text-4xl md:text-6xl mb-3 text-white drop-shadow-[4px_4px_0_#000]">
+            Bounty Board
+          </h1>
+          <p className="text-black/80 text-lg md:text-xl max-w-2xl font-medium">
+            Protect the protocol. Find malicious applications or fake milestone proofs, raise a dispute, and earn rewards if they are slashed.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <section>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="font-paytone text-2xl md:text-3xl">Open Milestones</h2>
@@ -169,7 +176,8 @@ export function DisputesPage() {
           dispute={defendModalTarget} 
         />
       )}
-    </div>
+      </div>
+    </main>
   );
 }
 

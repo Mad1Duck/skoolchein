@@ -2987,6 +2987,48 @@ export const scholarshipCoreAbi = [
     "stateMutability": "view",
     "type": "function"
   }
+,
+
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "metadataURI",
+        "type": "string"
+      }
+    ],
+    "name": "claimStudentNFT",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "scholar",
+        "type": "address"
+      }
+    ],
+    "name": "StudentNotCompleted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StudentNFTNotConfigured",
+    "type": "error"
+  }
+
 ] as const;
 
 export const scholarshipTreasuryAbi = [

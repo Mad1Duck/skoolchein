@@ -51,8 +51,20 @@
     100% { transform: translate(3px, 3px); box-shadow: 0 0 0 0 #000; }
   }
 
+  @keyframes slide-up-fade-in {
+    0% { transform: translateY(100%); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slide-down-fade-out {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(100%); opacity: 0; }
+  }
+
   --animate-slide-up: slide-up 0.12s ease-out forwards;
   --animate-skeleton: skeleton-stripe 1.6s infinite ease-in-out;
+  --animate-slideUp-fadeIn: slide-up-fade-in 0.6s ease-in-out forwards;
+  --animate-slideDown-fadeOut: slide-down-fade-out 0.6s ease-in-out forwards;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

@@ -1,20 +1,24 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { NeoButton } from "./ui/NeoButton";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
+import { useBreakpoint } from "@/hooks/use-breakpoint";
+import gsap from "gsap";
 import { v4Addresses, scholarshipCoreAbi } from "@/constants/contractsV4";
 
 const navItems = [
-  { href: "/programs",  label: "Programs" },
+  { href: "/",          label: "Home" },
+  { href: "/programs",  label: "Scholarships" },
   { href: "/vote",      label: "Vote" },
-  { href: "/disputes",  label: "Disputes" },
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "My Dashboard" },
 ];
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const breakpoint = useBreakpoint();
   const location = useLocation();
   const currentPath = location.pathname;
+  const ref = useRef<HTMLDivElement>(null);
 
   const { address } = useAccount();
   const { data: adminAddress } = useReadContract({
@@ -25,114 +29,100 @@ export function Header() {
 
   const isAdmin = address && adminAddress && address.toLowerCase() === (adminAddress as string).toLowerCase();
 
+  useEffect(() => {
+    if (!ref.current) return;
+    gsap.fromTo(
+      ref.current,
+      { opacity: 0, y: "100%" },
+      { opacity: 1, y: "0%", duration: 2, ease: "power3.out" }
+    );
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50 bg-white border-b-2 border-black">
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <div className="flex items-center justify-between h-14">
-          <Link to="/programs" className="flex items-center shrink-0">
-            <img src="/skoolcein-logo.svg" alt="Skoolcein" className="h-7" />
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map(({ href, label }) => {
-              const isActive = currentPath === href || currentPath.startsWith(href + "/");
-              return (
-                <Link
-                  key={href}
-                  to={href}
-                  className={`
-                    px-3 py-1.5 rounded-md text-sm font-bold border-2 transition-all duration-100
-                    ${isActive
-                      ? "bg-skpurple text-white border-black shadow-[2px_2px_0_0_#000]"
-                      : "bg-white text-gray-800 border-transparent hover:bg-gray-100 hover:text-skpurple"
-                    }
-                  `}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className={`
-                  px-3 py-1.5 rounded-md text-sm font-bold border-2 transition-all duration-100
-                  ${currentPath.startsWith("/admin")
-                    ? "bg-skred text-white border-black shadow-[2px_2px_0_0_#000]"
-                    : "bg-white text-skred border-transparent hover:bg-skred-light"
-                  }
-                `}
-              >
-                Admin
-              </Link>
-            )}
-          </nav>
-
-          <div className="hidden lg:block">
-            <NeoButton label="Connect" variant="connect" size="sm" />
-          </div>
-
-          {/* Mobile Toggle */}
-          <button
-            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-md border-2 border-black bg-white shadow-[2px_2px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-100"
-            onClick={() => setOpen(!open)}
-            aria-label={open ? "Close menu" : "Open menu"}
+    <header
+      ref={ref}
+      className="flex max-lg:flex-col py-[1.375rem] px-6 bg-white m-9 max-md:mx-3 justify-between items-center rounded-2xl border-2 border-black shadow-[inset_0_-1px_1px_0_rgba(0,0,0,0.1)] shrink-0 z-[10]"
+    >
+      <div className="flex justify-between max-lg:self-stretch">
+        <Link to="/programs">
+          <img src="/skoolcein-logo.svg" alt="logo" />
+        </Link>
+        <button className="hidden max-lg:block" onClick={() => setOpen(!open)}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square">
-              {open ? (
-                <path d="M4 4 L20 20 M20 4 L4 20" />
-              ) : (
-                <path d="M3 6 H21 M3 12 H21 M3 18 H21" />
-              )}
-            </svg>
-          </button>
-        </div>
+            <path
+              d="M4 5H20"
+              stroke="black"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4 12H20"
+              stroke="black"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4 19H20"
+              stroke="black"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
-
-      {/* Mobile Nav */}
-      {open && (
-        <div className="lg:hidden border-t-2 border-black bg-white">
-          <nav className="px-4 py-3 space-y-1">
-            {navItems.map(({ href, label }) => {
-              const isActive = currentPath === href || currentPath.startsWith(href + "/");
-              return (
+      <nav
+        className={`max-lg:self-stretch ${open ? "max-lg:block" : "max-lg:hidden"}`}
+      >
+        <ul className="flex gap-6 text-gray-800 items-center max-lg:flex-col max-lg:items-start max-lg:mt-5">
+          {navItems.map(({ href, label }) => {
+            const isActive = currentPath === href || currentPath.startsWith(href + "/");
+            return (
+              <li key={href}>
                 <Link
-                  key={href}
                   to={href}
-                  onClick={() => setOpen(false)}
-                  className={`
-                    block px-3 py-2.5 rounded-md text-sm font-bold border-2 transition-all duration-100
-                    ${isActive
-                      ? "bg-skpurple text-white border-black shadow-[2px_2px_0_0_#000]"
-                      : "bg-white text-gray-800 border-transparent hover:bg-gray-100"
-                    }
-                  `}
+                  className={`flex py-2 px-2.5 justify-center items-center gap-2.5 font-medium transition-all duration-200 ${
+                    isActive
+                      ? "font-extrabold text-skpurple"
+                      : "hover:text-skpurple"
+                  }`}
                 >
                   {label}
                 </Link>
-              );
-            })}
-            {isAdmin && (
+              </li>
+            );
+          })}
+          {isAdmin && (
+            <li>
               <Link
                 to="/admin"
-                onClick={() => setOpen(false)}
-                className={`
-                  block px-3 py-2.5 rounded-md text-sm font-bold border-2 transition-all duration-100
-                  ${currentPath.startsWith("/admin")
-                    ? "bg-skred text-white border-black shadow-[2px_2px_0_0_#000]"
-                    : "bg-white text-skred border-transparent hover:bg-skred-light"
-                  }
-                `}
+                className={`flex py-2 px-2.5 justify-center items-center gap-2.5 font-medium transition-all duration-200 ${
+                  currentPath.startsWith("/admin")
+                    ? "font-extrabold text-skred"
+                    : "hover:text-skred"
+                }`}
               >
                 Admin
               </Link>
-            )}
-            <div className="pt-3 border-t-2 border-gray-200 mt-2">
-              <NeoButton label="Connect Wallet" variant="connect" size="md" fullWidth />
-            </div>
-          </nav>
-        </div>
+            </li>
+          )}
+        </ul>
+        {breakpoint.isLessThan("lg") && (
+          <div className="mt-5">
+            <NeoButton label="Connect Wallet" variant="connect" size="md" />
+          </div>
+        )}
+      </nav>
+      {breakpoint.isAtLeast("lg") && (
+        <NeoButton label="Connect Wallet" variant="connect" size="sm" />
       )}
     </header>
   );

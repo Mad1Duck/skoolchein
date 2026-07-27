@@ -1,4 +1,4 @@
-type StatusType = "active" | "vote" | "soon" | "pddikti" | "disbursed";
+type StatusType = "active" | "vote" | "soon" | "done" | "pddikti" | "disbursed";
 
 interface StatusBadgeProps {
   status?: string;
@@ -10,6 +10,7 @@ const STATUS_STYLES: Record<StatusType, { bg: string; label: string }> = {
   pddikti: { bg: "bg-black", label: "PDDIKTI Verified" },
   vote: { bg: "bg-skred", label: "On Vote" },
   soon: { bg: "bg-skgreen", label: "Soon" },
+  done: { bg: "bg-skgreen", label: "Done" },
   disbursed: { bg: "bg-skgreen", label: "Disbursed" },
 };
 
