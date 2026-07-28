@@ -36,7 +36,7 @@ export const applicationStatusEnum = onchainEnum("application_status", ["PENDING
 export const indexedBlocks = onchainTable("indexed_blocks", (t) => ({
   blockNumber: t.integer("block_number").primaryKey(),
   eventName: t.text("event_name").default(""),
-  timestamp: t.timestamp("timestamp", { withTimezone: true }).defaultNow(),
+  timestamp: t.timestamp("timestamp", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -68,8 +68,8 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
   votingEnd: t.timestamp("voting_end", { withTimezone: true }),
   openDonation: t.boolean("open_donation").default(true),
   resolveProgress: t.integer("resolve_progress").default(0),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -87,8 +87,8 @@ export const v4Applicants = onchainTable("v4_applicants", (t) => ({
   screeningScore: t.numeric("screening_score").default("0"),
   totalScore: t.numeric("total_score").default("0"),
   retryCount: t.integer("retry_count").default(0),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.pid, table.wallet] }),
 }));
@@ -103,8 +103,8 @@ export const v4Scholars = onchainTable("v4_scholars", (t) => ({
   currentMilestone: t.integer("current_milestone").default(0),
   totalMilestones: t.integer("total_milestones").default(0),
   totalReceived: t.numeric("total_received").default("0"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.pid, table.wallet] }),
 }));
@@ -130,8 +130,8 @@ export const v4Milestones = onchainTable("v4_milestones", (t) => ({
   completedAt: t.timestamp("completed_at", { withTimezone: true }),
   provider: t.text("provider"),
   externalId: t.text("external_id"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -144,7 +144,7 @@ export const v4Votes = onchainTable("v4_votes", (t) => ({
   voterAddress: t.text("voter_address").notNull(),
   candidateAddress: t.text("candidate_address").notNull(),
   votingWeight: t.numeric("voting_weight").default("0"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.pid, table.voterAddress] }),
 }));
@@ -159,8 +159,8 @@ export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
   wasSlashed: t.boolean("was_slashed").default(false),
   returnedAmount: t.numeric("returned_amount").default("0"),
   bonusAmount: t.numeric("bonus_amount").default("0"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.pid, table.voterAddress] }),
 }));
@@ -188,8 +188,8 @@ export const v4Disputes = onchainTable("v4_disputes", (t) => ({
   resolvedAt: t.timestamp("resolved_at", { withTimezone: true }),
   isLateDispute: t.boolean("is_late_dispute").default(false),
   griefingStakeOriginal: t.numeric("griefing_stake_original").default("0"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -204,8 +204,8 @@ export const v4Reputation = onchainTable("v4_reputation", (t) => ({
   totalBurned: t.numeric("total_burned").default("0"),
   remainingVotingPower: t.numeric("remaining_voting_power").default("0"),
   votingLockedUntil: t.timestamp("voting_locked_until", { withTimezone: true }),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 /** Tracks manual withdrawals of slashed funds from Treasury — PK transactionHash */
@@ -213,7 +213,7 @@ export const v4TreasuryWithdrawals = onchainTable("v4_treasury_withdrawals", (t)
   transactionHash: t.text("tx_hash").primaryKey(),
   recipient: t.text("recipient").notNull(),
   amount: t.numeric("amount").default("0"),
-  timestamp: t.timestamp("timestamp", { withTimezone: true }).defaultNow(),
+  timestamp: t.timestamp("timestamp", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 /** Tracks Fraud NFTs (Tainted credentials) issued to blacklisted students — PK transactionHash */
@@ -223,7 +223,7 @@ export const v4FraudNfts = onchainTable("v4_fraud_nfts", (t) => ({
   pid: t.integer("pid").notNull(),
   tokenId: t.integer("token_id"),
   metadataUri: t.text("metadata_uri").default(""),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -237,7 +237,7 @@ export const v4Donations = onchainTable("v4_donations", (t) => ({
   donor: t.text("donor").notNull(),
   grossAmount: t.numeric("gross_amount").default("0"),
   netAmount: t.numeric("net_amount").default("0"),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -249,7 +249,7 @@ export const v4CommitteeMembers = onchainTable("v4_committee_members", (t) => ({
   pid: t.integer("pid").notNull(),
   memberAddress: t.text("member_address").notNull(),
   isActive: t.boolean("is_active").default(true),
-  addedAt: t.timestamp("added_at", { withTimezone: true }).defaultNow(),
+  addedAt: t.timestamp("added_at", { withTimezone: true }).$defaultFn(() => new Date()),
   removedAt: t.timestamp("removed_at", { withTimezone: true }),
 }), (table) => ({
   pk: primaryKey({ columns: [table.pid, table.memberAddress] }),
@@ -260,7 +260,7 @@ export const v4CommitteeDisputeVotes = onchainTable("v4_committee_dispute_votes"
   disputeId: t.integer("dispute_id").notNull(),
   memberAddress: t.text("member_address").notNull(),
   upholdDispute: t.boolean("uphold_dispute").notNull(),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.disputeId, table.memberAddress] }),
 }));
@@ -270,7 +270,7 @@ export const v4CommitteeMilestoneVotes = onchainTable("v4_committee_milestone_vo
   milestoneId: t.integer("milestone_id").notNull(),
   memberAddress: t.text("member_address").notNull(),
   approve: t.boolean("approve").notNull(),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
   pk: primaryKey({ columns: [table.milestoneId, table.memberAddress] }),
 }));
@@ -288,8 +288,8 @@ export const v4BountyHunters = onchainTable("v4_bounty_hunters", (t) => ({
   totalRewards: t.numeric("total_rewards").default("0"),
   isFlagged: t.boolean("is_flagged").default(false),
   cooldownUntil: t.timestamp("cooldown_until", { withTimezone: true }),
-  createdAt: t.timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: t.timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
