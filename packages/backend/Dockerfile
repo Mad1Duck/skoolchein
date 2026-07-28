@@ -17,6 +17,11 @@ COPY packages/ponder/ponder.schema.ts ./packages/ponder/ponder.schema.ts
 # Copy backend source
 WORKDIR /app/packages/backend
 COPY packages/backend/src ./src
+# Generated migration files — without these, start.sh's `db:migrate` has
+# nothing to apply and falls back to `db:push --force` (which diffs the live
+# schema and can drop columns). Regenerate with `bun run db:generate` after
+# changing src/db/schema.ts, and commit the result.
+COPY packages/backend/drizzle ./drizzle
 COPY packages/backend/drizzle.config.ts ./drizzle.config.ts
 COPY packages/backend/tsconfig.json ./tsconfig.json
 COPY packages/backend/start.sh ./start.sh
