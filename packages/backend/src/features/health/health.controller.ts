@@ -13,10 +13,49 @@ import { GeminiService } from "@/features/gemini/gemini.service";
 export class HealthController {
   constructor(private gemini: GeminiService) {}
 
+  /**
+   * Container healthcheck target (docker-compose `test: wget .../health`).
+   *
+   * Must stay fast and free of third-party dependencies — the healthcheck
+   * runs with a 5s timeout, and `depends_on: condition: service_healthy`
+   * gates the whole deploy on it. Anything slow or external (Gemini, disk,
+   * SSE fan-out) belongs in /health/detail instead.
+   *
+   * Always 200 while the process is alive: backend serves most /v4/* routes
+   * through Ponder over HTTP, so its own Postgres being down degrades only
+   * the learning/webhook routes rather than making the service unusable.
+   * DB state is reported in the body for observability.
+   */
   @Get("/")
   @Public()
-  @ApiDoc({ summary: "Backend health check (CPU, memory, disk, DB, Gemini status)" })
+  @ApiDoc({ summary: "Liveness probe — fast, no external dependencies" })
   async check(c: Context) {
+    let database = "connected";
+    try {
+      await db.execute(sql`SELECT 1`);
+    } catch (e) {
+      logger.error({ e }, "database error");
+      database = "error";
+    }
+
+    // NOTE: return a plain object, never `c.json(...)`. hono-forge's route
+    // builder unconditionally does `c.json(result)` on whatever the handler
+    // returns, so returning a Response gets double-wrapped into `{}`.
+    return {
+      status: "ok",
+      database,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Full diagnostics — CPU, memory, disk, DB, plus a Gemini summary.
+   * Deliberately NOT the healthcheck target (see above).
+   */
+  @Get("/detail")
+  @Public()
+  @ApiDoc({ summary: "Full diagnostics (CPU, memory, disk, DB, Gemini analysis)" })
+  async detail(c: Context) {
     const cpuLoad = os.loadavg();
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
@@ -59,6 +98,6 @@ export class HealthController {
 
     const geminiResponse = await this.gemini.summarize(JSON.stringify(snapshot));
 
-    return c.json({ ...snapshot, geminiResponse });
+    return { ...snapshot, geminiResponse };
   }
 }

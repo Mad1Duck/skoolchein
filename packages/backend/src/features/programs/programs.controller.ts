@@ -1,7 +1,14 @@
 import type { Context } from "hono";
-import { Controller, Get, Injectable, ApiTags, ApiDoc } from "hono-forge";
+import { Controller, Get, Injectable, ApiTags, ApiDoc, HttpException } from "hono-forge";
 import { ProgramsService } from "./programs.service";
 
+/**
+ * NOTE: handlers return plain objects, never `c.json(...)`. hono-forge's
+ * route builder unconditionally wraps the returned value in `c.json(result)`,
+ * so returning a Response gets double-wrapped and serializes to `{}`.
+ * Non-200 responses are raised via HttpException; unexpected errors fall
+ * through to the onError handler configured in main.ts.
+ */
 @Controller("/v4/programs")
 @Injectable([ProgramsService])
 @ApiTags("Programs")
@@ -17,27 +24,19 @@ export class ProgramsController {
     const offset = Number(c.req.query("offset") ?? 0);
     const sort = c.req.query("sort") === "asc" ? "asc" as const : "desc" as const;
 
-    try {
-      const { data, total } = await this.service.list({ status, initiator, limit, offset, sort });
-      return c.json({ data, total, limit, offset });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch programs", details: String(err) }, 500);
-    }
+    const { data, total } = await this.service.list({ status, initiator, limit, offset, sort });
+    return { data, total, limit, offset };
   }
 
   @Get("/:pid")
   @ApiDoc({ summary: "Single program detail with related counts" })
   async detail(c: Context) {
     const pid = Number(c.req.param("pid"));
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const program = await this.service.getByPid(pid);
-      if (!program) return c.json({ error: "Program not found" }, 404);
-      return c.json({ data: program });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch program", details: String(err) }, 500);
-    }
+    const program = await this.service.getByPid(pid);
+    if (!program) throw HttpException.notFound("Program not found");
+    return { data: program };
   }
 
   @Get("/:pid/applicants")
@@ -46,14 +45,9 @@ export class ProgramsController {
     const pid = Number(c.req.param("pid"));
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const data = await this.service.applicantsForProgram(pid, limit, offset);
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch applicants", details: String(err) }, 500);
-    }
+    return { data: await this.service.applicantsForProgram(pid, limit, offset) };
   }
 
   @Get("/:pid/scholars")
@@ -62,14 +56,9 @@ export class ProgramsController {
     const pid = Number(c.req.param("pid"));
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const data = await this.service.scholarsForProgram(pid, limit, offset);
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch scholars", details: String(err) }, 500);
-    }
+    return { data: await this.service.scholarsForProgram(pid, limit, offset) };
   }
 
   @Get("/:pid/milestones")
@@ -78,14 +67,9 @@ export class ProgramsController {
     const pid = Number(c.req.param("pid"));
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const data = await this.service.milestonesForProgram(pid, limit, offset);
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch milestones", details: String(err) }, 500);
-    }
+    return { data: await this.service.milestonesForProgram(pid, limit, offset) };
   }
 
   @Get("/:pid/votes")
@@ -94,27 +78,17 @@ export class ProgramsController {
     const pid = Number(c.req.param("pid"));
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const data = await this.service.votesForProgram(pid, limit, offset);
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch votes", details: String(err) }, 500);
-    }
+    return { data: await this.service.votesForProgram(pid, limit, offset) };
   }
 
   @Get("/:pid/disputes")
   @ApiDoc({ summary: "Disputes for a program" })
   async disputes(c: Context) {
     const pid = Number(c.req.param("pid"));
-    if (Number.isNaN(pid)) return c.json({ error: "Invalid pid" }, 400);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
 
-    try {
-      const data = await this.service.disputesForProgram(pid);
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch disputes", details: String(err) }, 500);
-    }
+    return { data: await this.service.disputesForProgram(pid) };
   }
 }

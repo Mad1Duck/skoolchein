@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
-import { HonoRouteBuilder, OpenAPIGenerator } from "hono-forge";
+import { HonoRouteBuilder, OpenAPIGenerator, HttpException } from "hono-forge";
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 import {
@@ -25,6 +25,10 @@ import {
 HonoRouteBuilder.configure({
   requestLogger: (e) => logger.info({ method: e.method, path: e.path, status: e.statusCode, durationMs: e.durationMs }, "request"),
   onError: (err, c) => {
+    // Returning a Response here short-circuits hono-forge's own error
+    // handling, so let HttpException fall through — otherwise every
+    // deliberate 404/400 would be rewritten into a 500.
+    if (err instanceof HttpException) return;
     logger.error({ err }, "unhandled error");
     return c.json({ success: false, error: { code: "INTERNAL_SERVER_ERROR", message: (err as Error).message } }, 500);
   },

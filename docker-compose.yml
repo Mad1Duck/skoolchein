@@ -86,11 +86,15 @@ services:
       scholarship-ponder:
         condition: service_healthy
     healthcheck:
+      # Hits the lightweight liveness probe, NOT /health/detail (which calls
+      # Gemini + reads disk and would blow past the timeout).
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 5
-      start_period: 30s
+      # start.sh runs drizzle-kit migrations (up to 3 attempts w/ 5s backoff)
+      # before the server binds — give it room before failures start counting.
+      start_period: 90s
     restart: unless-stopped
 
   # ── Frontend (Vite + Nginx) ────────────────────────────────────────────────────

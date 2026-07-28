@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { Controller, Post, Injectable, Public, ApiTags, ApiDoc, channels } from "hono-forge";
+import { Controller, Post, Injectable, Public, ApiTags, ApiDoc, channels, HttpException } from "hono-forge";
 import { env } from "@/config/env";
 import { WebhooksService } from "./webhooks.service";
 
@@ -18,30 +18,25 @@ export class WebhooksController {
   @Public()
   @ApiDoc({ summary: "Upsert external course progress (HackQuest/Udemy webhook)" })
   async progress(c: Context) {
-    try {
-      const body = await c.req.json();
-      const { address, provider, courseId, progress, status, secret } = body;
+    const body = await c.req.json();
+    const { address, provider, courseId, progress, status, secret } = body;
 
-      if (secret !== env.WEBHOOK_SECRET) {
-        return c.json({ error: "Unauthorized" }, 401);
-      }
-
-      if (!address || !provider || !courseId) {
-        return c.json({ error: "Missing required fields" }, 400);
-      }
-
-      await this.service.upsertProgress({ address, provider, courseId, progress, status });
-
-      await channels.publish("main", "main", {
-        step: "ExternalProgressUpdated",
-        data: { address: String(address).toLowerCase(), courseId },
-        status: true,
-      });
-
-      return c.json({ success: true, message: "Progress updated" });
-    } catch (error) {
-      console.error("[Webhook] Error updating progress:", error);
-      return c.json({ error: "Internal Server Error" }, 500);
+    if (secret !== env.WEBHOOK_SECRET) {
+      throw HttpException.unauthorized("Invalid webhook secret");
     }
+
+    if (!address || !provider || !courseId) {
+      throw HttpException.badRequest("Missing required fields: address, provider, courseId");
+    }
+
+    await this.service.upsertProgress({ address, provider, courseId, progress, status });
+
+    await channels.publish("main", "main", {
+      step: "ExternalProgressUpdated",
+      data: { address: String(address).toLowerCase(), courseId },
+      status: true,
+    });
+
+    return { success: true, message: "Progress updated" };
   }
 }

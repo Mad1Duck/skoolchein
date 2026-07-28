@@ -16,12 +16,7 @@ export class VotesController {
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
 
-    try {
-      const data = await this.service.list({ voter, candidate, limit, offset });
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch votes", details: String(err) }, 500);
-    }
+    return { data: await this.service.list({ voter, candidate, limit, offset }) };
   }
 
   @Get("/stakes")
@@ -32,16 +27,13 @@ export class VotesController {
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
 
-    try {
-      const data = await this.service.listStakes({
+    return {
+      data: await this.service.listStakes({
         voter,
         resolved: resolved !== undefined ? resolved === "true" : undefined,
         limit,
         offset,
-      });
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch confidence stakes", details: String(err) }, 500);
-    }
+      }),
+    };
   }
 }

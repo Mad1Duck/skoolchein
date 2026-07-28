@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { Controller, Get, Injectable, ApiTags, ApiDoc } from "hono-forge";
+import { Controller, Get, Injectable, ApiTags, ApiDoc, HttpException } from "hono-forge";
 import { DisputesService } from "./disputes.service";
 
 @Controller("/v4/disputes")
@@ -17,26 +17,18 @@ export class DisputesController {
     const limit = Math.min(Number(c.req.query("limit") ?? 20), 100);
     const offset = Number(c.req.query("offset") ?? 0);
 
-    try {
-      const { data, total } = await this.service.list({ status, bountyHunter, scholar, limit, offset });
-      return c.json({ data, total, limit, offset });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch disputes", details: String(err) }, 500);
-    }
+    const { data, total } = await this.service.list({ status, bountyHunter, scholar, limit, offset });
+    return { data, total, limit, offset };
   }
 
   @Get("/:blockchainId")
   @ApiDoc({ summary: "Single dispute by on-chain id" })
   async detail(c: Context) {
     const blockchainId = Number(c.req.param("blockchainId"));
-    if (Number.isNaN(blockchainId)) return c.json({ error: "Invalid id" }, 400);
+    if (Number.isNaN(blockchainId)) throw HttpException.badRequest("Invalid id");
 
-    try {
-      const dispute = await this.service.getByBlockchainId(blockchainId);
-      if (!dispute) return c.json({ error: "Dispute not found" }, 404);
-      return c.json({ data: dispute });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch dispute", details: String(err) }, 500);
-    }
+    const dispute = await this.service.getByBlockchainId(blockchainId);
+    if (!dispute) throw HttpException.notFound("Dispute not found");
+    return { data: dispute };
   }
 }

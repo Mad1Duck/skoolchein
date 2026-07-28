@@ -74,6 +74,6 @@ export class SseController {
   async broadcast(c: Context) {
     const { channel, data } = await c.req.json();
     await channels.publish(channel ?? CHANNEL, channel ?? CHANNEL, data);
-    return c.json({ ok: true });
+    return { ok: true };
   }
 }

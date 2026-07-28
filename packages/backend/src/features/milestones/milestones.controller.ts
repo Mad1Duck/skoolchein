@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { Controller, Get, Injectable, ApiTags, ApiDoc } from "hono-forge";
+import { Controller, Get, Injectable, ApiTags, ApiDoc, HttpException } from "hono-forge";
 import { MilestonesService } from "./milestones.service";
 
 @Controller("/v4/milestones")
@@ -16,26 +16,17 @@ export class MilestonesController {
     const limit = Math.min(Number(c.req.query("limit") ?? 50), 100);
     const offset = Number(c.req.query("offset") ?? 0);
 
-    try {
-      const data = await this.service.list({ scholar, status, limit, offset });
-      return c.json({ data });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch milestones", details: String(err) }, 500);
-    }
+    return { data: await this.service.list({ scholar, status, limit, offset }) };
   }
 
   @Get("/:blockchainId")
   @ApiDoc({ summary: "Single milestone by on-chain id" })
   async detail(c: Context) {
     const blockchainId = Number(c.req.param("blockchainId"));
-    if (Number.isNaN(blockchainId)) return c.json({ error: "Invalid id" }, 400);
+    if (Number.isNaN(blockchainId)) throw HttpException.badRequest("Invalid id");
 
-    try {
-      const milestone = await this.service.getByBlockchainId(blockchainId);
-      if (!milestone) return c.json({ error: "Milestone not found" }, 404);
-      return c.json({ data: milestone });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch milestone", details: String(err) }, 500);
-    }
+    const milestone = await this.service.getByBlockchainId(blockchainId);
+    if (!milestone) throw HttpException.notFound("Milestone not found");
+    return { data: milestone };
   }
 }

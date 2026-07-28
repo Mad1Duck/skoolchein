@@ -13,30 +13,27 @@ export class ReputationController {
   async detail(c: Context) {
     const address = c.req.param("address")!.toLowerCase();
 
-    try {
-      const rep = await this.service.getByAddress(address);
+    const rep = await this.service.getByAddress(address);
 
-      if (!rep) {
-        return c.json({
-          data: {
-            address,
-            repBalance: "0",
-            totalMinted: "0",
-            totalBurned: "0",
-            remainingVotingPower: "0",
-            votingLockedUntil: null,
-            isVotingLocked: false,
-          },
-        });
-      }
-
-      const isVotingLocked = rep.votingLockedUntil
-        ? new Date(rep.votingLockedUntil) > new Date()
-        : false;
-
-      return c.json({ data: { ...rep, isVotingLocked } });
-    } catch (err) {
-      return c.json({ error: "Failed to fetch reputation", details: String(err) }, 500);
+    // An address with no REP yet is a valid zero state, not a 404.
+    if (!rep) {
+      return {
+        data: {
+          address,
+          repBalance: "0",
+          totalMinted: "0",
+          totalBurned: "0",
+          remainingVotingPower: "0",
+          votingLockedUntil: null,
+          isVotingLocked: false,
+        },
+      };
     }
+
+    const isVotingLocked = rep.votingLockedUntil
+      ? new Date(rep.votingLockedUntil) > new Date()
+      : false;
+
+    return { data: { ...rep, isVotingLocked } };
   }
 }

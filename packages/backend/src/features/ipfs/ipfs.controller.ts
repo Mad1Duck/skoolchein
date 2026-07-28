@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { Controller, Get, Post, Injectable, ApiTags, ApiDoc } from "hono-forge";
+import { Controller, Post, Injectable, ApiTags, ApiDoc, HttpException } from "hono-forge";
 import { isArray, isObject } from "lodash";
 import { IpfsService } from "./ipfs.service";
 
@@ -57,8 +57,7 @@ export class IpfsController {
       attributes: parsedAttributes,
     };
 
-    const result = await this.service.uploadToIPFS(file as File, metadata);
-    return c.json(result);
+    return this.service.uploadToIPFS(file as File, metadata);
   }
 
   @Post("/upload/erc-721")
@@ -68,7 +67,7 @@ export class IpfsController {
     const file = body.file as File;
 
     if (!(file instanceof File)) {
-      return c.json({ error: "File is required and must be a valid image." }, 400);
+      throw HttpException.badRequest("File is required and must be a valid image.");
     }
 
     const name = typeof body.name === "string" ? body.name : "Untitled NFT";
@@ -89,7 +88,7 @@ export class IpfsController {
         parsedAttributes = [attributesRaw];
       }
     } catch (e) {
-      return c.json({ error: "Invalid JSON for attributes." }, 400);
+      throw HttpException.badRequest("Invalid JSON for attributes.");
     }
 
     const metadata = {
@@ -100,7 +99,6 @@ export class IpfsController {
       attributes: parsedAttributes,
     };
 
-    const result = await this.service.uploadERCToIPFS(file, metadata);
-    return c.json(result);
+    return this.service.uploadERCToIPFS(file, metadata);
   }
 }
