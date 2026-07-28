@@ -6,14 +6,28 @@
 # in docs/ponder-backend-split-migration.md has a concrete example to
 # copy from instead of only prose.
 #
-# api.<domain>      → packages/backend  (REST: /v4, /ipfs, /sse, /webhooks)
-# indexer.<domain>  → packages/ponder   (GraphQL/SQL only)
+# skoolcein.<domain>  → packages/frontend (static SPA)
+# api.<domain>        → packages/backend  (REST: /v4, /ipfs, /sse, /webhooks)
+# indexer.<domain>    → packages/ponder   (GraphQL/SQL only)
+#
+# Uses container hostnames (scholarship-frontend, scholarship-backend,
+# scholarship-ponder), NOT localhost:<port> — this assumes Caddy itself
+# runs as a container attached to the same `nawasena-network` external
+# Docker network that docker-compose.yml joins (see its top-level
+# `networks:` block). If Caddy instead runs directly on the VPS host
+# (not containerized), use `localhost:<host-mapped-port>` for each
+# block instead (3102/3103/42069 per docker-compose.yml's `ports:`),
+# but don't mix the two styles in the same file — pick one.
 # ═══════════════════════════════════════════════════════════════════
 
+skoolcein.nawasena-labs.com {
+  reverse_proxy scholarship-frontend:80
+}
+
 api.skoolcein.nawasena-labs.com {
-  reverse_proxy localhost:3101
+  reverse_proxy scholarship-backend:3001
 }
 
 indexer.skoolcein.nawasena-labs.com {
-  reverse_proxy localhost:42069
+  reverse_proxy scholarship-ponder:42069
 }

@@ -26,6 +26,11 @@ services:
       # otherwise (single Postgres, two schemas).
       DATABASE_URL: ${DATABASE_INDEXER_URL:-${DATABASE_URL}}
       DATABASE_SCHEMA: ${DATABASE_SCHEMA:-skoolcein}
+      # Internal docker network hostname — Ponder's event handlers POST here
+      # to push SSE updates through backend's broadcaster (see
+      # packages/ponder/src/services/sse.notify.service.ts). "localhost"
+      # would resolve to this container, not scholarship-backend.
+      BACKEND_INTERNAL_URL: http://scholarship-backend:3001
       PONDER_RPC_URL: ${PONDER_RPC_URL:-http://100.73.196.95:8550}
       CHAIN: ${CHAIN:-nawasena}
       START_BLOCK: ${START_BLOCK:-0}
@@ -55,7 +60,7 @@ services:
       dockerfile: packages/backend/Dockerfile
     container_name: scholarship-backend
     ports:
-      - "127.0.0.1:3101:3001"
+      - "127.0.0.1:3103:3001"
     env_file:
       - .env
     environment:

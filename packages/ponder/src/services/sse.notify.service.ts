@@ -8,7 +8,7 @@ import { logger } from "@/utils/logger";
  * instead of calling an in-process broadcaster directly. Failures here must
  * never break indexing, so every error is swallowed and logged.
  */
-const BACKEND_INTERNAL_URL = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:3101";
+const BACKEND_INTERNAL_URL = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:3103";
 
 export const sendSseToAll = async (channel: string, data: unknown) => {
   try {
