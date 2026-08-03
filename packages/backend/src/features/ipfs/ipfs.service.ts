@@ -1,12 +1,12 @@
 import { Injectable, Singleton } from "hono-forge";
-import { ipfsPinataGateway, pinata } from "@/utils/lib/ipfs";
+import { getPinata, getPinataGateway } from "@/utils/lib/ipfs";
 
 export interface IMetadata {
   [key: string]: unknown;
 }
 
 async function uploadFile(file: File): Promise<string> {
-  const result = await pinata.upload.public.file(file);
+  const result = await getPinata().upload.public.file(file);
   return result.cid;
 }
 
@@ -18,7 +18,7 @@ async function uploadJson(data: object): Promise<string> {
     : 'metadata.json';
 
   const file = new File([json], fileName, { type: 'application/json' });
-  const result = await pinata.upload.public.file(file);
+  const result = await getPinata().upload.public.file(file);
   return result.cid;
 }
 
@@ -26,6 +26,7 @@ async function uploadJson(data: object): Promise<string> {
 @Singleton()
 export class IpfsService {
   async uploadToIPFS(file: File, metadata: IMetadata) {
+    const gateway = getPinataGateway();
     let imageCID: string | undefined;
 
     if (file) {
@@ -42,18 +43,19 @@ export class IpfsService {
     return {
       imageCID,
       metaCID,
-      metadataURL: `${ipfsPinataGateway}/${metaCID}`,
-      imageURL: imageCID ? `${ipfsPinataGateway}/${imageCID}` : '',
+      metadataURL: `${gateway}/${metaCID}`,
+      imageURL: imageCID ? `${gateway}/${imageCID}` : '',
     };
   }
 
   async uploadERCToIPFS(file: File, metadata: IMetadata) {
+    const gateway = getPinataGateway();
     let imageCID = '';
     let imageURL = '';
 
     if (file) {
       imageCID = await uploadFile(file);
-      imageURL = `${ipfsPinataGateway}/${imageCID}`;
+      imageURL = `${gateway}/${imageCID}`;
     }
 
     const finalMeta = {
@@ -69,7 +71,7 @@ export class IpfsService {
     return {
       imageCID,
       metaCID,
-      metadataURL: `${ipfsPinataGateway}/${metaCID}`,
+      metadataURL: `${gateway}/${metaCID}`,
       imageURL,
       ipfsFormat: finalMeta,
     };
