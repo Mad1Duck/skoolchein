@@ -34,6 +34,46 @@ if (process.env.DATABASE_INDEXER_URL) {
 const startBlock = Number(process.env.START_BLOCK ?? 0);
 const chain = "nawasena" as const;
 
+/**
+ * Read a required contract address, failing loudly and by name.
+ *
+ * Ponder validates every configured address at startup; an unset var arrives
+ * as "" and produces an opaque build error that doesn't say which one is
+ * missing. This turns that into an actionable message.
+ */
+function requiredAddress(envKey: string): `0x${string}` {
+  const value = process.env[envKey];
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    throw new Error(
+      `${envKey} is missing or not a valid address (got: ${JSON.stringify(value)}). ` +
+      `Set it in the root .env — run packages/contract/scripts/sync-deployments.ts <chainId> after deploying.`,
+    );
+  }
+  return value as `0x${string}`;
+}
+
+/**
+ * Optional contract address, falling back to the zero address when unset.
+ *
+ * The contract stays declared either way — dropping the key would make it
+ * optional in the config type, which strips its events from Ponder's
+ * `EventNames` and breaks the handlers that reference them. The zero address
+ * is a valid address that never emits logs, so an undeployed contract simply
+ * indexes nothing instead of failing the build (an empty string would).
+ */
+function optionalAddress(envKey: string): `0x${string}` {
+  const value = process.env[envKey];
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    return "0x0000000000000000000000000000000000000000";
+  }
+  return value as `0x${string}`;
+}
+
+// The price oracle is deployed separately and may not exist yet. Indexing it
+// is additive (token registry + USD rates), so a missing address must not
+// stop the indexer from syncing everything else.
+const priceOracleAddress = optionalAddress("CONTRACT_PRICE_ORACLE");
+
 export default createConfig({
   chains: {
     nawasena: {
@@ -45,46 +85,51 @@ export default createConfig({
     ScholarshipCore: {
       chain,
       abi: scholarshipCoreAbi,
-      address: process.env.CONTRACT_CORE! as `0x${string}`,
+      address: requiredAddress("CONTRACT_CORE"),
       startBlock,
     },
     ScholarshipTreasury: {
       chain,
       abi: scholarshipTreasuryAbi,
-      address: process.env.CONTRACT_TREASURY! as `0x${string}`,
+      address: requiredAddress("CONTRACT_TREASURY"),
       startBlock,
     },
     ScholarshipBounty: {
       chain,
       abi: scholarshipBountyAbi,
-      address: process.env.CONTRACT_BOUNTY! as `0x${string}`,
+      address: requiredAddress("CONTRACT_BOUNTY"),
       startBlock,
     },
     ScholarshipReputation: {
       chain,
       abi: scholarshipReputationAbi,
-      address: process.env.CONTRACT_REPUTATION! as `0x${string}`,
+      address: requiredAddress("CONTRACT_REPUTATION"),
       startBlock,
     },
     CommitteeGovernance: {
       chain,
       abi: committeeGovernanceAbi,
-      address: process.env.CONTRACT_COMMITTEE! as `0x${string}`,
+      address: requiredAddress("CONTRACT_COMMITTEE"),
       startBlock,
     },
     MilestoneManager: {
       chain,
       abi: milestoneManagerAbi,
-      address: process.env.CONTRACT_MILESTONE_MANAGER! as `0x${string}`,
+      address: requiredAddress("CONTRACT_MILESTONE_MANAGER"),
       startBlock,
     },
     // Token registry + admin USD rates. Indexed so the backend can serve the
     // token list and rates over REST without every client doing its own
     // contract reads.
+    //
+    // Address falls back to 0x0 when CONTRACT_PRICE_ORACLE is unset — an
+    // empty string fails the whole indexer build, whereas the zero address
+    // simply matches no logs. Optional add-ons must not take down
+    // program/applicant/milestone indexing.
     ScholarshipPriceOracle: {
       chain,
       abi: scholarshipPriceOracleAbi,
-      address: process.env.CONTRACT_PRICE_ORACLE! as `0x${string}`,
+      address: priceOracleAddress,
       startBlock,
     },
   },

@@ -12,5 +12,9 @@ export const registerV4Handlers = () => {
   committeeGovernanceHandlers();
   scholarshipTreasuryHandlers();
   scholarshipReputationHandlers();
+
+  // Always registered. When CONTRACT_PRICE_ORACLE is unset, ponder.config.ts
+  // points this contract at the zero address, so these handlers simply never
+  // fire — no need to branch here.
   scholarshipPriceOracleHandlers();
 };
