@@ -25,6 +25,26 @@ jobs:
       - name: Inject .env
         run: cp $HOME/apps/skoolcein/.env .env
 
+      # Ponder refuses to reuse a schema whose build id differs from the current
+      # one ("Schema 'x' was previously used by a different Ponder app"). Any
+      # change to ponder.schema.ts, ponder.config.ts, or the handlers changes
+      # that build id — so a fixed schema name means every such deploy needs a
+      # manual DROP SCHEMA, which is exactly the recurring breakage this avoids.
+      #
+      # Giving each commit its own schema makes the collision impossible: a new
+      # build always lands in a fresh namespace. The previous schema keeps
+      # serving traffic until this one is ready, and `ponder db prune` removes
+      # inactive ones afterwards.
+      - name: Derive per-deployment schema
+        run: |
+          SCHEMA="skoolcein_$(git rev-parse --short HEAD)"
+          echo "DATABASE_SCHEMA=$SCHEMA" >> "$GITHUB_ENV"
+          # docker compose reads DATABASE_SCHEMA from .env; override it there so
+          # the value is identical for `up`, restarts, and any `compose run`.
+          sed -i -E '/^DATABASE_SCHEMA=/d' .env
+          echo "DATABASE_SCHEMA=\"$SCHEMA\"" >> .env
+          echo "Deploying into Ponder schema: $SCHEMA"
+
       - name: Build images
         run: docker compose build
 
@@ -47,6 +67,16 @@ jobs:
 
       - name: Show running containers
         run: docker compose ps
+
+      # Drops schemas from superseded deployments. Only touches Ponder-created
+      # schemas that are no longer active, so the one just deployed (and the
+      # backend's own `public` tables) are untouched.
+      # Non-fatal: a failed cleanup should never fail an otherwise good deploy.
+      - name: Prune superseded Ponder schemas
+        continue-on-error: true
+        run: |
+          docker compose run --rm --no-deps scholarship-ponder \
+            sh -c 'bun --bun ponder db prune' || echo "prune skipped"
 
       - name: Dump logs on failure
         if: failure()
