@@ -110,15 +110,15 @@ abstract contract ScholarshipCoreBase is Initializable {
 
     // ── Storage ──────────────────────────────────────────────────────────────
     uint256 internal _nextProgramId;
-    mapping(uint256 => ScholarshipTypes.Program)                              public programs;
-    mapping(uint256 => mapping(address => ScholarshipTypes.Applicant))        public applicants;
+    mapping(uint256 => ScholarshipTypes.Program)                              internal programs;
+    mapping(uint256 => mapping(address => ScholarshipTypes.Applicant))        internal applicants;
     mapping(uint256 => address[])                                             internal _programApplicants;
     mapping(uint256 => address[])                                             internal _shortlist;
-    mapping(address => mapping(uint256 => ScholarshipTypes.Scholar))          public scholars;
+    mapping(address => mapping(uint256 => ScholarshipTypes.Scholar))          internal scholars;
     mapping(address => ScholarshipTypes.StudentStatus)                        public globalStudentStatus;
     mapping(address => uint256)                                               public globalFreezeUntil;
-    mapping(uint256 => mapping(address => ScholarshipTypes.ScoreComponents))  public scoreComponents;
-    mapping(uint256 => mapping(address => ScholarshipTypes.VoterInfo))        public voterInfo;
+    mapping(uint256 => mapping(address => ScholarshipTypes.ScoreComponents))  internal scoreComponents;
+    mapping(uint256 => mapping(address => ScholarshipTypes.VoterInfo))        internal voterInfo;
     mapping(uint256 => mapping(address => uint8))                             public retryCount;
     mapping(uint256 => address)                                               public programCommittee;
     mapping(uint256 => uint256)                                               public programCompletedScholars;

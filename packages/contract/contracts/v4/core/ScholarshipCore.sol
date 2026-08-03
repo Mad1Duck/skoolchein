@@ -50,6 +50,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
     error ApplicantListIncomplete();
     error InvalidMaxOptional();
     error TokenNotSupported(address token);
+    error DisputeResolutionFailed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -176,12 +177,12 @@ contract ScholarshipCore is ScholarshipCoreBase {
 
     function resolveDisputeBH(uint256 disputeId) external onlyRole(COMMITTEE_ROLE) {
         (bool success, ) = bountyHunter.call(abi.encodeWithSignature("resolveDispute(uint256,bool)", disputeId, true));
-        require(success, "Dispute resolution failed");
+        if (!success) revert DisputeResolutionFailed();
     }
 
     function resolveDisputeScholar(uint256 disputeId) external onlyRole(COMMITTEE_ROLE) {
         (bool success, ) = bountyHunter.call(abi.encodeWithSignature("resolveDispute(uint256,bool)", disputeId, false));
-        require(success, "Dispute resolution failed");
+        if (!success) revert DisputeResolutionFailed();
     }
 
     // ── View Helpers (IScholarshipCore compatible) ───────────────────────────
