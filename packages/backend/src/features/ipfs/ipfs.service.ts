@@ -1,26 +1,13 @@
 import { Injectable, Singleton } from "hono-forge";
-import { ipfs, ipfsHost, ipfsPinataGateway, pinata } from "@/utils/lib/ipfs";
+import { ipfsPinataGateway, pinata } from "@/utils/lib/ipfs";
 
 export interface IMetadata {
   [key: string]: unknown;
 }
 
-const usePinata = !!process.env.PINATA_JWT;
-
-function getGateway() {
-  if (usePinata) return ipfsPinataGateway;
-  return ipfsHost;
-}
-
 async function uploadFile(file: File): Promise<string> {
-  if (usePinata) {
-    const result = await pinata.upload.public.file(file);
-    return result.cid;
-  } else {
-    const buffer = await file.arrayBuffer();
-    const result = await ipfs.add(Buffer.from(buffer), { pin: true });
-    return result.cid.toString();
-  }
+  const result = await pinata.upload.public.file(file);
+  return result.cid;
 }
 
 async function uploadJson(data: object): Promise<string> {
@@ -30,21 +17,15 @@ async function uploadJson(data: object): Promise<string> {
     ? `${rawName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`
     : 'metadata.json';
 
-  if (usePinata) {
-    const file = new File([json], fileName, { type: 'application/json' });
-    const result = await pinata.upload.public.file(file);
-    return result.cid;
-  } else {
-    const result = await ipfs.add(json, { pin: true });
-    return result.cid.toString();
-  }
+  const file = new File([json], fileName, { type: 'application/json' });
+  const result = await pinata.upload.public.file(file);
+  return result.cid;
 }
 
 @Injectable()
 @Singleton()
 export class IpfsService {
   async uploadToIPFS(file: File, metadata: IMetadata) {
-    const gateway = getGateway();
     let imageCID: string | undefined;
 
     if (file) {
@@ -61,19 +42,18 @@ export class IpfsService {
     return {
       imageCID,
       metaCID,
-      metadataURL: `${gateway}/${metaCID}`,
-      imageURL: imageCID ? `${gateway}/${imageCID}` : '',
+      metadataURL: `${ipfsPinataGateway}/${metaCID}`,
+      imageURL: imageCID ? `${ipfsPinataGateway}/${imageCID}` : '',
     };
   }
 
   async uploadERCToIPFS(file: File, metadata: IMetadata) {
-    const gateway = getGateway();
     let imageCID = '';
     let imageURL = '';
 
     if (file) {
       imageCID = await uploadFile(file);
-      imageURL = `${gateway}/${imageCID}`;
+      imageURL = `${ipfsPinataGateway}/${imageCID}`;
     }
 
     const finalMeta = {
@@ -89,7 +69,7 @@ export class IpfsService {
     return {
       imageCID,
       metaCID,
-      metadataURL: `${gateway}/${metaCID}`,
+      metadataURL: `${ipfsPinataGateway}/${metaCID}`,
       imageURL,
       ipfsFormat: finalMeta,
     };

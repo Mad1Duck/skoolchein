@@ -9,7 +9,8 @@
 # skoolcein.<domain>  → packages/frontend (static SPA)
 # api.<domain>        → packages/backend  (REST: /v4, /ipfs, /sse, /webhooks)
 # indexer.<domain>    → packages/ponder   (GraphQL/SQL only)
-# rpc.<domain>        → the chain node    (JSON-RPC over TLS)
+# rpc.nawasena-labs.com → the chain node  (JSON-RPC over TLS, shared infra —
+#                                          not under the skoolcein subdomain)
 #
 # Uses container hostnames (scholarship-frontend, scholarship-backend,
 # scholarship-ponder), NOT localhost:<port> — this assumes Caddy itself
@@ -41,9 +42,11 @@ indexer.skoolcein.nawasena-labs.com {
 # extensions are exempt, so the wallet may appear connected while the dApp
 # itself reads nothing.
 #
-# The node here runs on the VPS host (anvil on :8550), not in the Docker
-# network, so this block uses a host address rather than a container name.
-# Adjust if your node is containerised.
-rpc.skoolcein.nawasena-labs.com {
+# Upstream is the HOST address (anvil on the VPS at :8550), NOT `localhost`.
+# Caddy runs as a container here — same as the blocks above, which is why they
+# address services by container name — so inside it `localhost` resolves to the
+# Caddy container itself and the proxy answers 502 Bad Gateway.
+# `host.docker.internal:8550` works too if that alias is configured.
+rpc.nawasena-labs.com {
   reverse_proxy 100.73.196.95:8550
 }

@@ -78,7 +78,6 @@ services:
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       PINATA_GATEWAY: ${PINATA_GATEWAY}
-      IPFS_HOST: ${IPFS_HOST}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       NODE_ENV: production
     networks:

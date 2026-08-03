@@ -8,6 +8,5 @@ export const env = {
   WEBHOOK_SECRET: process.env.WEBHOOK_SECRET ?? "skoolchein_dev_secret_123",
   PINATA_JWT: process.env.PINATA_JWT ?? "",
   PINATA_GATEWAY: process.env.PINATA_GATEWAY ?? "",
-  IPFS_HOST: process.env.IPFS_HOST ?? "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
 };
