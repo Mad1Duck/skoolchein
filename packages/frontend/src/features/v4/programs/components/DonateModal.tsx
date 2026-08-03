@@ -1,21 +1,31 @@
 import { useState, useEffect } from 'react';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { useApproveUSDC, useDonate } from '@/lib/contracts/write-hooks';
+import { useApproveUSDC, useDonate, needsApproval } from '@/lib/contracts/write-hooks';
 import { v4Addresses } from '@/constants/contractsV4';
+import { getTokenMeta } from '@/lib/contracts/v4/token';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   programId: number;
   programName?: string;
+  /** Program's payment token (`program.token`). Zero address = native currency.
+   *  Defaults to native when omitted. */
+  token?: `0x${string}`;
 }
 
 type Step = 'form' | 'approve' | 'donate' | 'done';
 
-export function DonateModal({ isOpen, onClose, programId, programName }: Props) {
+export function DonateModal({ isOpen, onClose, programId, programName, token }: Props) {
+  // Declared before the state below, which seeds its default from it.
+  const tokenMeta = getTokenMeta(token);
+  // Native payments travel as msg.value — there's nothing to approve, and
+  // calling approve() on the zero address would revert.
+  const requiresApproval = needsApproval(token);
+
   const [step, setStep] = useState<Step>('form');
-  const [amount, setAmount] = useState('10');
+  const [amount, setAmount] = useState(tokenMeta.minDonationHint);
   const [nftUri, setNftUri] = useState('ipfs://QmDonorNFT');
 
   const { approve, isPending: isApproving, isSuccess: approved } = useApproveUSDC();
@@ -32,16 +42,21 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
 
   const handleAction = () => {
     if (step === 'form') {
-      setStep('approve');
-      approve(v4Addresses.ScholarshipCore, amount);
+      if (requiresApproval) {
+        setStep('approve');
+        approve(v4Addresses.ScholarshipCore, amount);
+      } else {
+        // Skip straight to the transfer for native.
+        setStep('donate');
+      }
     } else if (step === 'donate') {
-      donate(BigInt(programId), amount, nftUri);
+      donate(BigInt(programId), amount, nftUri, token);
     }
   };
 
   const handleClose = () => {
     setStep('form');
-    setAmount('10');
+    setAmount(tokenMeta.minDonationHint);
     onClose();
   };
 
@@ -51,7 +66,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
         <div className="text-center py-10 space-y-4">
           <h2 className="font-paytone text-2xl">Thank you for your contribution!</h2>
           <p className="text-gray-600">
-            You donated <span className="font-bold">{amount} USDC</span> to{' '}
+            You donated <span className="font-bold">{amount} {tokenMeta.symbol}</span> to{' '}
             {programName ?? `Program #${programId}`}. A Donor NFT has been minted to your wallet.
           </p>
           <NeoButton label="Close" variant="primary" onClick={handleClose} fullWidth />
@@ -69,7 +84,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
               <p className="font-extrabold uppercase tracking-wider text-[10px] mb-2">How Donations Work</p>
               <ul className="text-gray-700 space-y-1 text-xs list-disc list-inside">
                 <li>Your donation gives you <strong>voting power</strong> equal to the net amount</li>
-                <li>A 1 USDC fee is deducted from all donations</li>
+                <li>A protocol fee is deducted from all donations</li>
                 <li>You'll receive a <strong>Donor NFT</strong> as proof of contribution</li>
                 <li>Place a confidence stake on your chosen scholar to earn bonus yield</li>
               </ul>
@@ -77,17 +92,17 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
 
             <div>
               <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
-                Donation Amount (USDC) <span className="text-skred">*</span>
+                Donation Amount ({tokenMeta.symbol}) <span className="text-skred">*</span>
               </label>
               <input
                 type="number"
-                min="2"
-                step="1"
+                min={tokenMeta.minDonationHint}
+                step="any"
                 className="w-full"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-gray-500 mt-1">Minimum 2 USDC (1 USDC fee applied)</p>
+              <p className="text-xs text-gray-500 mt-1">{`Minimum  ; a protocol fee is deducted`}</p>
             </div>
 
             <div>
@@ -107,9 +122,9 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
         {step === 'approve' && (
           <div className="text-center py-10 space-y-3">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
-            <p className="font-bold text-lg">Approving USDC</p>
+            <p className="font-bold text-lg">Approving {tokenMeta.symbol}</p>
             <p className="text-sm text-gray-600">
-              Approving <strong>{amount} USDC</strong> for transfer. Please confirm in your wallet.
+              Approving <strong>{amount} {tokenMeta.symbol}</strong> for transfer. Please confirm in your wallet.
             </p>
           </div>
         )}
@@ -119,7 +134,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
             <div className="w-10 h-10 border-2 border-black bg-skgreen mx-auto animate-pulse mb-2" />
             <p className="font-bold text-lg">Confirm Donation</p>
             <p className="text-sm text-gray-600">
-              Sign the transaction to donate <strong>{amount} USDC</strong> and receive your Donor NFT.
+              Sign the transaction to donate <strong>{amount} {tokenMeta.symbol}</strong> and receive your Donor NFT.
             </p>
           </div>
         )}
@@ -137,7 +152,7 @@ export function DonateModal({ isOpen, onClose, programId, programName }: Props) 
               label="Continue"
               variant="success"
               onClick={handleAction}
-              disabled={!amount || Number(amount) < 2}
+              disabled={!amount || Number(amount) < Number(tokenMeta.minDonationHint)}
               fullWidth
             />
           )}

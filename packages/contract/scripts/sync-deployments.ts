@@ -26,6 +26,7 @@ const CONTRACT_MAP: Record<string, string> = {
   "ScholarshipV4#CommitteeGovernance": "CommitteeGovernance",
   "ScholarshipV4#MilestoneManager": "MilestoneManager",
   "ScholarshipV4#ScholarshipAdmin": "ScholarshipAdmin",
+  "ScholarshipV4#ScholarshipPriceOracle": "ScholarshipPriceOracle",
   "ScholarshipV4#MockUSDC": "MockUSDC",
   "ScholarshipV4#FraudNFT": "FraudNFT",
 };
@@ -39,6 +40,7 @@ const ENV_KEY_MAP: Record<string, string> = {
   CommitteeGovernance: "CONTRACT_COMMITTEE",
   MilestoneManager: "CONTRACT_MILESTONE_MANAGER",
   ScholarshipAdmin: "CONTRACT_ADMIN",
+  ScholarshipPriceOracle: "CONTRACT_PRICE_ORACLE",
   MockUSDC: "CONTRACT_USDC",
   FraudNFT: "CONTRACT_FRAUD_NFT",
 };

@@ -3,7 +3,7 @@ import { api } from "../client";
 import type {
   Program, ProgramDetail, Applicant, Scholar, Milestone,
   Vote, ConfidenceStake, Dispute, Reputation, DashboardData,
-  PaginatedResponse, SingleResponse, AdminOverview, ExternalLearning,
+  PaginatedResponse, SingleResponse, AdminOverview, ExternalLearning, TokenRegistryEntry,
 } from "../types";
 
 // ── Query key factory ─────────────────────────────────────────────────────────
@@ -248,4 +248,31 @@ export function useExternalProgress(wallet: string, provider?: string, externalI
     },
     enabled: !!wallet && !!provider,
   });
+}
+
+// ── Payment tokens & USD rates ────────────────────────────────────────────────
+
+/**
+ * Token registry with USD rates (from ScholarshipPriceOracle via the indexer).
+ * Prefer this over per-component contract reads — one request serves the whole
+ * app, and rates change rarely.
+ */
+export function useTokenRegistry(params?: { includeDeregistered?: boolean }) {
+  return useQuery({
+    queryKey: ["tokenRegistry", params] as const,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: TokenRegistryEntry[] }>("/tokens", { params });
+      return data.data;
+    },
+    // Rates are admin-set and infrequent; avoid refetching on every mount.
+    staleTime: 60_000,
+  });
+}
+
+/** Lookup map keyed by lowercased token address, for O(1) rate lookups. */
+export function useTokenRateMap(): Record<string, bigint> {
+  const { data } = useTokenRegistry();
+  const map: Record<string, bigint> = {};
+  for (const t of data ?? []) map[t.token.toLowerCase()] = BigInt(t.priceUsd || "0");
+  return map;
 }

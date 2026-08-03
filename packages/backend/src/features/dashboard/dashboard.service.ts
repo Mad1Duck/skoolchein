@@ -38,6 +38,7 @@ export class DashboardService {
         program: {
           pid: v4Programs.pid,
           metadataCID: v4Programs.metadataCID,
+          token: v4Programs.token,
           status: v4Programs.status,
           totalFund: v4Programs.totalFund,
         },
@@ -52,6 +53,7 @@ export class DashboardService {
         program: {
           pid: v4Programs.pid,
           metadataCID: v4Programs.metadataCID,
+          token: v4Programs.token,
           status: v4Programs.status,
           totalFund: v4Programs.totalFund,
         },

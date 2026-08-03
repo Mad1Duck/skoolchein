@@ -48,6 +48,10 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
   pid: t.integer("pid").primaryKey(),
   initiator: t.text("initiator").notNull(),
   metadataCID: t.text("metadata_cid").default(""),
+  // Payment token backing this program. The zero address is the chain's
+  // native currency (ScholarshipTypes.NATIVE_TOKEN); anything else is an
+  // ERC20 such as USDC. Comes from ProgramCreated's `token` arg.
+  token: t.text("token").default(""),
   status: programStatusEnum("status").default("CREATED"),
   educationLevel: t.integer("education_level").default(0),
   screeningMode: t.integer("screening_mode").default(0),
@@ -117,6 +121,9 @@ export const v4Scholars = onchainTable("v4_scholars", (t) => ({
 export const v4Milestones = onchainTable("v4_milestones", (t) => ({
   blockchainId: t.integer("blockchain_id").primaryKey(),
   pid: t.integer("pid"),
+  // Denormalized from the parent program so an amount always travels with
+  // its denomination (native 18 decimals vs USDC 6). Zero address = native.
+  token: t.text("token").default(""),
   scholarWallet: t.text("scholar_wallet"),
   kind: t.text("kind").default("MANDATORY"), // MANDATORY | OPTIONAL | NEGOTIATED
   requiresProof: t.boolean("requires_proof").default(false),
@@ -152,6 +159,8 @@ export const v4Votes = onchainTable("v4_votes", (t) => ({
 /** Optional confidence stake — PK (pid, voterAddress). Created on ConfidenceStaked, resolved on ConfidenceStakeResolved */
 export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
   pid: t.integer("pid").notNull(),
+  // Denormalized from the parent program — see v4Milestones.token.
+  token: t.text("token").default(""),
   voterAddress: t.text("voter_address").notNull(),
   scholarAddress: t.text("scholar_address").notNull(),
   amount: t.numeric("amount").default("0"),
@@ -173,6 +182,8 @@ export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
 export const v4Disputes = onchainTable("v4_disputes", (t) => ({
   blockchainId: t.integer("blockchain_id").primaryKey(),
   pid: t.integer("pid"),
+  // Denormalized from the parent program — see v4Milestones.token.
+  token: t.text("token").default(""),
   milestoneId: t.integer("milestone_id"),       // 0 = program-level dispute
   scholarAddress: t.text("scholar_address").notNull(),
   bountyHunter: t.text("bounty_hunter").notNull(),
@@ -211,6 +222,8 @@ export const v4Reputation = onchainTable("v4_reputation", (t) => ({
 /** Tracks manual withdrawals of slashed funds from Treasury — PK transactionHash */
 export const v4TreasuryWithdrawals = onchainTable("v4_treasury_withdrawals", (t) => ({
   transactionHash: t.text("tx_hash").primaryKey(),
+  // Which token was withdrawn — zero address = native currency.
+  token: t.text("token").default(""),
   recipient: t.text("recipient").notNull(),
   amount: t.numeric("amount").default("0"),
   timestamp: t.timestamp("timestamp", { withTimezone: true }).$defaultFn(() => new Date()),
@@ -234,6 +247,8 @@ export const v4FraudNfts = onchainTable("v4_fraud_nfts", (t) => ({
 export const v4Donations = onchainTable("v4_donations", (t) => ({
   transactionHash: t.text("tx_hash").primaryKey(),
   pid: t.integer("pid").notNull(),
+  // Denormalized from the parent program — see v4Milestones.token.
+  token: t.text("token").default(""),
   donor: t.text("donor").notNull(),
   grossAmount: t.numeric("gross_amount").default("0"),
   netAmount: t.numeric("net_amount").default("0"),
@@ -327,4 +342,35 @@ export const v4DonationRelations = relations(v4Donations, ({ one }) => ({
 
 export const v4CommitteeMemberRelations = relations(v4CommitteeMembers, ({ one }) => ({
   program: one(v4Programs, { fields: [v4CommitteeMembers.pid], references: [v4Programs.pid] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════════════════
+// V4 TABLES — Payment Token Registry (ScholarshipPriceOracle)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Registered payment tokens and their admin-set USD rates — PK token address.
+ *
+ * Mirrors ScholarshipPriceOracle's on-chain registry so the backend can serve
+ * the token list + rates over REST instead of every client making its own
+ * contract calls.
+ *
+ * IMPORTANT: `priceUsd` is DISPLAY-ONLY. No fund-moving contract reads these
+ * rates (see the scope note in ScholarshipPriceOracle.sol) — never use this
+ * value to derive a transfer amount.
+ */
+export const v4TokenRegistry = onchainTable("v4_token_registry", (t) => ({
+  // Zero address = the chain's native currency.
+  token: t.text("token").primaryKey(),
+  symbol: t.text("symbol").default(""),
+  // The token's OWN decimals (native 18, USDC 6) — not the 8-decimal USD scale.
+  decimals: t.integer("decimals").default(0),
+  // USD price with 8 decimals (Chainlink convention). "0" = never priced.
+  priceUsd: t.numeric("price_usd").default("0"),
+  priceUpdatedAt: t.timestamp("price_updated_at", { withTimezone: true }),
+  // Soft-delete: deregistered tokens are kept so historical rows still resolve
+  // a symbol/decimals rather than rendering as unknown.
+  isRegistered: t.boolean("is_registered").default(true),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+  updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }));

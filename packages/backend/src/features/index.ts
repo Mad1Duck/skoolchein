@@ -12,3 +12,4 @@ export { DisputesController } from "./disputes/disputes.controller";
 export { ReputationController } from "./reputation/reputation.controller";
 export { DashboardController } from "./dashboard/dashboard.controller";
 export { AdminController } from "./admin/admin.controller";
+export { TokensController } from "./tokens/tokens.controller";

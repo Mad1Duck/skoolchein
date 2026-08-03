@@ -10,9 +10,11 @@ import { ConfidenceStakeModal } from './ConfidenceStakeModal';
 interface CandidateCardProps {
   applicant: Applicant;
   programId: number;
+  /** Program payment token (`program.token`). Zero address = native. */
+  token?: `0x${string}`;
 }
 
-export function CandidateCard({ applicant, programId }: CandidateCardProps) {
+export function CandidateCard({ applicant, programId, token }: CandidateCardProps) {
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   const { data: profile } = useQuery({
     queryKey: ['applicant-profile', applicant.profileCID],
@@ -77,6 +79,7 @@ export function CandidateCard({ applicant, programId }: CandidateCardProps) {
         onClose={() => setIsStakeModalOpen(false)}
         programId={programId}
         candidateWallet={applicant.wallet}
+        token={token}
       />
     </>
   );

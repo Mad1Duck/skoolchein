@@ -6,6 +6,7 @@ import { scholarshipBountyAbi } from "./abis/v4/ScholarshipBounty";
 import { scholarshipReputationAbi } from "./abis/v4/ScholarshipReputation";
 import { committeeGovernanceAbi } from "./abis/v4/CommitteeGovernance";
 import { milestoneManagerAbi } from "./abis/v4/MilestoneManager";
+import { scholarshipPriceOracleAbi } from "./abis/v4/ScholarshipPriceOracle";
 
 dotenv.config();
 
@@ -75,6 +76,15 @@ export default createConfig({
       chain,
       abi: milestoneManagerAbi,
       address: process.env.CONTRACT_MILESTONE_MANAGER! as `0x${string}`,
+      startBlock,
+    },
+    // Token registry + admin USD rates. Indexed so the backend can serve the
+    // token list and rates over REST without every client doing its own
+    // contract reads.
+    ScholarshipPriceOracle: {
+      chain,
+      abi: scholarshipPriceOracleAbi,
+      address: process.env.CONTRACT_PRICE_ORACLE! as `0x${string}`,
       startBlock,
     },
   },

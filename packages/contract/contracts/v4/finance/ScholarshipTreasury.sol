@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IScholarshipTreasury} from "../interfaces/IScholarship.sol";
 import {ScholarshipTypes}     from "../libraries/ScholarshipTypes.sol";
+import {TokenTransfer}        from "../libraries/TokenTransfer.sol";
 
 /**
  * @title  ScholarshipTreasury
@@ -49,6 +50,7 @@ contract ScholarshipTreasury is
     IScholarshipTreasury
 {
     using SafeERC20 for IERC20;
+    using TokenTransfer for address;
 
     // ── Roles ────────────────────────────────────────────────────────────────
 
@@ -66,6 +68,15 @@ contract ScholarshipTreasury is
     // -- Program balances and yield ----------------------------------------
     mapping(uint256 => uint256) public programBalance;
     mapping(uint256 => uint256) public programYield;
+
+    /**
+     * @notice Payment token backing each program's balance.
+     * @dev    Set once, on the first `depositProgramFund` call for a pid
+     *         (Core calls this exactly once, inside createProgram). Every
+     *         other fund-moving function looks this up instead of taking
+     *         a token argument, so their signatures stay stable.
+     */
+    mapping(uint256 => address) public programToken;
 
     // -- Donor tracking per program (yield distribution + refunds) ----------
     // pid → donor → net donated amount
@@ -115,7 +126,7 @@ contract ScholarshipTreasury is
     event YieldDistributed(uint256 indexed pid, uint256 totalYield);
     event YieldClaimed(uint256 indexed pid, address voter, uint256 amount);
     event DonorRefunded(uint256 indexed pid, address donor, uint256 amount);
-    event TreasuryReserveWithdrawn(address indexed recipient, uint256 amount);
+    event TreasuryReserveWithdrawn(address indexed token, address indexed recipient, uint256 amount);
 
     // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -126,6 +137,11 @@ contract ScholarshipTreasury is
     error NothingToRefund();
     error NothingToWithdraw();
     error TooManyDonorsForPushRefund();
+
+    // ── Native token support ────────────────────────────────────────────────
+    // Required so TokenTransfer.payOut's low-level call can forward native
+    // funds from Core (createProgram/placeConfidenceStake) into this contract.
+    receive() external payable {}
 
     // ── Constructor / Initializer ────────────────────────────────────────────
 
@@ -165,8 +181,10 @@ contract ScholarshipTreasury is
      */
     function depositProgramFund(
         uint256 pid,
-        uint256 amount
+        uint256 amount,
+        address token
     ) external override onlyRole(CORE_ROLE) {
+        programToken[pid]    = token;
         programBalance[pid] += amount;
         emit FundDeposited(pid, msg.sender, amount);
     }
@@ -214,7 +232,7 @@ contract ScholarshipTreasury is
             revert InsufficientProgramBalance();
 
         programBalance[pid] -= amount;
-        usdc.safeTransfer(scholar, amount);
+        programToken[pid].payOut(scholar, amount);
 
         emit MilestoneDisbursed(pid, scholar, milestoneId, amount);
     }
@@ -250,9 +268,10 @@ contract ScholarshipTreasury is
         uint256 toProtocol   = (remaining * protocolPercent) / 100;
         // remainder (treasuryPercent) stays in contract — no transfer needed
 
-        if (bhReward   > 0) usdc.safeTransfer(bountyHunter,        bhReward);
+        address token = programToken[pid];
+        if (bhReward   > 0) token.payOut(bountyHunter,        bhReward);
         if (toProtocol > 0) {
-            usdc.safeTransfer(protocolFeeRecipient, toProtocol);
+            token.payOut(protocolFeeRecipient, toProtocol);
             protocolFeeAccumulated += toProtocol;
         }
 
@@ -312,13 +331,13 @@ contract ScholarshipTreasury is
             programYield[pid] -= actualBonus;
 
             uint256 total = stake + actualBonus;
-            usdc.safeTransfer(voter, total);
+            programToken[pid].payOut(voter, total);
             emit ConfidenceStakeResolved(pid, voter, stake, actualBonus, false);
         } else {
             // 50% slashed — stays in treasury, rest returned
             uint256 slashAmt = stake / 2;
             uint256 returned = stake - slashAmt;
-            usdc.safeTransfer(voter, returned);
+            programToken[pid].payOut(voter, returned);
             emit ConfidenceStakeResolved(pid, voter, returned, 0, true);
         }
     }
@@ -374,7 +393,7 @@ contract ScholarshipTreasury is
         yieldClaimed[pid][voter] = true;
 
         if (voterShare > 0) {
-            usdc.safeTransfer(voter, voterShare);
+            programToken[pid].payOut(voter, voterShare);
             emit YieldClaimed(pid, voter, voterShare);
         }
     }
@@ -398,6 +417,7 @@ contract ScholarshipTreasury is
             revert TooManyDonorsForPushRefund();
         uint256          balance = programBalance[pid];
         uint256          total   = programTotalDonated[pid];
+        address          token   = programToken[pid];
 
         // CEI: zero balance first
         programBalance[pid] = 0;
@@ -409,7 +429,7 @@ contract ScholarshipTreasury is
                 uint256 refund = (balance * donated) / total;
                 donorBalance[pid][donor] = 0;
                 if (refund > 0) {
-                    usdc.safeTransfer(donor, refund);
+                    token.payOut(donor, refund);
                     emit DonorRefunded(pid, donor, refund);
                 }
             }
@@ -435,7 +455,7 @@ contract ScholarshipTreasury is
         programBalance[pid]      -= refund;
 
         if (refund > 0) {
-            usdc.safeTransfer(donor, refund);
+            programToken[pid].payOut(donor, refund);
             emit DonorRefunded(pid, donor, refund);
         }
     }
@@ -490,15 +510,15 @@ contract ScholarshipTreasury is
      * @param recipient  Address to receive the funds.
      * @param amount     Amount of USDC to withdraw.
      */
-    function withdrawTreasuryReserve(address recipient, uint256 amount)
+    function withdrawTreasuryReserve(address token, address recipient, uint256 amount)
         external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE)
     {
         if (amount == 0) revert NothingToWithdraw();
         // We don't have a separate tracker for reserve, but we can check balance vs total program/yield/stakes
         // However, a simple balance-based check or a dedicated counter is better.
         // For now, we trust the Admin/Multisig to withdraw only what is surplus.
-        usdc.safeTransfer(recipient, amount);
-        emit TreasuryReserveWithdrawn(recipient, amount);
+        token.payOut(recipient, amount);
+        emit TreasuryReserveWithdrawn(token, recipient, amount);
     }
 
     // ── UUPS ─────────────────────────────────────────────────────────────────

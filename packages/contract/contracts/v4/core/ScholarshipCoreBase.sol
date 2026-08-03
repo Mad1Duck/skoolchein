@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {ScholarshipTypes}       from "../libraries/ScholarshipTypes.sol";
+import {TokenTransfer}          from "../libraries/TokenTransfer.sol";
 import {IScholarshipTreasury}   from "../interfaces/IScholarship.sol";
 import {IScholarshipReputation} from "../interfaces/IScholarship.sol";
 import {ICredentialNFT}         from "../interfaces/IScholarship.sol";
@@ -17,6 +18,7 @@ import {IMilestoneManager}      from "../interfaces/IScholarship.sol";
  */
 abstract contract ScholarshipCoreBase is Initializable {
     using SafeERC20 for IERC20;
+    using TokenTransfer for address;
 
     // ── Inline ReentrancyGuard ───────────────────────────────────────────────
     uint256 private _reentrancyStatus;
@@ -124,6 +126,56 @@ abstract contract ScholarshipCoreBase is Initializable {
 
     mapping(uint256 => uint8) public applicationExtensionCount;
     mapping(uint256 => uint8) public votingExtensionCount;
+
+    // ── Payment tokens ───────────────────────────────────────────────────────
+    // APPENDED DELIBERATELY. These must stay at the very end of the storage
+    // layout: this is a UUPS proxy, so inserting a slot earlier would shift
+    // everything after it and corrupt live program data. For the same reason
+    // the token is tracked in its own mapping rather than as a new field on
+    // ScholarshipTypes.Program (that struct lives in a mapping, so growing it
+    // changes each entry's slot span).
+    mapping(uint256 => address)                      public programToken;
+    mapping(address => ScholarshipTypes.TokenConfig) public tokenConfig;
+
+    /**
+     * @notice Highest pid created before multi-token support existed.
+     *
+     * @dev    Disambiguates "token not set" from "token is native". Programs
+     *         at or below this boundary predate `programToken` and are always
+     *         USDC; without it their unset (zero) entry would be read as the
+     *         native sentinel and their payouts would try to send ETH.
+     *         Set once via setLegacyTokenBoundary() during the upgrade.
+     */
+    uint256 public legacyTokenBoundary;
+
+    event TokenConfigUpdated(address indexed token, bool enabled, uint256 minDonation, uint256 transactionFee);
+    event LegacyTokenBoundarySet(uint256 boundary);
+
+    /**
+     * @notice Whitelist (or de-list) a payment token and set its economics.
+     * @dev    This is the only way `tokenConfig[token].enabled` can become
+     *         true — without calling this at least once for a token,
+     *         `createProgram` will always revert with `TokenNotSupported`.
+     */
+    function setTokenConfig(
+        address token,
+        bool enabled,
+        uint256 minDonation,
+        uint256 transactionFee
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        tokenConfig[token] = ScholarshipTypes.TokenConfig({
+            enabled: enabled,
+            minDonation: minDonation,
+            transactionFee: transactionFee
+        });
+        emit TokenConfigUpdated(token, enabled, minDonation, transactionFee);
+    }
+
+    /// @notice One-time (or as-needed) boundary set for legacy USDC-only programs.
+    function setLegacyTokenBoundary(uint256 boundary) external onlyRole(GOVERNANCE_ROLE) {
+        legacyTokenBoundary = boundary;
+        emit LegacyTokenBoundarySet(boundary);
+    }
 
     uint8   public constant MAX_EXTENSIONS        = 2;
     uint256 public constant MAX_EXTENSION_DURATION = 30 days;
@@ -285,15 +337,50 @@ abstract contract ScholarshipCoreBase is Initializable {
         ScholarshipTypes.VoterInfo storage v = voterInfo[pid][msg.sender];
         if (v.votedFor != scholar) revert MustVoteBeforeStaking();
         if (v.confidenceStake > 0) revert ConfidenceStakeAlreadyExists();
-        
+
         if (!programs[pid].openDonation) revert PublicParticipationDisabled();
-        uint256 netDonation = programs[pid].totalFund; 
+        uint256 netDonation = programs[pid].totalFund;
         if (amount > netDonation) revert ConfidenceStakeExceedsDonation();
-        
+
         v.confidenceStake = amount;
         v.confidenceStakeFor = scholar;
+
+        // Collect the stake. This transfer was missing entirely: the stake was
+        // recorded in the Treasury and later paid back out (principal + bonus
+        // on success, or half returned on slash) without ever being paid in,
+        // draining funds contributed by others.
+        _programToken(pid).pullIn(msg.sender, address(treasury), amount);
+
         treasury.depositConfidenceStake(pid, msg.sender, scholar, amount);
         emit ConfidenceStaked(pid, msg.sender, scholar, amount);
+    }
+
+    // ── Payment-token helpers ────────────────────────────────────────────────
+
+    /**
+     * @notice Payment token for a program.
+     * @dev    Programs created before the multi-token upgrade have no entry in
+     *         `programToken`, which would read as address(0) — the native
+     *         sentinel — and wrongly route their USDC payouts through the
+     *         native path. Legacy programs (pid <= legacyTokenBoundary) are
+     *         therefore pinned to the original USDC token.
+     */
+    function _programToken(uint256 pid) internal view returns (address) {
+        address t = programToken[pid];
+        if (t == address(0) && pid <= legacyTokenBoundary) return address(usdc);
+        return t;
+    }
+
+    /// @notice Per-token economics, falling back to the global config for USDC.
+    function _tokenEconomics(address token)
+        internal
+        view
+        returns (uint256 minDonation, uint256 transactionFee)
+    {
+        ScholarshipTypes.TokenConfig storage tc = tokenConfig[token];
+        if (tc.enabled) return (tc.minDonation, tc.transactionFee);
+        // Unconfigured USDC keeps the pre-upgrade global values.
+        return (_config.minDonation, _config.transactionFee);
     }
 
     function _onMilestoneCompleted(uint256 pid, address scholarAddr, uint256 /* mid */, uint256 amount, ScholarshipTypes.MilestoneKind kind) internal {

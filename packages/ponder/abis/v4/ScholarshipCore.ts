@@ -163,6 +163,38 @@ export const scholarshipCoreAbi = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "NativeTransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "expected",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "received",
+        "type": "uint256"
+      }
+    ],
+    "name": "NativeValueMismatch",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "NewEndMustBeBeforeVotingStart",
     "type": "error"
@@ -266,8 +298,24 @@ export const scholarshipCoreAbi = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "TokenNotSupported",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "TooEarly",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnexpectedNativeValue",
     "type": "error"
   },
   {
@@ -477,6 +525,19 @@ export const scholarshipCoreAbi = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "boundary",
+        "type": "uint256"
+      }
+    ],
+    "name": "LegacyTokenBoundarySet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "uint256",
         "name": "pid",
@@ -538,6 +599,12 @@ export const scholarshipCoreAbi = [
         "internalType": "string",
         "name": "metadataCID",
         "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       }
     ],
     "name": "ProgramCreated",
@@ -811,6 +878,37 @@ export const scholarshipCoreAbi = [
       }
     ],
     "name": "StudentShortlisted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "minDonation",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "transactionFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "TokenConfigUpdated",
     "type": "event"
   },
   {
@@ -1375,11 +1473,16 @@ export const scholarshipCoreAbi = [
         "internalType": "address",
         "name": "committeeContract",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       }
     ],
     "name": "createProgram",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -1402,7 +1505,7 @@ export const scholarshipCoreAbi = [
     ],
     "name": "donate",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -2098,6 +2201,19 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "legacyTokenBoundary",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "milestoneManager",
     "outputs": [
       {
@@ -2155,7 +2271,7 @@ export const scholarshipCoreAbi = [
     ],
     "name": "placeConfidenceStake",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -2191,6 +2307,25 @@ export const scholarshipCoreAbi = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "programToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -2682,6 +2817,19 @@ export const scholarshipCoreAbi = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "boundary",
+        "type": "uint256"
+      }
+    ],
+    "name": "setLegacyTokenBoundary",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
             "internalType": "uint256",
@@ -2805,6 +2953,34 @@ export const scholarshipCoreAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minDonation",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "transactionFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "setTokenConfig",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "studentNFT",
     "outputs": [
@@ -2871,6 +3047,35 @@ export const scholarshipCoreAbi = [
     "name": "toggleOpenDonation",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "tokenConfig",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minDonation",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "transactionFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

@@ -3,7 +3,7 @@ import { v4Programs, v4Donations, v4ConfidenceStakes, v4BountyHunters, v4Reputat
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
-import { upsertReputation } from "./helpers";
+import { upsertReputation, programTokenOf } from "./helpers";
 
 export const scholarshipTreasuryHandlers = () => {
 
@@ -36,9 +36,11 @@ export const scholarshipTreasuryHandlers = () => {
       const { db } = context;
       const { pid, donor, netAmount } = event.args;
 
+      const donationToken = await programTokenOf(db, Number(pid));
       await db.insert(v4Donations).values({
         transactionHash: event.transaction.hash,
         pid: Number(pid),
+        token: donationToken,
         donor: String(donor),
         netAmount: String(netAmount),
       }).onConflictDoNothing();
@@ -182,17 +184,18 @@ export const scholarshipTreasuryHandlers = () => {
   ponder.on("ScholarshipTreasury:TreasuryReserveWithdrawn", async ({ event, context }) => {
     try {
       const { db } = context;
-      const { recipient, amount } = event.args;
+      const { token, recipient, amount } = event.args;
 
       await db.insert(v4TreasuryWithdrawals).values({
         transactionHash: event.transaction.hash,
+        token: String(token).toLowerCase(),
         recipient: String(recipient),
         amount: String(amount),
         timestamp: new Date(Number(event.block.timestamp) * 1000),
       }).onConflictDoNothing();
 
       await insertBlock({ db, event, eventName: "ScholarshipTreasury:TreasuryReserveWithdrawn" });
-      await sendSseToAll("main", { step: "TreasuryReserveWithdrawn", data: { recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { step: "TreasuryReserveWithdrawn", data: { token, recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "TreasuryReserveWithdrawn handler error");
     }

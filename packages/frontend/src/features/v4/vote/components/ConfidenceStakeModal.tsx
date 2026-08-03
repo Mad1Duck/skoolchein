@@ -3,16 +3,23 @@ import { usePlaceConfidenceStake, useApproveUSDC } from "@/lib/contracts/write-h
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { v4Addresses } from "@/constants/contractsV4";
+import { getTokenMeta } from "@/lib/contracts/v4/token";
+import { needsApproval } from "@/lib/contracts/write-hooks";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   programId: number;
   candidateWallet: string;
+  /** Program payment token (`program.token`). Zero address = native. */
+  token?: `0x${string}`;
 }
 
-export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWallet }: Props) {
-  const [amount, setAmount] = useState("10"); // Default 10 USDC
+export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWallet, token }: Props) {
+  const tokenMeta = getTokenMeta(token);
+  // Native stakes carry msg.value; approving the zero address would revert.
+  const requiresApproval = needsApproval(token);
+  const [amount, setAmount] = useState(tokenMeta.minDonationHint);
   const [step, setStep] = useState<"form" | "approve" | "stake">("form");
 
   const { approve, isPending: isApproving, isSuccess: approved } = useApproveUSDC();
@@ -20,11 +27,16 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
 
   const handleNext = () => {
     if (step === "form") {
-      setStep("approve");
-      approve(v4Addresses.ScholarshipCore, amount);
+      if (requiresApproval) {
+        setStep("approve");
+        approve(v4Addresses.ScholarshipCore, amount);
+      } else {
+        setStep("stake");
+        stake(BigInt(programId), candidateWallet as `0x${string}`, amount, token);
+      }
     } else if (step === "approve") {
       setStep("stake");
-      stake(BigInt(programId), candidateWallet as `0x${string}`, amount);
+      stake(BigInt(programId), candidateWallet as `0x${string}`, amount, token);
     }
   };
 
@@ -55,7 +67,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
               Staking confidence allows you to earn bonus yield if this candidate successfully completes their scholarship milestones. If they behave maliciously and are slashed, you lose a portion of your stake.
             </p>
             <div>
-              <label className="block text-sm font-bold mb-1">Stake Amount (USDC)</label>
+              <label className="block text-sm font-bold mb-1">Stake Amount ({tokenMeta.symbol})</label>
               <input 
                 type="number" 
                 min="1"
@@ -73,8 +85,8 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWall
         {step === "approve" && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-4" />
-            <p className="font-bold">Approve USDC</p>
-            <p className="text-sm text-gray-600">Please approve the transfer of {amount} USDC.</p>
+            <p className="font-bold">Approve {tokenMeta.symbol}</p>
+            <p className="text-sm text-gray-600">Please approve the transfer of {amount} {tokenMeta.symbol}.</p>
           </div>
         )}
 

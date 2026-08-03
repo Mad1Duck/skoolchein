@@ -3,6 +3,7 @@ import { milestoneManagerHandlers } from "./milestones";
 import { scholarshipBountyHandlers } from "./bounty";
 import { committeeGovernanceHandlers } from "./governance";
 import { scholarshipTreasuryHandlers, scholarshipReputationHandlers } from "./treasury";
+import { scholarshipPriceOracleHandlers } from "./oracle";
 
 export const registerV4Handlers = () => {
   scholarshipCoreHandlers();
@@ -11,4 +12,5 @@ export const registerV4Handlers = () => {
   committeeGovernanceHandlers();
   scholarshipTreasuryHandlers();
   scholarshipReputationHandlers();
+  scholarshipPriceOracleHandlers();
 };

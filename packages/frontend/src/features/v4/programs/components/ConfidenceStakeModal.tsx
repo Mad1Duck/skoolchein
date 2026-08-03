@@ -3,7 +3,8 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { usePlaceConfidenceStake } from '@/lib/contracts/v4';
 import { useReputation } from '@/lib/api/hooks';
-import { useAccount } from 'wagmi';
+import { useAccount } from "wagmi";
+import { getTokenMeta, formatTokenAmount } from "@/lib/contracts/v4/token";
 
 interface Props {
   isOpen: boolean;
@@ -11,11 +12,14 @@ interface Props {
   programId: bigint;
   scholarAddress: `0x${string}`;
   scholarName?: string;
+  /** Program payment token (`program.token`). Zero address = native. */
+  token?: `0x${string}`;
 }
 
 type Step = 'form' | 'staking' | 'done';
 
-export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddress, scholarName }: Props) {
+export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddress, scholarName, token }: Props) {
+  const tokenMeta = getTokenMeta(token);
   const { address } = useAccount();
   const [step, setStep] = useState<Step>('form');
   const [amount, setAmount] = useState('10');
@@ -28,7 +32,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
   }, [isSuccess, step]);
 
   const handleStake = () => {
-    stake(programId, scholarAddress, amount);
+    stake(programId, scholarAddress, amount, token);
     setStep('staking');
   };
 
@@ -44,7 +48,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
         <div className="text-center py-10 space-y-4">
           <h2 className="font-paytone text-2xl">Confidence Stake Placed!</h2>
           <p className="text-gray-600">
-            You successfully staked <span className="font-bold">{amount} USDC</span> on{' '}
+            You successfully staked <span className="font-bold">{amount} {tokenMeta.symbol}</span> on{' '}
             <span className="font-bold">{scholarName ?? scholarAddress}</span>.
           </p>
           <NeoButton label="Close" variant="primary" onClick={handleClose} fullWidth />
@@ -69,12 +73,12 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
 
             <div className="bg-white border-2 border-dashed border-black p-3 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
               <span className="text-xs font-bold text-gray-500 uppercase">Available Power</span>
-              <span className="font-black">{donationPower} USDC</span>
+              <span className="font-black">{formatTokenAmount(donationPower, token)} {tokenMeta.symbol}</span>
             </div>
 
             <div>
               <label className="block text-sm font-bold mb-1">
-                Stake Amount (USDC)
+                Stake Amount ({tokenMeta.symbol})
               </label>
               <input
                 type="number"
@@ -94,7 +98,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
             <p className="font-bold text-lg">Staking Confidence</p>
             <p className="text-sm text-gray-600">
-              Confirm the transaction to stake <strong>{amount} USDC</strong> on <strong>{scholarName ?? scholarAddress}</strong>.
+              Confirm the transaction to stake <strong>{amount} {tokenMeta.symbol}</strong> on <strong>{scholarName ?? scholarAddress}</strong>.
             </p>
             {error && (
               <div className="bg-skred-light p-3 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
@@ -117,7 +121,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
               label={isPending ? 'Staking...' : 'Place Stake'}
               variant="primary"
               onClick={handleStake}
-              disabled={!amount || Number(amount) <= 0 || Number(amount) > Number(donationPower)}
+              disabled={!amount || Number(amount) <= 0 || Number(amount) > Number(formatTokenAmount(donationPower, token))}
               fullWidth
             />
           )}

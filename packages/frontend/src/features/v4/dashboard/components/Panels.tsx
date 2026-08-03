@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { formatUnits } from 'viem';
+import { formatTokenWithSymbol, formatTokenAmount } from '@/lib/contracts/v4/token';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
 import {
@@ -174,7 +174,7 @@ function InitiatorProgramCard({
           <div className="text-right">
             <p className="text-xs text-gray-500">Yield Accrued</p>
             <p className="font-paytone text-emerald-700">
-              {formatUnits(BigInt(program.yieldAccrued), 6)} USDC
+              {formatTokenWithSymbol(program.yieldAccrued, program.token)}
             </p>
           </div>
         </div>
@@ -511,7 +511,7 @@ function ScholarCard({
                       {m.kind}
                     </span>
                     <span className="text-gray-500 ml-2">
-                      ${formatUnits(BigInt(m.amount), 6)} USDC
+                      {formatTokenWithSymbol(m.amount, m.token)}
                     </span>
                   </div>
                   <StatusPill status={m.status} />
@@ -621,7 +621,7 @@ export function VoterPanel({
                             : 'text-skgreen'
                           : 'text-skyellow'
                       }>
-                      {formatUnits(BigInt(s.amount), 6)} USDC
+                      {formatTokenWithSymbol(s.amount, s.token)}
                     </span>
                   </li>
                 ))}
@@ -649,7 +649,7 @@ export function BountyHunterPanel({
   const wonCount = disputes.filter(d => d.status.includes('WON') || d.status.includes('GUILTY') || d.status.includes('CONCEDED')).length;
   const lostCount = disputes.filter(d => d.status.includes('LOST') || d.status.includes('REJECTED')).length;
   const activeCount = disputes.filter(d => d.status === 'ACTIVE').length;
-  const totalReward = disputes.reduce((acc, obj) => acc + Number(formatUnits(BigInt(obj.bhRewardPaid || '0'), 6)), 0);
+  const totalReward = disputes.reduce((acc, obj) => acc + Number(formatTokenAmount(obj.bhRewardPaid || "0", obj.token)), 0);
 
   return (
     <section>
@@ -753,7 +753,7 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
         <div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-200 mb-3">
           <span className="text-gray-500">Reward Paid:</span>
           <span className="font-bold font-paytone">
-            {formatUnits(BigInt(dispute.bhRewardPaid), 6)} USDC
+            {formatTokenWithSymbol(dispute.bhRewardPaid, dispute.token)}
           </span>
         </div>
 
@@ -919,7 +919,7 @@ function CommitteeMilestoneVoteRow({
       <div>
         <span className="font-bold text-sm">Milestone #{milestone.blockchainId}</span>
         <span className="text-xs text-gray-500 ml-2">
-          ${formatUnits(BigInt(milestone.amount), 6)} USDC
+          {formatTokenWithSymbol(milestone.amount, milestone.token)}
         </span>
       </div>
       <div className="flex gap-1">

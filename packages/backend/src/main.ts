@@ -20,6 +20,7 @@ import {
   ReputationController,
   DashboardController,
   AdminController,
+  TokensController,
 } from "@/features";
 
 HonoRouteBuilder.configure({
@@ -43,7 +44,7 @@ const controllers = [
   HealthController, IpfsController, SseController, WebhooksController, LearningController,
   ProgramsController, ApplicantsController, ScholarsController, MilestonesController,
   VotesController, DisputesController, ReputationController, DashboardController,
-  AdminController,
+  AdminController, TokensController,
 ];
 
 for (const ctrl of controllers) {

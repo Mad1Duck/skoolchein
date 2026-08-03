@@ -38,7 +38,7 @@ export function CandidateList({ program }: CandidateListProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {shortlisted.map((applicant) => (
-          <CandidateCard key={applicant.wallet} applicant={applicant} programId={program.pid} />
+          <CandidateCard key={applicant.wallet} applicant={applicant} programId={program.pid} token={program.token as `0x${string}` | undefined} />
         ))}
       </div>
     </div>

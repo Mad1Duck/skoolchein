@@ -1,12 +1,21 @@
 import { scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi, v4Addresses } from "@/constants/contractsV4";
 import { parseUnits } from "viem";
 import { useTxHook } from "./use-tx-base";
+import { parseTokenAmount, nativeValueFor, isNativeToken } from "../token";
 
 const CORE_ADDRESS = v4Addresses.ScholarshipCore;
 const TREASURY_ADDRESS = v4Addresses.ScholarshipTreasury;
 const USDC_ADDRESS = v4Addresses.MockUSDC;
 
 // ── USDC ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Whether a payment needs an ERC20 approve() first. Native payments don't —
+ * calling approve on the zero address would revert.
+ */
+export function needsApproval(token?: string | null): boolean {
+  return !isNativeToken(token);
+}
 
 export function useApproveUSDC() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
@@ -43,12 +52,24 @@ export function useMintUSDC() {
 export function useDonate() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
 
-  const donate = (pid: bigint, amountStr: string, nftMetadataURI: string) => {
+  /**
+   * @param token Program's payment token — pass `program.token` from the API.
+   *              Native donations carry msg.value; ERC20 ones need a prior
+   *              approve() (see useApproveUSDC / needsApproval).
+   */
+  const donate = (
+    pid: bigint,
+    amountStr: string,
+    nftMetadataURI: string,
+    token?: `0x${string}`,
+  ) => {
+    const amount = parseTokenAmount(amountStr, token);
     writeContract({
       address: CORE_ADDRESS,
       abi: scholarshipCoreAbi,
       functionName: "donate",
-      args: [pid, parseUnits(amountStr, 6), nftMetadataURI],
+      args: [pid, amount, nftMetadataURI],
+      value: nativeValueFor(amount, token),
     });
   };
 

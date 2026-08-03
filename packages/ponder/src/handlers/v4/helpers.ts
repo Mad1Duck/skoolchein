@@ -1,5 +1,19 @@
 import type { Context } from "ponder:registry";
-import { v4Reputation, v4BountyHunters } from "ponder:schema";
+import { v4Reputation, v4BountyHunters, v4Programs } from "ponder:schema";
+
+/**
+ * Payment token of a program, for denormalizing onto rows that carry an
+ * amount (milestones, disputes, stakes, donations). Keeping the token next
+ * to the amount means consumers never have to join back to the program just
+ * to know the decimals — native uses 18, USDC 6.
+ *
+ * Returns "" when the program isn't indexed yet; consumers treat that as
+ * unknown rather than as the native sentinel (which is the zero address).
+ */
+export async function programTokenOf(db: Context["db"], pid: number): Promise<string> {
+  const prog = await db.find(v4Programs, { pid });
+  return prog?.token ?? "";
+}
 
 /** Upsert v4_reputation balance for an address */
 export async function upsertReputation(

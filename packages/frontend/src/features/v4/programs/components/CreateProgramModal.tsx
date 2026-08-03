@@ -5,6 +5,8 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import type { ProgramMetadata } from '@/lib/api/types';
 import { v4Addresses } from '@/constants/contractsV4';
+import { NATIVE_TOKEN, SUPPORTED_TOKENS, getTokenMeta } from '@/lib/contracts/v4/token';
+import { needsApproval } from '@/lib/contracts/write-hooks';
 
 interface Props {
   isOpen: boolean;
@@ -25,7 +27,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
     organization: '',
     targetWinners: 1,
     maxCandidates: 5,
-    totalFund: '100',
+    totalFund: "100",
+    token: NATIVE_TOKEN as string,
     educationLevel: 3, // 3 = University
     screeningMode: 1,  // 1 = BY_STUDENT, 0 = BY_COMMITTEE
     maxOptionalMilestones: 0,
@@ -63,7 +66,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
       const res = await uploadToIPFS({ meta, type: 'program', name: `${slug}-${Date.now()}` });
       const cid = res?.metaCID || 'QmFallbackTestingCID1234567890abcdefg';
       setMetaCID(cid);
-      setStep('approve');
+      // Native funding needs no ERC20 approval — skip straight to create.
+      setStep(needsApproval(formData.token) ? "approve" : "create");
     } else if (step === 'approve') {
       approve(v4Addresses.ScholarshipCore, formData.totalFund);
     } else if (step === 'create') {
@@ -102,6 +106,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
         totalFund: formData.totalFund,
         maxOptionalMilestones: formData.maxOptionalMilestones,
         committeeContract: committeeAddr,
+        token: formData.token as `0x${string}`,
       });
     }
   };
@@ -190,12 +195,43 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               />
             </div>
 
+            {/* Payment token — determines decimals and whether funding is sent
+                as msg.value (native) or needs an ERC20 approve first. */}
+            <div>
+              <label className="block text-xs font-bold mb-1">Payment Token</label>
+              <div className="flex gap-2">
+                {SUPPORTED_TOKENS.map((t) => (
+                  <button
+                    key={t.address}
+                    type="button"
+                    onClick={() => set('token', t.address)}
+                    className={`flex-1 border-2 border-black p-2 text-sm font-bold shadow-[2px_2px_0_0_#000] transition-colors ${
+                      formData.token.toLowerCase() === t.address.toLowerCase()
+                        ? 'bg-skgreen'
+                        : 'bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    {t.symbol}
+                    <span className="block text-[10px] font-normal text-gray-600">
+                      {t.isNative ? 'native currency' : 'ERC20'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                All program amounts (fund, donations, milestones) are denominated in this token.
+              </p>
+            </div>
+
             {/* Fund + Winners */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1">Total Fund (USDC)</label>
+                <label className="block text-xs font-bold mb-1">
+                  Total Fund ({getTokenMeta(formData.token).symbol})
+                </label>
                 <input
                   type="number"
+                  step="any"
                   className="w-full"
                   value={formData.totalFund}
                   onChange={(e) => set('totalFund', e.target.value)}
@@ -396,7 +432,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
             <p className="font-bold">Approve USDC</p>
             <p className="text-sm text-gray-600">
-              Approve <strong>{formData.totalFund} USDC</strong> transfer to Treasury.
+              Approve <strong>{formData.totalFund} {getTokenMeta(formData.token).symbol}</strong> transfer to Treasury.
             </p>
           </div>
         )}

@@ -30,6 +30,15 @@ export interface Program {
   pid: number;
   initiator: string;
   metadataCID: string;
+  /**
+   * Payment token backing this program. The zero address
+   * (0x0000000000000000000000000000000000000000) means the chain's native
+   * currency; any other value is an ERC20 such as USDC. Amount fields on this
+   * program (totalFund, allocatedFund, spentFund, …) are denominated in this
+   * token — note native uses 18 decimals while USDC uses 6, so always format
+   * against the token, never a hardcoded decimal count.
+   */
+  token: string;
   status: ProgramStatus;
   educationLevel: number;
   screeningMode: number;
@@ -93,6 +102,9 @@ export interface Scholar {
 export interface Milestone {
   blockchainId: number;
   pid: number | null;
+  /** Denormalized payment token — zero address = native. Use with
+   *  formatTokenAmount so decimals match (native 18 vs USDC 6). */
+  token: string;
   scholarWallet: string | null;
   kind: "MANDATORY" | "OPTIONAL" | "NEGOTIATED";
   requiresProof: boolean;
@@ -120,6 +132,8 @@ export interface Vote {
 
 export interface ConfidenceStake {
   pid: number;
+  /** Denormalized payment token — see Milestone.token. */
+  token: string;
   voterAddress: string;
   scholarAddress: string;
   amount: string;
@@ -134,6 +148,8 @@ export interface ConfidenceStake {
 export interface Dispute {
   blockchainId: number;
   pid: number | null;
+  /** Denormalized payment token — see Milestone.token. */
+  token: string;
   milestoneId: number | null;
   scholarAddress: string;
   bountyHunter: string;
@@ -243,4 +259,26 @@ export interface ApplicantProfile {
   photoUrl?: string;
   content?: string; // profileText
   hackquestId?: string;
+}
+
+/**
+ * Payment token + USD rate, mirrored from ScholarshipPriceOracle by the
+ * indexer and served at GET /v4/tokens.
+ */
+export interface TokenRegistryEntry {
+  /** Zero address = the chain's native currency. */
+  token: string;
+  symbol: string;
+  /** The token's OWN decimals (native 18, USDC 6) — not the USD scale. */
+  decimals: number;
+  /**
+   * USD price with 8 decimals (Chainlink convention). "0" = never priced.
+   * DISPLAY ONLY — no fund-moving contract reads this; never derive a
+   * transfer amount from it.
+   */
+  priceUsd: string;
+  priceUpdatedAt: string | null;
+  isRegistered: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

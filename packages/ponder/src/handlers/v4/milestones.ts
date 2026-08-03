@@ -5,6 +5,7 @@ import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
 import { hexToString } from "viem";
+import { programTokenOf } from "./helpers";
 
 const decodeBytes32 = (value: `0x${string}`) =>
   /^0x0+$/.test(value) ? "" : hexToString(value, { size: 32 }).replace(/\0/g, "");
@@ -26,9 +27,11 @@ export const milestoneManagerHandlers = () => {
       const provider = decodeBytes32(event.args.provider);
       const externalId = decodeBytes32(event.args.externalId);
 
+      const token = await programTokenOf(db, Number(pid));
       await db.insert(v4Milestones).values({
         blockchainId: mId,
         pid: Number(pid),
+        token,
         scholarWallet: String(scholar),
         kind: kindStr,
         requiresProof: kindStr !== "MANDATORY",
@@ -70,9 +73,11 @@ export const milestoneManagerHandlers = () => {
       const provider = decodeBytes32(event.args.provider);
       const externalId = decodeBytes32(event.args.externalId);
 
+      const token = await programTokenOf(db, Number(pid));
       await db.insert(v4Milestones).values({
         blockchainId: mId,
         pid: Number(pid),
+        token,
         scholarWallet: String(scholar),
         kind: kindStr,
         requiresProof: kindStr !== "MANDATORY",

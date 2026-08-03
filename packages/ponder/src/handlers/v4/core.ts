@@ -5,7 +5,7 @@ import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
 import { count, eq, and } from "drizzle-orm";
-import { toDate } from "./helpers";
+import { toDate, programTokenOf } from "./helpers";
 
 export const scholarshipCoreHandlers = () => {
 
@@ -14,7 +14,7 @@ export const scholarshipCoreHandlers = () => {
   ponder.on("ScholarshipCore:ProgramCreated", async ({ event, context }) => {
     try {
       const { db } = context;
-      const { pid, initiator, metadataCID } = event.args;
+      const { pid, initiator, metadataCID, token } = event.args;
 
       const prog: any = await context.client.readContract({
         abi: scholarshipCoreAbi,
@@ -27,6 +27,7 @@ export const scholarshipCoreHandlers = () => {
         pid: Number(pid),
         initiator: String(initiator),
         metadataCID: String(metadataCID),
+        token: String(token).toLowerCase(),
         status: "CREATED",
         totalFund: String(prog.totalFund),
         targetWinners: Number(prog.targetWinners),
@@ -292,8 +293,10 @@ export const scholarshipCoreHandlers = () => {
       const { db } = context;
       const { pid, voter, scholar, amount } = event.args;
 
+      const stakeToken = await programTokenOf(db, Number(pid));
       await db.insert(v4ConfidenceStakes).values({
         pid: Number(pid),
+        token: stakeToken,
         voterAddress: String(voter),
         scholarAddress: String(scholar),
         amount: String(amount),

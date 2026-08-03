@@ -3,7 +3,7 @@ import { v4Disputes, v4BountyHunters } from "ponder:schema";
 import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
-import { upsertBountyHunter } from "./helpers";
+import { upsertBountyHunter, programTokenOf } from "./helpers";
 
 export const scholarshipBountyHandlers = () => {
 
@@ -16,9 +16,11 @@ export const scholarshipBountyHandlers = () => {
         0: "LIGHT_FRAUD", 1: "MILESTONE_FRAUD", 2: "HEAVY_FRAUD",
       };
 
+      const disputeToken = await programTokenOf(db, Number(pid));
       await db.insert(v4Disputes).values({
         blockchainId: Number(disputeId),
         pid: Number(pid),
+        token: disputeToken,
         scholarAddress: String(scholar),
         bountyHunter: String(bountyHunter),
         disputeType: typeMap[Number(disputeType)] ?? "LIGHT_FRAUD",

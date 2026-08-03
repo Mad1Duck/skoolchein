@@ -20,6 +20,7 @@ export class DisputesService {
         program: {
           pid: v4Programs.pid,
           metadataCID: v4Programs.metadataCID,
+          token: v4Programs.token,
           status: v4Programs.status,
         },
       })
@@ -41,6 +42,7 @@ export class DisputesService {
       program: {
         pid: v4Programs.pid,
         metadataCID: v4Programs.metadataCID,
+        token: v4Programs.token,
         status: v4Programs.status,
       },
     })

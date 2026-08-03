@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatUnits } from "viem";
+import { formatTokenWithSymbol } from '@/lib/contracts/v4/token';
 import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { DashboardCard } from "./DashboardCard";
@@ -91,7 +91,7 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
                     Proof: {m.proofCID}
                   </p>
                   <p className="font-bold text-skgreen">
-                    ${formatUnits(BigInt(m.amount), 6)} USDC
+                    {formatTokenWithSymbol(m.amount, m.token)}
                   </p>
                 </div>
                 {canExecute && (

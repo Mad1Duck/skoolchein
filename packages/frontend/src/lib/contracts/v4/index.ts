@@ -4,4 +4,5 @@ export * from "./hooks/bounty";
 export * from "./hooks/governance";
 export * from "./hooks/treasury";
 export * from "./hooks/admin";
+export * from "./hooks/oracle";
 export * from "./hooks/use-tx-base";

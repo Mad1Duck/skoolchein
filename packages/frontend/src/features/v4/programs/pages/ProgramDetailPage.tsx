@@ -184,6 +184,7 @@ export function ProgramDetailPage() {
           onClose={() => setIsDonateOpen(false)}
           programId={program.pid}
           programName={meta?.name}
+          token={program.token as `0x${string}` | undefined}
         />
       )}
 
@@ -204,6 +205,7 @@ export function ProgramDetailPage() {
           programId={BigInt(program.pid)}
           scholarAddress={selectedScholar.address}
           scholarName={selectedScholar.name}
+          token={program.token as `0x${string}` | undefined}
         />
       )}
 

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {ScholarshipTypes}       from "../libraries/ScholarshipTypes.sol";
+import {TokenTransfer}          from "../libraries/TokenTransfer.sol";
 import {IScholarshipTreasury}   from "../interfaces/IScholarship.sol";
 import {IScholarshipReputation} from "../interfaces/IScholarship.sol";
 import {ICredentialNFT}         from "../interfaces/IScholarship.sol";
@@ -22,9 +23,10 @@ import {ScholarshipCoreBase}    from "./ScholarshipCoreBase.sol";
  */
 contract ScholarshipCore is ScholarshipCoreBase {
     using SafeERC20 for IERC20;
+    using TokenTransfer for address;
 
     // ── Events ────────────────────────────────────────────────────────────────
-    event ProgramCreated(uint256 indexed pid, address indexed initiator, string metadataCID);
+    event ProgramCreated(uint256 indexed pid, address indexed initiator, string metadataCID, address token);
     event CommitteeAssigned(uint256 indexed pid, address committeeContract);
     event DonationReceived(uint256 indexed pid, address indexed donor, uint256 grossAmount, uint256 netAmount);
     event ProtocolFeeCollected(uint256 indexed pid, address indexed donor, uint256 feeAmount);
@@ -47,6 +49,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
     error AlreadyApplied();
     error ApplicantListIncomplete();
     error InvalidMaxOptional();
+    error TokenNotSupported(address token);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -111,8 +114,9 @@ contract ScholarshipCore is ScholarshipCoreBase {
         uint256 milestoneDisputeWindow,
         uint256 totalFund,
         uint8   maxOptionalMilestones,
-        address committeeContract
-    ) external nonReentrant {
+        address committeeContract,
+        address token
+    ) external payable nonReentrant {
         { uint256 wSum = uint256(weights.academicWeight) + weights.incomeWeight + weights.essayWeight + weights.recommendWeight + weights.extracurricWeight; if (wSum != 100) revert InvalidScoreWeights(); }
         { uint256 sSum = uint256(slashDist.bountyHunterPercent) + slashDist.treasuryPercent + slashDist.protocolPercent; if (sSum != 100) revert InvalidSlashDistribution(); }
         if (maxCandidates < _config.minCandidates || maxCandidates > _config.maxCandidates) revert InvalidCandidateRange();
@@ -120,10 +124,16 @@ contract ScholarshipCore is ScholarshipCoreBase {
         if (timeline[0] >= timeline[1] || timeline[2] >= timeline[3] || timeline[1] >= timeline[2]) revert InvalidTimeline();
         if (totalFund == 0) revert InsufficientFund();
         if (maxOptionalMilestones > _config.maxOptionalMilestones) revert InvalidMaxOptional();
+        // Whitelist check — without it any caller could back a program with an
+        // arbitrary ERC20, including one that reenters or misreports balances.
+        if (!tokenConfig[token].enabled) revert TokenNotSupported(token);
 
-        usdc.safeTransferFrom(msg.sender, address(treasury), totalFund);
         uint256 pid = ++_nextProgramId;
-        treasury.depositProgramFund(pid, totalFund);
+        programToken[pid] = token;
+
+        // Pulls ERC20 via transferFrom, or validates+forwards msg.value for native.
+        TokenTransfer.pullIn(token, msg.sender, address(treasury), totalFund);
+        treasury.depositProgramFund(pid, totalFund, token);
 
         programs[pid] = ScholarshipTypes.Program({
             pid:                   pid,
@@ -161,7 +171,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
             milestoneManager.setProgramCommittee(pid, committeeContract);
             emit CommitteeAssigned(pid, committeeContract);
         }
-        emit ProgramCreated(pid, msg.sender, metadataCID);
+        emit ProgramCreated(pid, msg.sender, metadataCID, token);
     }
 
     function resolveDisputeBH(uint256 disputeId) external onlyRole(COMMITTEE_ROLE) {
@@ -218,14 +228,24 @@ contract ScholarshipCore is ScholarshipCoreBase {
     // ═══════════════════════════════════════════════════════════════════
 
     function donate(uint256 pid, uint256 grossAmount, string calldata nftMetadataURI)
-        external nonReentrant programExists(pid) inStatus(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN)
+        external payable nonReentrant programExists(pid) inStatus(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN)
     {
         if (!programs[pid].openDonation) revert PublicParticipationDisabled();
-        if (grossAmount < _config.minDonation) revert InsufficientDonation();
+
+        address token = _programToken(pid);
+        // Per-token economics: minDonation/transactionFee are absolute amounts,
+        // so the USDC values (6 decimals) are meaningless for an 18-decimal
+        // native token — 50 * 1e6 wei would be no minimum at all.
+        (uint256 minDonation, uint256 fee) = _tokenEconomics(token);
+
+        if (grossAmount < minDonation) revert InsufficientDonation();
+        // Guard the subtraction below: a fee larger than the donation would
+        // underflow-revert, but an equal one would mint a zero-power voter.
+        if (grossAmount <= fee) revert InsufficientDonation();
+
         ScholarshipTypes.VoterInfo storage voter = voterInfo[pid][msg.sender];
         if (voter.donatedAmount > 0) revert AlreadyDonated();
-        usdc.safeTransferFrom(msg.sender, address(treasury), grossAmount);
-        uint256 fee = _config.transactionFee;
+        token.pullIn(msg.sender, address(treasury), grossAmount);
         uint256 net = grossAmount - fee;
         voter.donatedAmount = net; voter.remainingVotingPower = net;
         treasury.recordDonation(pid, msg.sender, net);
@@ -390,7 +410,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
         _voteForCandidate(pid, candidate, useReputation);
     }
 
-    function placeConfidenceStake(uint256 pid, address scholar, uint256 amount) external nonReentrant {
+    function placeConfidenceStake(uint256 pid, address scholar, uint256 amount) external payable nonReentrant {
         _placeConfidenceStake(pid, scholar, amount);
     }
 }

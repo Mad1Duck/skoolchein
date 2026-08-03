@@ -237,7 +237,7 @@ interface IMilestoneManager {
  */
 interface IScholarshipTreasury {
 
-    function depositProgramFund(uint256 pid, uint256 amount) external;
+    function depositProgramFund(uint256 pid, uint256 amount, address token) external;
 
     function recordDonation(uint256 pid, address donor, uint256 netAmount) external;
 

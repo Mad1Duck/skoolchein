@@ -289,11 +289,52 @@ library ScholarshipTypes {
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    // PAYMENT TOKENS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Sentinel address representing the chain's native currency
+     *         (ETH, or whatever the deployment chain uses) as a payment token.
+     *         A program whose token == NATIVE_TOKEN is funded with msg.value
+     *         instead of ERC20 transfers.
+     */
+    address constant NATIVE_TOKEN = address(0);
+
+    /**
+     * @notice Per-token economics and whitelist entry.
+     *
+     * @dev    Two reasons this can't be a single global config:
+     *
+     *         1. DECIMALS. minDonation/transactionFee are absolute amounts.
+     *            USDC uses 6 decimals, native currencies use 18 — a shared
+     *            `50 * 1e6` minimum would be 50 USDC but only 0.00000000005
+     *            ETH, i.e. effectively no minimum at all.
+     *
+     *         2. SAFETY. `enabled` doubles as a whitelist. Without it any
+     *            caller could create a program backed by an arbitrary ERC20,
+     *            including a malicious one that reenters on transfer or
+     *            misreports balances.
+     */
+    struct TokenConfig {
+        bool    enabled;         // Admin must explicitly allow the token
+        uint256 minDonation;     // In this token's own decimals
+        uint256 transactionFee;  // In this token's own decimals
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // PROTOCOL CONSTANTS (compile-time defaults — overridable via ProtocolConfig)
     // ═══════════════════════════════════════════════════════════════════
 
+    // NOTE: these two are USDC-denominated (6 decimals) and remain the
+    // defaults for the protocol's original USDC path. Per-token overrides
+    // live in TokenConfig — see the decimals note above.
     uint256 constant DEFAULT_MIN_DONATION             = 50  * 1e6;
     uint256 constant DEFAULT_TRANSACTION_FEE          = 10  * 1e6;
+
+    // Native-currency equivalents (18 decimals). Deliberately conservative
+    // defaults; admin should tune these per deployment/chain.
+    uint256 constant DEFAULT_NATIVE_MIN_DONATION      = 0.01 ether;
+    uint256 constant DEFAULT_NATIVE_TRANSACTION_FEE   = 0.001 ether;
     uint8   constant DEFAULT_MIN_CANDIDATES           = 5;
     uint8   constant DEFAULT_MAX_CANDIDATES           = 20;
     uint8   constant DEFAULT_MAX_RETRY                = 3;

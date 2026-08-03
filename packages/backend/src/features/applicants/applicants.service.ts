@@ -18,6 +18,7 @@ export class ApplicantsService {
       program: {
         pid: v4Programs.pid,
         metadataCID: v4Programs.metadataCID,
+        token: v4Programs.token,
         status: v4Programs.status,
         initiator: v4Programs.initiator,
         totalFund: v4Programs.totalFund,
@@ -37,6 +38,7 @@ export class ApplicantsService {
       program: {
         pid: v4Programs.pid,
         metadataCID: v4Programs.metadataCID,
+        token: v4Programs.token,
         status: v4Programs.status,
       },
     })

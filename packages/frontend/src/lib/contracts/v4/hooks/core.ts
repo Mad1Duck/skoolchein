@@ -1,6 +1,7 @@
 import { scholarshipCoreAbi, v4Addresses } from "@/constants/contractsV4";
-import { stringToHex, parseUnits } from "viem";
+import { stringToHex } from "viem";
 import { useTxHook } from "./use-tx-base";
+import { NATIVE_TOKEN, parseTokenAmount, nativeValueFor } from "../token";
 
 const CORE_ADDRESS = v4Addresses.ScholarshipCore;
 
@@ -32,7 +33,15 @@ export function useCreateProgram() {
     totalFund: string;
     maxOptionalMilestones: number;
     committeeContract: `0x${string}`;
+    /** Payment token. Zero address = native currency. Must be whitelisted
+     *  on-chain via setTokenConfig, else the call reverts TokenNotSupported. */
+    token?: `0x${string}`;
   }) => {
+    const token = (args.token ?? NATIVE_TOKEN) as `0x${string}`;
+    // Decimals come from the chosen token (native 18 / USDC 6) — a hardcoded
+    // 6 here would under-fund a native program by 10^12.
+    const totalFund = parseTokenAmount(args.totalFund, token);
+
     writeContract({
       address: CORE_ADDRESS,
       abi: scholarshipCoreAbi,
@@ -47,10 +56,13 @@ export function useCreateProgram() {
         args.targetWinners,
         args.timeline,
         args.milestoneDisputeWindow,
-        parseUnits(args.totalFund, 6),
+        totalFund,
         args.maxOptionalMilestones,
         args.committeeContract,
+        token,
       ],
+      // Native funds travel as msg.value; ERC20 relies on a prior approve().
+      value: nativeValueFor(totalFund, token),
     });
   };
 
@@ -222,12 +234,24 @@ export function useVoteForCandidate() {
 
 export function usePlaceConfidenceStake() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
-  const stake = (pid: bigint, scholar: `0x${string}`, amountStr: string) => {
+  /**
+   * @param token Program's payment token — pass `program.token` from the API.
+   *              Determines both the decimals and whether funds travel as
+   *              msg.value (native) or via a prior approve() (ERC20).
+   */
+  const stake = (
+    pid: bigint,
+    scholar: `0x${string}`,
+    amountStr: string,
+    token?: `0x${string}`,
+  ) => {
+    const amount = parseTokenAmount(amountStr, token);
     writeContract({
       address: CORE_ADDRESS,
       abi: scholarshipCoreAbi,
       functionName: "placeConfidenceStake",
-      args: [pid, scholar, parseUnits(amountStr, 6)],
+      args: [pid, scholar, amount],
+      value: nativeValueFor(amount, token),
     });
   };
   return { stake, isPending, isSuccess, error, hash, reset };

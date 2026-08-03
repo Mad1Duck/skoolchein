@@ -8,7 +8,9 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProtocolConfig } from "../components/AdminProtocolConfig";
+import { AdminTokenOracle } from "../components/AdminTokenOracle";
 import { formatUnits } from "viem";
+import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 
 export function AdminDashboardPage() {
   const { address } = useAccount();
@@ -23,7 +25,11 @@ export function AdminDashboardPage() {
   const { data: applicantsData } = useApplicants();
   const { data: scholarsData } = useScholars();
 
-  // Treasury
+  // Treasury.
+  // NOTE: this reads the Treasury's *USDC* balance specifically, so 6 decimals
+  // below is correct. It does NOT include native-token programs — their funds
+  // sit as the contract's ETH balance. Add a separate native balance read if
+  // an all-token total is needed.
   const { data: treasuryBalance } = useReadContract({
     address: v4Addresses.MockUSDC,
     abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
@@ -31,6 +37,12 @@ export function AdminDashboardPage() {
     args: [v4Addresses.ScholarshipTreasury],
   });
   
+  // WARNING: Treasury.protocolFeeAccumulated is a single counter incremented
+  // by slashAndDistribute regardless of the program's token, so once native
+  // programs exist it sums raw 18-decimal and 6-decimal amounts together and
+  // is no longer meaningful as one number. Displayed as USDC below only
+  // because that's what it was pre-multi-token. Needs a per-token mapping
+  // in the contract to be correct.
   const { data: protocolFee } = useReadContract({
     address: v4Addresses.ScholarshipTreasury,
     abi: parseAbi(["function protocolFeeAccumulated() view returns (uint256)"]),
@@ -112,7 +124,7 @@ export function AdminDashboardPage() {
                     <td className="p-3 font-bold border-r-2 border-black">
                       <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black bg-black text-white">{p.status.replace(/_/g, ' ')}</span>
                     </td>
-                    <td className="p-3 font-bold font-data border-r-2 border-black">${formatUnits(BigInt(p.totalFund || "0"), 6)}</td>
+                    <td className="p-3 font-bold font-data border-r-2 border-black">{formatTokenWithSymbol(p.totalFund || "0", p.token)}</td>
                     <td className="p-3 text-xs font-bold border-r-2 border-black text-gray-600 font-data">
                       {p.applicationStart ? new Date(p.applicationStart).toLocaleDateString() : "N/A"} – {p.votingEnd ? new Date(p.votingEnd).toLocaleDateString() : "N/A"}
                     </td>
@@ -177,7 +189,7 @@ export function AdminDashboardPage() {
                       <td className="p-3 font-bold font-data">{s.scholar.wallet.slice(0,8)}...</td>
                       <td className="p-3 font-bold text-gray-500 font-data">Prog #{s.program?.pid}</td>
                       <td className="p-3 font-bold text-skpurple border-l-2 pl-3 font-data">
-                        ${formatUnits(BigInt(s.scholar.totalReceived || "0"), 6)}
+                        {formatTokenWithSymbol(s.scholar.totalReceived || "0", s.program?.token)}
                       </td>
                     </tr>
                   ))}
@@ -234,8 +246,8 @@ export function AdminDashboardPage() {
                   {programsData?.data.filter(p => Number(p.protocolFeeCollected) > 0).sort((a, b) => Number(b.protocolFeeCollected) - Number(a.protocolFeeCollected)).map(p => (
                     <tr key={p.pid} className="border-b border-gray-200">
                       <td className="p-3 font-bold font-data">#{p.pid}</td>
-                      <td className="p-3 text-right font-data text-skpurple">${formatUnits(BigInt(p.protocolFeeCollected), 6)}</td>
-                      <td className="p-3 text-right text-xs text-gray-600 font-data">${formatUnits(BigInt(p.totalFund), 6)}</td>
+                      <td className="p-3 text-right font-data text-skpurple">{formatTokenWithSymbol(p.protocolFeeCollected, p.token)}</td>
+                      <td className="p-3 text-right text-xs text-gray-600 font-data">{formatTokenWithSymbol(p.totalFund, p.token)}</td>
                       <td className="p-3 text-right">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border-2 border-black bg-skyellow">
                           {((Number(p.protocolFeeCollected) / Number(p.totalFund)) * 100).toFixed(2)}%
@@ -256,7 +268,10 @@ export function AdminDashboardPage() {
       )}
 
       {activeTab === "config" && (
-        <AdminProtocolConfig />
+        <div className="space-y-8">
+          <AdminProtocolConfig />
+          <AdminTokenOracle />
+        </div>
       )}
 
       {selectedProgram && (

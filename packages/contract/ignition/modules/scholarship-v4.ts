@@ -15,6 +15,9 @@ const ROLES = {
 const USDC_ADDRESS = process.env.USDC_ADDRESS ?? "";
 const PROTOCOL_FEE_RECIPIENT = process.env.PROTOCOL_FEE_RECIPIENT ?? "";
 const ZERO = "0x0000000000000000000000000000000000000000";
+/// Alias for readability where the zero address means "pay in the chain's
+/// native currency" (ScholarshipTypes.NATIVE_TOKEN) rather than "unset".
+const NATIVE_TOKEN = ZERO;
 
 export default buildModule("ScholarshipV4", (m) => {
 
@@ -102,8 +105,57 @@ export default buildModule("ScholarshipV4", (m) => {
 
   // Core Access
   m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, adminProxy], { id: "core_grantGovernanceRole", ...afterAll });
+  const deployerGovernanceRole = m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, deployer], { id: "core_grantGovernanceRoleDeployer", ...afterAll });
   m.call(core, "setBounty", [bountyProxy], { id: "core_setBounty", ...afterAll });
   m.call(core, "grantRole", [ROLES.COMMITTEE_ROLE, committeeProxy], { id: "core_grantCommitteeRole", ...afterAll });
+
+  // ── STEP 12 — MULTI-TOKEN WHITELIST ────────────────────────────────────────
+  // Without this, tokenConfig[usdc].enabled stays false forever and
+  // createProgram() always reverts with TokenNotSupported — see
+  // setTokenConfig() in ScholarshipCoreBase.sol.
+  m.call(core, "setTokenConfig", [usdc, true, 0n, 0n], {
+    id: "core_whitelistUsdc",
+    after: [deployerGovernanceRole],
+  });
+
+  // Native currency (address(0) = ScholarshipTypes.NATIVE_TOKEN). Without this
+  // a native-funded program reverts TokenNotSupported. Economics are in the
+  // token's OWN decimals — native is 18, so these are 0.01 / 0.001 ETH, not
+  // the 6-decimal USDC values used above.
+  m.call(core, "setTokenConfig", [NATIVE_TOKEN, true, 10n ** 16n, 10n ** 15n], {
+    id: "core_whitelistNative",
+    after: [deployerGovernanceRole],
+  });
+
+  // Pins every pre-existing program to USDC. Their `programToken` entry is
+  // unset (zero), which is indistinguishable from the native sentinel — this
+  // boundary is what stops their payouts being routed as ETH. Fresh deploys
+  // have no prior programs, hence 0.
+  m.call(core, "setLegacyTokenBoundary", [0n], {
+    id: "core_setLegacyTokenBoundary",
+    after: [deployerGovernanceRole],
+  });
+
+  // ── STEP 13 — ScholarshipPriceOracle (UUPS) ────────────────────────────────
+  // Standalone by design: ScholarshipCore is already at the EIP-170 bytecode
+  // limit, and admin-mutable rates are kept out of fund-moving contracts.
+  const oracleImpl = m.contract("ScholarshipPriceOracle", [], { id: "ScholarshipPriceOracle_Impl" });
+  const oracleProxy = m.contract("ERC1967Proxy", [
+    oracleImpl,
+    m.encodeFunctionCall(oracleImpl, "initialize", [deployer]),
+  ], { id: "ScholarshipPriceOracle_Proxy", after: [committeeProxy] });
+  const priceOracle = m.contractAt("ScholarshipPriceOracle", oracleProxy, { id: "ScholarshipPriceOracle" });
+
+  // Seed the registry so the admin UI has something to list. Prices start at
+  // 0 (reported `stale`) until an admin sets real rates.
+  const registerNative = m.call(priceOracle, "registerToken", [NATIVE_TOKEN, "ETH", 18], {
+    id: "oracle_registerNative",
+    after: [oracleProxy],
+  });
+  m.call(priceOracle, "registerToken", [usdc, "USDC", 6], {
+    id: "oracle_registerUsdc",
+    after: [registerNative],
+  });
 
   // Treasury Access
   m.call(treasury, "grantRole", [ROLES.CORE_ROLE, coreProxy], { id: "treasury_grantCoreRole", ...afterAll });
@@ -122,6 +174,6 @@ export default buildModule("ScholarshipV4", (m) => {
   m.call(bounty, "grantRole", [ROLES.RESOLVER_ROLE, committeeProxy], { id: "bounty_grantResolverRole", ...afterAll });
 
   return {
-    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee
+    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee, priceOracle
   };
 });

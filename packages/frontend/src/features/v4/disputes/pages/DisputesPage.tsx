@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { formatUnits } from "viem";
+import { formatTokenWithSymbol, formatTokenAmount } from '@/lib/contracts/v4/token';
 import { useDisputes, useMilestones } from "@/lib/api/hooks";
 import { useTriggerAutoGuilty } from "@/lib/contracts/write-hooks";
 import { NeoCard, NeoCardBody } from "@/components/ui/NeoCard";
@@ -72,7 +72,7 @@ export function DisputesPage() {
                         </p>
                       </div>
                       <div className="text-right flex flex-col items-end gap-2 shrink-0">
-                        <p className="font-data font-bold text-skgreen text-lg">${formatUnits(BigInt(milestone.amount), 6)}</p>
+                        <p className="font-data font-bold text-skgreen text-lg">{formatTokenAmount(milestone.amount, milestone.token)}</p>
                         <NeoButton
                           label="Raise Dispute"
                           variant="danger"
@@ -119,7 +119,7 @@ export function DisputesPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-xs text-gray-500">Potential Reward</p>
-                          <p className="font-data font-bold text-skred text-lg">{formatUnits(BigInt(dispute.potentialReward), 6)} USDC</p>
+                          <p className="font-data font-bold text-skred text-lg">{formatTokenWithSymbol(dispute.potentialReward, dispute.token)}</p>
                         </div>
                       </div>
 
