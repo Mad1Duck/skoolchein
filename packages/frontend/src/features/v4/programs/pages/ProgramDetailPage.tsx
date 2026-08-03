@@ -25,6 +25,7 @@ import { PhaseTimeline } from '@/components/ui/PhaseTimeline';
 import { StatCard } from '@/components/ui/StatCard';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
+import { formatTokenAmount, getTokenMeta } from '@/lib/contracts/v4/token';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
 
@@ -37,9 +38,19 @@ const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'disputes', label: 'Disputes' },
 ];
 
-function formatUSDC(raw: string | bigint | number): string {
-  const n = typeof raw === 'bigint' ? Number(raw) / 1e6 : Number(raw) / 1e6;
-  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+/**
+ * Format an amount in the PROGRAM'S OWN token.
+ *
+ * Amounts are denominated in whatever token backs the program — native uses 18
+ * decimals, USDC uses 6 — so the decimal count must come from the token, never
+ * be hardcoded (see the note on Applicant/Program.token in lib/api/types.ts).
+ * The previous helper divided everything by 1e6 and prefixed "$", which
+ * rendered a 52 ETH program as "$52,000,000,000,000,000" and labelled ETH as
+ * dollars. Callers must NOT add their own "$".
+ */
+function fmtAmount(raw: string | bigint | number | null | undefined, token?: string | null): string {
+  const n = Number(formatTokenAmount(BigInt(raw ?? 0), token));
+  return `${n.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${getTokenMeta(token).symbol}`;
 }
 
 export function ProgramDetailPage() {
@@ -63,8 +74,20 @@ export function ProgramDetailPage() {
     staleTime: Infinity,
   });
 
+  // Applicants are NOT lazy: the Apply button below has to know whether this
+  // wallet already applied, which is decided before any tab is opened. Sharing
+  // one query is free — TanStack Query keys on the program id, so the
+  // applicants tab reuses this cache entry rather than refetching.
+  const applicantsQ = useProgramApplicants(id);
+
+  /** This wallet's own application, if any — drives the Apply button state. */
+  const myApplication = userAddress
+    ? (applicantsQ.data ?? []).find(
+        (a) => a.wallet.toLowerCase() === userAddress.toLowerCase(),
+      )
+    : undefined;
+
   // Sub-resource queries (lazy loaded on tab switch)
-  const applicantsQ = useProgramApplicants(activeTab === 'applicants' ? id : '');
   const scholarsQ = useProgramScholars(activeTab === 'scholars' ? id : '');
   const milestonesQ = useProgramMilestones(activeTab === 'milestones' ? id : '');
   const votesQ = useProgramVotes(activeTab === 'votes' ? id : '');
@@ -147,9 +170,21 @@ export function ProgramDetailPage() {
             </button>
           )}
           {program.status === 'APPLICATION_OPEN' && (
-            <Link to="/apply/$id" params={{ id: String(program.pid) }}>
-              <NeoButton label="Apply Now" variant="primary" size="md" />
-            </Link>
+            // Show the current application state instead of inviting a second
+            // apply — the contract rejects a duplicate, so offering the button
+            // would only produce a failed transaction.
+            myApplication ? (
+              <NeoButton
+                label={`Applied · ${myApplication.status}`}
+                variant="secondary"
+                size="md"
+                disabled
+              />
+            ) : (
+              <Link to="/apply/$id" params={{ id: String(program.pid) }}>
+                <NeoButton label="Apply Now" variant="primary" size="md" />
+              </Link>
+            )
           )}
           {program.status === 'VOTING' && program.openDonation && (
             <NeoButton
@@ -223,8 +258,8 @@ export function ProgramDetailPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total Fund" value={`$${formatUSDC(program.totalFund)}`} color="green" />
-        <StatCard label="Spent" value={`$${formatUSDC(program.spentFund)}`} color="orange" />
+        <StatCard label="Total Fund" value={fmtAmount(program.totalFund, program.token)} color="green" />
+        <StatCard label="Spent" value={fmtAmount(program.spentFund, program.token)} color="orange" />
         <StatCard label="Applicants" value={program.applicantCount} color="yellow" />
         <StatCard label="Active Scholars" value={program.activeScholarCount} color="purple" />
       </div>
@@ -306,7 +341,7 @@ export function ProgramDetailPage() {
                   <div className="min-w-0">
                     <p className="font-bold font-data text-sm">{shortenAddress(s.wallet)}</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
-                      Received <span className="font-data font-bold">${formatUSDC(s.totalReceived)}</span> · Milestone <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
+                      Received <span className="font-data font-bold">{fmtAmount(s.totalReceived, program.token)}</span> · Milestone <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
                     </p>
                   </div>
                 </div>
@@ -337,7 +372,7 @@ export function ProgramDetailPage() {
                 <div className="min-w-0">
                   <p className="font-bold text-sm">Milestone <span className="font-data">#{m.blockchainId}</span></p>
                   <p className="text-[11px] text-gray-500 font-data mt-0.5">
-                    {m.scholarWallet ? shortenAddress(m.scholarWallet) : '—'} · ${formatUSDC(m.amount)}
+                    {m.scholarWallet ? shortenAddress(m.scholarWallet) : '—'} · {fmtAmount(m.amount, m.token ?? program.token)}
                   </p>
                 </div>
                 <NeoBadge status={m.status} />
@@ -397,10 +432,14 @@ export function ProgramDetailPage() {
 
 function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
   const grossTotal = BigInt(program.totalFund) + BigInt(program.protocolFeeCollected || 0);
-  const unallocated = Number(program.totalFund) - Number(program.allocatedFund);
+  // Money stays in bigint. An 18-decimal amount exceeds Number's 2^53 exact
+  // range, so subtracting as Number silently loses precision on native-token
+  // programs. Only the percentages below narrow to Number, where a ratio of
+  // two similar magnitudes is safe.
+  const unallocated = BigInt(program.totalFund) - BigInt(program.allocatedFund);
   const pctSpent = (Number(program.spentFund) / Math.max(1, Number(program.totalFund))) * 100;
   const pctAllocated = ((Number(program.allocatedFund) - Number(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100;
-  const pctUnallocated = (unallocated / Math.max(1, Number(program.totalFund))) * 100;
+  const pctUnallocated = (Number(unallocated) / Math.max(1, Number(program.totalFund))) * 100;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -434,23 +473,23 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Gross Total</dt>
-              <dd className="font-bold font-data">${formatUSDC(grossTotal)}</dd>
+              <dd className="font-bold font-data">{fmtAmount(grossTotal, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
               <dt className="text-skpurple font-bold text-xs uppercase tracking-wider">Net Total Fund</dt>
-              <dd className="font-bold text-skpurple font-data text-base">${formatUSDC(program.totalFund)}</dd>
+              <dd className="font-bold text-skpurple font-data text-base">{fmtAmount(program.totalFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline border-t-2 border-black/10 pt-2">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Allocated</dt>
-              <dd className="font-bold font-data">${formatUSDC(program.allocatedFund)}</dd>
+              <dd className="font-bold font-data">{fmtAmount(program.allocatedFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Spent</dt>
-              <dd className="font-bold text-orange-600 font-data">${formatUSDC(program.spentFund)}</dd>
+              <dd className="font-bold text-orange-600 font-data">{fmtAmount(program.spentFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Yield Accrued</dt>
-              <dd className="font-bold text-skpurple font-data">${formatUSDC(program.yieldAccrued)}</dd>
+              <dd className="font-bold text-skpurple font-data">{fmtAmount(program.yieldAccrued, program.token)}</dd>
             </div>
           </dl>
 
@@ -461,17 +500,17 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <div
                 className="h-full bg-skgreen border-r-2 border-black"
                 style={{ width: `${pctSpent}%` }}
-                title={`Spent: $${formatUSDC(program.spentFund)}`}
+                title={`Spent: ${fmtAmount(program.spentFund, program.token)}`}
               />
               <div
                 className="h-full bg-skyellow border-r-2 border-black"
                 style={{ width: `${pctAllocated}%` }}
-                title={`Pending: $${formatUSDC(BigInt(program.allocatedFund) - BigInt(program.spentFund))}`}
+                title={`Pending: ${fmtAmount(BigInt(program.allocatedFund) - BigInt(program.spentFund), program.token)}`}
               />
               <div
                 className="h-full bg-gray-200"
                 style={{ width: `${pctUnallocated}%` }}
-                title={`Unallocated: $${formatUSDC(unallocated)}`}
+                title={`Unallocated: ${fmtAmount(unallocated, program.token)}`}
               />
             </div>
             <div className="flex justify-between text-[10px] font-bold text-gray-600 mt-1.5 uppercase tracking-wider">

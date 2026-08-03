@@ -1,4 +1,4 @@
-import { formatCurrency, formatUSDC } from '@/util/currency';
+import { formatTokenCompact } from '@/lib/contracts/v4/token';
 import React, { useState, useRef } from 'react';
 import { usePopper } from 'react-popper';
 import { twMerge } from 'tailwind-merge';
@@ -16,9 +16,14 @@ interface TimelineProps {
   title?: string;
   items: TimelineItem[];
   className?: string;
+  /**
+   * Token the item amounts are denominated in (zero address / omitted =
+   * native). Required for correct scaling: native uses 18 decimals, USDC 6.
+   */
+  token?: string | null;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ title, items, className = '' }) => {
+const Timeline: React.FC<TimelineProps> = ({ title, items, className = '', token }) => {
   const [openPopperId, setOpenPopperId] = useState<number | null>(null);
   const referenceRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const popperRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -71,7 +76,7 @@ const Timeline: React.FC<TimelineProps> = ({ title, items, className = '' }) => 
                   <span className={`text-sm font-bold`}>{item.description}</span>
                 </div>
                 <span className={`text-sm font-bold`}>
-                  {formatCurrency(formatUSDC(item.amount ? item.amount / 1_000_000 : 0), 'USD')}
+                  {formatTokenCompact(item.amount ?? 0, token)}
                 </span>
               </div>
 

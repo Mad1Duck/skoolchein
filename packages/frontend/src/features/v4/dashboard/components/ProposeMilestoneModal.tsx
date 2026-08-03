@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { parseUnits } from 'viem';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useProposeMilestone } from '@/lib/contracts/write-hooks';
+import { useProgram } from '@/lib/api/hooks';
+import { getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
 
 interface Props {
   isOpen: boolean;
@@ -15,7 +16,7 @@ type MilestoneKind = 1 | 2; // 1 = OPTIONAL, 2 = NEGOTIATED
 
 export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
   const [kind, setKind] = useState<MilestoneKind>(1);
-  const [amount, setAmount] = useState('5');
+  const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [provider, setProvider] = useState('');
   const [externalId, setExternalId] = useState('');
@@ -23,12 +24,19 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
 
   const { proposeMilestone, isPending, isSuccess } = useProposeMilestone();
 
+  // The amount is denominated in the PROGRAM'S token, which decides the
+  // decimals used to scale it (native 18, USDC 6). Resolved here rather than
+  // taken as a prop so the two call sites can't pass a stale or missing value.
+  const { data: program } = useProgram(String(programId));
+  const token = program?.token;
+  const tokenMeta = getTokenMeta(token);
+
   useEffect(() => {
     if (isSuccess) {
       onClose();
       setStep('form');
       setDescription('');
-      setAmount('5');
+      setAmount('');
     }
   }, [isSuccess, onClose]);
 
@@ -46,7 +54,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
       proposeMilestone(
         BigInt(programId),
         kind,
-        parseUnits(amount, 6),
+        parseTokenAmount(amount, token),
         descCID,
         provider,
         externalId
@@ -120,18 +128,24 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
             {/* Amount */}
             <div>
               <label className="block text-sm font-bold mb-1">
-                Requested Amount (USDC) <span className="text-red-500">*</span>
+                Requested Amount ({tokenMeta.symbol}) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                min="1"
-                step="1"
+                // A whole-number step suits USDC but not an 18-decimal native
+                // token, where realistic amounts are fractional.
+                min="0"
+                step={tokenMeta.isNative ? '0.001' : '1'}
                 required
                 className="w-full"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                placeholder={tokenMeta.isNative ? '0.5' : '50'}
               />
-              <p className="text-xs text-gray-500 mt-1">Must not exceed the program's remaining unallocated fund.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                In {tokenMeta.symbol} — the token backing this program. Must not exceed the
+                program's remaining unallocated fund.
+              </p>
             </div>
 
             {/* Platform Selection */}
@@ -186,10 +200,13 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
               />
               <NeoButton
                 type="submit"
-                label={isPending ? 'Proposing…' : 'Submit Proposal'}
+                label={isPending ? 'Proposing…' : !program ? 'Loading program…' : 'Submit Proposal'}
                 variant="primary"
                 loading={isPending}
-                disabled={isPending || !description || !amount}
+                // Block until the program resolves. getTokenMeta() falls back to
+                // native (18 decimals) for an unknown token, so submitting early
+                // would scale a USDC program's amount by 10^12.
+                disabled={isPending || !program || !description || !amount}
                 fullWidth
               />
             </div>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardCard } from "./DashboardCard";
 import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program, Scholar } from "@/lib/api/types";
-import { formatCurrency, formatUSDC } from "@/util/currency";
+import { formatTokenCompact } from "@/lib/contracts/v4/token";
 import { fetchProgramMeta } from "@/lib/ipfs";
 
 interface StudentProfileCardProps {
@@ -22,7 +22,8 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
   const profileImage = `https://api.dicebear.com/9.x/thumbs/svg?seed=${scholar?.wallet ?? "student"}`;
   const creatorImage = `https://api.dicebear.com/9.x/thumbs/svg?seed=${program?.initiator ?? "creator"}`;
   const name = scholar ? `Scholar #${scholar.pid}` : "No Name";
-  const totalReceived = scholar ? formatUSDC(BigInt(scholar.totalReceived)) : 0;
+  // Scholar carries no token of its own; the amount is in the program's token.
+  const totalReceived = scholar ? formatTokenCompact(scholar.totalReceived, program?.token) : "—";
   const programTitle = meta?.name ?? (program?.pid ? `Program #${program.pid}` : "No Program");
 
   return (
@@ -78,7 +79,7 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
               src="https://assets.coingecko.com/coins/images/6319/standard/usdc.png?1696506694"
               alt="usdc"
             />
-            <p className="font-bold">{formatCurrency(totalReceived, "USD")}</p>
+            <p className="font-bold">{totalReceived}</p>
           </div>
         </div>
       </div>

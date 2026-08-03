@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { formatTokenWithSymbol, formatTokenAmount } from '@/lib/contracts/v4/token';
+import { formatTokenWithSymbol, formatTokenAmount, formatTokenCompact } from '@/lib/contracts/v4/token';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
 import {
@@ -22,7 +22,6 @@ import type {
   Milestone,
   Applicant,
 } from '@/lib/api/types';
-import { formatCurrency, formatUSDC } from '@/util/currency';
 import { useProgramApplicants, useProgramMilestones, useExternalProgress } from '@/lib/api/hooks';
 
 import { CommitteeManagementModal } from '../../programs/components/CommitteeManagementModal';
@@ -168,7 +167,7 @@ function InitiatorProgramCard({
               )}
             </p>
             <p className="text-sm mt-1">
-              {formatCurrency(formatUSDC(Number(program.totalFund)), 'USD')}
+              {formatTokenCompact(program.totalFund, program.token)}
             </p>
           </div>
           <div className="text-right">

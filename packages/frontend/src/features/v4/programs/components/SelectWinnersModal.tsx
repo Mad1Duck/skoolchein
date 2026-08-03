@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { parseUnits } from 'viem';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { useSelectWinners } from '@/lib/contracts/write-hooks';
 import type { Applicant } from '@/lib/api/types';
+import { useProgram } from '@/lib/api/hooks';
+import { getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
 
 interface MilestoneConfig {
   amount: string;
@@ -35,6 +36,12 @@ const DEFAULT_MILESTONE: MilestoneConfig = {
 
 export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, targetWinners }: Props) {
   const { selectWinners, isPending, isSuccess } = useSelectWinners();
+
+  // Milestone amounts are denominated in the program's token, which determines
+  // the decimals they scale by (native 18, USDC 6).
+  const { data: program } = useProgram(String(programId));
+  const token = program?.token;
+  const tokenMeta = getTokenMeta(token);
 
   // Sort by voteScore desc, pick up to targetWinners
   const [winners, setWinners] = useState<WinnerConfig[]>([]);
@@ -89,7 +96,7 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
   const handleConfirm = () => {
     const ranked = winners.map((w) => w.applicant.wallet as `0x${string}`);
     const amounts = winners.map((w) =>
-      w.milestones.map((m) => parseUnits(m.amount || '0', 6))
+      w.milestones.map((m) => parseTokenAmount(m.amount || '0', token))
     );
     const descs = winners.map((w) => w.milestones.map((m) => m.description));
     const providers = winners.map((w) => w.milestones.map((m) => m.provider));
@@ -107,8 +114,8 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
     <NeoModal isOpen={isOpen} onClose={onClose} title={`Select Winners — Program #${programId}`}>
       <div className="space-y-4">
         <div className="flex justify-between items-center bg-skblue-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
-          <span className="font-bold">Total USDC to Allocate:</span>
-          <span className="font-paytone text-lg text-skblue">${totalFundNeeded.toFixed(2)} USDC</span>
+          <span className="font-bold">Total {tokenMeta.symbol} to Allocate:</span>
+          <span className="font-paytone text-lg text-skblue">{totalFundNeeded.toLocaleString('en-US', { maximumFractionDigits: 4 })} {tokenMeta.symbol}</span>
         </div>
 
         <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
@@ -210,11 +217,14 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
           <NeoButton label="Cancel" variant="ghost" onClick={onClose} disabled={isPending} fullWidth />
           <NeoButton
-            label={isPending ? 'Selecting…' : `Confirm ${winners.length} Winner(s)`}
+            label={isPending ? 'Selecting…' : !program ? 'Loading program…' : `Confirm ${winners.length} Winner(s)`}
             variant="success"
             onClick={handleConfirm}
             loading={isPending}
-            disabled={isPending || winners.length === 0}
+            // Wait for the program: getTokenMeta() treats an unknown token as
+            // native (18 decimals), so confirming early would scale a USDC
+            // program's milestone amounts by 10^12.
+            disabled={isPending || !program || winners.length === 0}
             fullWidth
           />
         </div>

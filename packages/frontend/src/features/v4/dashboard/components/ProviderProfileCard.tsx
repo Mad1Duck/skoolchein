@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardCard } from "./DashboardCard";
 import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program } from "@/lib/api/types";
-import { formatCurrency, formatUSDC } from "@/util/currency";
+import { formatTokenCompact } from "@/lib/contracts/v4/token";
 import { fetchProgramMeta } from "@/lib/ipfs";
 
 interface ProviderProfileCardProps {
@@ -22,7 +22,8 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
   });
 
   const image = `https://api.dicebear.com/9.x/thumbs/svg?seed=${address ?? "provider"}`;
-  const totalFund = program ? formatUSDC(BigInt(program.totalFund)) : 0;
+  // Denominated in the program's own token — never a hardcoded 6 decimals.
+  const totalFund = program ? formatTokenCompact(program.totalFund, program.token) : "—";
   const title = meta?.name ?? (program ? `Program #${program.pid}` : "No Program");
   const description = meta?.description ?? "";
 
@@ -79,7 +80,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
                 src="https://assets.coingecko.com/coins/images/6319/standard/usdc.png?1696506694"
                 alt="usdc"
               />
-              <p className="font-bold">{formatCurrency(totalFund, "USD")}</p>
+              <p className="font-bold">{totalFund}</p>
             </div>
           </div>
         </div>

@@ -42,11 +42,28 @@ indexer.skoolcein.nawasena-labs.com {
 # extensions are exempt, so the wallet may appear connected while the dApp
 # itself reads nothing.
 #
-# Upstream is the HOST address (anvil on the VPS at :8550), NOT `localhost`.
-# Caddy runs as a container here — same as the blocks above, which is why they
-# address services by container name — so inside it `localhost` resolves to the
-# Caddy container itself and the proxy answers 502 Bad Gateway.
-# `host.docker.internal:8550` works too if that alias is configured.
+# DNS for this name must be an A record straight to the VPS (162.19.251.209),
+# "DNS only" / grey cloud — like the three skoolcein records above.
+#
+# Do NOT put it behind the Cloudflare proxy (orange cloud). Proxied, the orange
+# cloud intercepts the ACME HTTP challenge, so Caddy can never issue a
+# certificate for the name, so Cloudflare's origin fetch fails and it serves its
+# own 502. The browser then reports that as "CORS header
+# 'Access-Control-Allow-Origin' missing" — a Cloudflare error page carries no
+# CORS headers — which sends you hunting a CORS bug that does not exist.
+# Tell the layers apart by the response headers: `Via: 1.1 Caddy` means the
+# request reached Caddy; `Server: cloudflare` + `CF-RAY` means it did not.
+# Cloudflare's proxy setting is PER RECORD TYPE — switching A to DNS-only while
+# leaving AAAA proxied still sends IPv6 clients through the proxy.
+#
+# Upstream is the HOST, NOT `localhost`. anvil runs as a systemd service on the
+# VPS (anvil-0g.service, bound 0.0.0.0:8550), while Caddy runs as a container —
+# which is why the blocks above address services by container name. Inside the
+# container `localhost` is the container itself, so that address yields 502.
+#
+# The Tailscale IP is known-good from inside this Docker network: the Ponder
+# container already indexes through it (PONDER_RPC_URL in docker-compose.yml).
+# `host.docker.internal:8550` also works where that alias is configured.
 rpc.nawasena-labs.com {
   reverse_proxy 100.73.196.95:8550
 }

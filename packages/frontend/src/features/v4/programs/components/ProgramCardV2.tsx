@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import { useTokenRate } from '@/context/token-rate-context';
+import { formatTokenAmount, getTokenMeta } from '@/lib/contracts/v4/token';
 import { StatusBadge } from '@/components/StatusBadge';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { fetchProgramMeta } from '@/lib/ipfs';
@@ -19,8 +20,9 @@ const getTextSize = (size: string, base: string, small: string) =>
 const getImageSizeClass = (size: string) =>
   size === 'small' ? 'w-7 h-7 border' : 'w-12 h-12 border-4';
 
-function formatUSDC(raw: string): number {
-  return Number(raw) / 1_000_000;
+/** Numeric amount in the program's own token (native 18 decimals, USDC 6). */
+function toTokenNumber(raw: string, token?: string | null): number {
+  return Number(formatTokenAmount(BigInt(raw ?? 0), token));
 }
 
 function getLocalValue(amount: number, rate: number): string {
@@ -85,7 +87,8 @@ export function ProgramCardV2({
 
   const timeLeft = getTimeLeft(deadline);
   const status = getStatusKey(program.status);
-  const fund = formatUSDC(program.totalFund);
+  const tokenMeta = getTokenMeta(program.token);
+  const fund = toTokenNumber(program.totalFund, program.token);
   const initiator = program.initiator;
 
   return (
@@ -188,7 +191,7 @@ export function ProgramCardV2({
                       <span
                         className={`${getTextSize(size, 'text-2xl', 'text-base')} font-bold`}
                       >
-                        {fund.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
+                        {fund.toLocaleString('en-US', { maximumFractionDigits: 4 })} {tokenMeta.symbol}
                       </span>
                       <p
                         className={`${getTextSize(size, 'text-sm', 'text-xs')} mx-0.5`}
@@ -197,13 +200,19 @@ export function ProgramCardV2({
                       </p>
                       <img src="/icons/student.svg" alt="student-icon" />
                     </div>
-                    <div
-                      className={`flex items-start gap-1 ${getTextSize(size, 'text-sm', 'text-xs')}`}
-                    >
-                      <img src="/icons/information-diamond.svg" alt="info" />
-                      <span>worth around</span>
-                      <span className="font-bold">{getLocalValue(fund, rate || 0)}</span>
-                    </div>
+                    {/* `rate` is a USDC->IDR rate. Applying it to a native
+                        (ETH) amount would render a confidently wrong figure, so
+                        the conversion is shown only for USDC-denominated
+                        programs until a per-token rate is wired in. */}
+                    {!tokenMeta.isNative && (
+                      <div
+                        className={`flex items-start gap-1 ${getTextSize(size, 'text-sm', 'text-xs')}`}
+                      >
+                        <img src="/icons/information-diamond.svg" alt="info" />
+                        <span>worth around</span>
+                        <span className="font-bold">{getLocalValue(fund, rate || 0)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

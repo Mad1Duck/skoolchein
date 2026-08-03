@@ -85,6 +85,23 @@ export function formatTokenWithSymbol(
 }
 
 /**
+ * Display variant of {@link formatTokenWithSymbol}: rounded and
+ * thousands-separated for cards, tables and stat tiles — e.g. "1,234.5678 ETH".
+ *
+ * Use this instead of any local `value / 1e6` helper. Those hardcode USDC's 6
+ * decimals, so on a native-funded program (18 decimals) they overstate every
+ * amount by a factor of 10^12 and label it as dollars.
+ */
+export function formatTokenCompact(
+  amount: bigint | string | number | null | undefined,
+  token?: string | null,
+  maximumFractionDigits = 4,
+): string {
+  const n = Number(formatTokenAmount(BigInt(amount ?? 0), token));
+  return `${n.toLocaleString("en-US", { maximumFractionDigits })} ${getTokenMeta(token).symbol}`;
+}
+
+/**
  * Value to attach to a write call. Native payments are sent as msg.value;
  * ERC20 payments send nothing and rely on a prior approve().
  */

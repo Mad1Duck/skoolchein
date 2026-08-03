@@ -3,6 +3,7 @@ import { NeoCard, NeoCardBody, NeoCardFooter } from '@/components/ui/NeoCard';
 import { NeoBadge } from '@/components/ui/NeoBadge';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import type { Program, ProgramMetadata } from '@/lib/api/types';
+import { formatTokenAmount, getTokenMeta } from '@/lib/contracts/v4/token';
 
 interface ProgramCardProps {
   program: Program;
@@ -19,12 +20,16 @@ const fillByStatus: Record<string, 'yellow' | 'orange' | 'purple' | 'green' | 'c
   CANCELLED: 'red',
 };
 
-/** Format USDC amount (6 decimals) to display */
-function formatUSDC(raw: string): string {
-  const n = Number(raw) / 1e6;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+/**
+ * Abbreviated fund amount in the program's own token (native 18 decimals,
+ * USDC 6) — the decimals must come from the token, never be hardcoded.
+ */
+function formatFund(raw: string, token?: string | null): string {
+  const n = Number(formatTokenAmount(BigInt(raw ?? 0), token));
+  const symbol = getTokenMeta(token).symbol;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M ${symbol}`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K ${symbol}`;
+  return `${n.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${symbol}`;
 }
 
 function formatDate(iso: string | null): string {
@@ -72,7 +77,7 @@ export function ProgramCard({ program, meta }: ProgramCardProps) {
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 border-black/10">
             <div>
-              <p className="text-base font-data font-bold leading-tight">${formatUSDC(program.totalFund)}</p>
+              <p className="text-base font-data font-bold leading-tight">{formatFund(program.totalFund, program.token)}</p>
               <p className="text-[9px] font-extrabold uppercase text-gray-500 tracking-widest mt-0.5">Fund</p>
             </div>
             <div>
