@@ -4,7 +4,7 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useProposeMilestone } from '@/lib/contracts/write-hooks';
 import { useProgram } from '@/lib/api/hooks';
-import { getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
+import { formatTokenCompact, getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
 
 interface Props {
   isOpen: boolean;
@@ -30,6 +30,34 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
   const { data: program } = useProgram(String(programId));
   const token = program?.token;
   const tokenMeta = getTokenMeta(token);
+
+  // ── Fund budget ─────────────────────────────────────────────────────────
+  // All in the program's token, kept as bigint: 18-decimal amounts exceed
+  // Number's exact range, so arithmetic here must never round-trip through it.
+  //
+  // `totalFund` already includes donations — the indexer's DonationReceived
+  // handler adds each donation's netAmount to it — so it is the true ceiling.
+  // The contract rejects a milestone that exceeds what is still unallocated.
+  const totalFund = BigInt(program?.totalFund ?? 0);
+  const allocated = BigInt(program?.allocatedFund ?? 0);
+  const spent = BigInt(program?.spentFund ?? 0);
+  const available = totalFund > allocated ? totalFund - allocated : 0n;
+
+  // parseTokenAmount throws on malformed input (stray letters, more decimals
+  // than the token supports), which must not blank the whole modal.
+  let requested = 0n;
+  let amountInvalid = false;
+  try {
+    requested = parseTokenAmount(amount || '0', token);
+  } catch {
+    amountInvalid = true;
+  }
+
+  const remainingAfter = available - requested;
+  const isOverBudget = requested > available;
+  const scholarCount = program?.activeScholarCount ?? 0;
+  const perScholarAfter =
+    scholarCount > 0 && remainingAfter > 0n ? remainingAfter / BigInt(scholarCount) : 0n;
 
   useEffect(() => {
     if (isSuccess) {
@@ -143,9 +171,79 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 placeholder={tokenMeta.isNative ? '0.5' : '50'}
               />
               <p className="text-xs text-gray-500 mt-1">
-                In {tokenMeta.symbol} — the token backing this program. Must not exceed the
-                program's remaining unallocated fund.
+                In {tokenMeta.symbol} — the token backing this program.
               </p>
+
+              {/* Budget breakdown — shows what is actually spendable and
+                  whether this request fits, instead of leaving the user to
+                  discover the limit through a reverted transaction. */}
+              <div className="mt-3 border-2 border-black bg-white shadow-[3px_3px_0_0_#000] text-xs">
+                <div className="px-3 py-2 border-b-2 border-black bg-gray-50 font-extrabold uppercase tracking-widest text-[10px]">
+                  Fund Breakdown
+                </div>
+                <dl className="p-3 space-y-1.5">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Total fund (incl. donations)</dt>
+                    <dd className="font-data font-bold">{formatTokenCompact(totalFund, token)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Already allocated</dt>
+                    <dd className="font-data">−{formatTokenCompact(allocated, token)}</dd>
+                  </div>
+                  <div className="flex justify-between text-gray-500">
+                    <dt className="pl-3">of which paid out</dt>
+                    <dd className="font-data">{formatTokenCompact(spent, token)}</dd>
+                  </div>
+
+                  <div className="flex justify-between border-t-2 border-black/10 pt-1.5">
+                    <dt className="font-bold">Available now</dt>
+                    <dd className="font-data font-bold">{formatTokenCompact(available, token)}</dd>
+                  </div>
+
+                  {requested > 0n && (
+                    <>
+                      <div className="flex justify-between">
+                        <dt className="text-gray-600">This request</dt>
+                        <dd className="font-data">−{formatTokenCompact(requested, token)}</dd>
+                      </div>
+                      <div className="flex justify-between border-t-2 border-black/10 pt-1.5">
+                        <dt className="font-bold">Left afterwards</dt>
+                        <dd className={`font-data font-bold ${isOverBudget ? 'text-red-600' : 'text-emerald-700'}`}>
+                          {isOverBudget ? '−' : ''}
+                          {formatTokenCompact(isOverBudget ? -remainingAfter : remainingAfter, token)}
+                        </dd>
+                      </div>
+                      {scholarCount > 0 && !isOverBudget && (
+                        <div className="flex justify-between text-gray-500">
+                          <dt>Split across {scholarCount} active scholar{scholarCount === 1 ? '' : 's'}</dt>
+                          <dd className="font-data">{formatTokenCompact(perScholarAfter, token)} each</dd>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </dl>
+
+                {isOverBudget && (
+                  <p className="px-3 py-2 border-t-2 border-black bg-red-50 text-red-700 font-bold">
+                    Over available fund by {formatTokenCompact(requested - available, token)}.
+                    The proposal itself will submit, but your committee cannot approve
+                    it — approval reverts with InsufficientProgramFund unless donations
+                    cover the gap first. It would also use up one of your limited
+                    optional-milestone slots.
+                  </p>
+                )}
+                {amountInvalid && (
+                  <p className="px-3 py-2 border-t-2 border-black bg-red-50 text-red-700 font-bold">
+                    Not a valid {tokenMeta.symbol} amount (max {tokenMeta.decimals} decimal places).
+                  </p>
+                )}
+                {!isOverBudget && !amountInvalid && available === 0n && program && (
+                  <p className="px-3 py-2 border-t-2 border-black bg-skyellow-light font-bold">
+                    Every {tokenMeta.symbol} in this program is already allocated. A new
+                    milestone needs additional donations first.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Platform Selection */}
@@ -200,13 +298,31 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
               />
               <NeoButton
                 type="submit"
-                label={isPending ? 'Proposing…' : !program ? 'Loading program…' : 'Submit Proposal'}
+                label={
+                  isPending ? 'Proposing…'
+                  : !program ? 'Loading program…'
+                  : isOverBudget ? 'Submit Anyway'
+                  : 'Submit Proposal'
+                }
                 variant="primary"
                 loading={isPending}
                 // Block until the program resolves. getTokenMeta() falls back to
                 // native (18 decimals) for an unknown token, so submitting early
                 // would scale a USDC program's amount by 10^12.
-                disabled={isPending || !program || !description || !amount}
+                //
+                // Over-budget is deliberately NOT blocked: proposeMilestone has
+                // no fund check (only approveMilestone does), and donations can
+                // arrive before the committee votes. The warning above states
+                // the consequence and the label changes — the choice is the
+                // scholar's, not ours to veto.
+                disabled={
+                  isPending ||
+                  !program ||
+                  !description ||
+                  !amount ||
+                  amountInvalid ||
+                  requested === 0n
+                }
                 fullWidth
               />
             </div>
