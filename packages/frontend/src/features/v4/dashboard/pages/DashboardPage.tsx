@@ -19,6 +19,7 @@ import { useState, useMemo } from 'react';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { LiveBadge } from '@/components/ui/LiveBadge';
 import { ProviderProfileCard } from '../components/ProviderProfileCard';
+import { ProgramSwitcher } from '../components/ProgramSwitcher';
 import { StudentProfileCard } from '../components/StudentProfileCard';
 import { DashboardMessageCard } from '../components/DashboardMessageCard';
 import { DashboardNftCollections } from '../components/DashboardNftCollections';
@@ -129,7 +130,7 @@ export function DashboardPage() {
   });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeView, setActiveView] = useState<'provider' | 'student'>('provider');
-  const [programIndex, setProgramIndex] = useState(0);
+  const [selectedPid, setSelectedPid] = useState<number | undefined>();
   const [scholarshipIndex, setScholarshipIndex] = useState(0);
 
   // ── Committee membership detection ───────────────────────────────────────────
@@ -181,10 +182,10 @@ export function DashboardPage() {
   const isProvider = programsCreated.length > 0;
   const isStudent = scholarships.length > 0;
 
-  const selectedProgram = programsCreated[programIndex];
+  // Falls back to the first program until one is picked (or if the picked one disappears).
+  const selectedProgram = programsCreated.find((p) => p.pid === selectedPid) ?? programsCreated[0];
   const selectedScholarship = scholarships[scholarshipIndex];
 
-  const nextProgram = () => setProgramIndex((i) => (i + 1) % programsCreated.length);
   const nextScholarship = () => setScholarshipIndex((i) => (i + 1) % scholarships.length);
 
   return (
@@ -280,12 +281,19 @@ export function DashboardPage() {
 
         {/* Two-column layout */}
         {activeView === 'provider' && isProvider && (
+          <>
+          <div className="mb-6">
+            <ProgramSwitcher
+              programs={programsCreated}
+              selectedPid={selectedProgram?.pid}
+              onSelect={setSelectedPid}
+            />
+          </div>
           <div className="flex flex-col lg:flex-row gap-8 mb-12">
             <div className="lg:w-[24rem] lg:shrink-0 min-w-0 space-y-6 w-full">
               <ProviderProfileCard
                 program={selectedProgram}
                 isLoading={false}
-                onNext={nextProgram}
               />
               <DashboardMessageCard
                 sender={address}
@@ -313,8 +321,9 @@ export function DashboardPage() {
               </DashboardTabsContent>
               <DashboardTabsContent value="programs">
                 <InitiatorPanel
-                  programs={programsCreated}
+                  programs={selectedProgram ? [selectedProgram] : []}
                   onOpenCreateModal={() => setIsCreateModalOpen(true)}
+                  hideHeading
                 />
               </DashboardTabsContent>
               <DashboardTabsContent value="achievements">
@@ -328,6 +337,7 @@ export function DashboardPage() {
               </DashboardTabsContent>
             </DashboardTabs>
           </div>
+          </>
         )}
 
         {activeView === 'student' && isStudent && (

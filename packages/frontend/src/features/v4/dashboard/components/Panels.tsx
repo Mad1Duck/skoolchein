@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { fetchProgramMeta } from '@/lib/ipfs';
 import { formatTokenAmount } from '@/lib/contracts/v4/token';
 import { useT } from '@/lib/i18n';
 import { statusLabel } from '@/lib/i18n/status';
@@ -8,6 +10,8 @@ import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { NeoBadge } from '@/components/ui/NeoBadge';
+import type { TranslationKey } from '@/lib/i18n/en';
 import {
   useOpenApplications,
   useOpenScreening,
@@ -42,12 +46,15 @@ import { BountyHunterRaiseDisputeModal } from './BountyHunterRaiseDisputeModal';
 // Initiator Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function InitiatorPanel({ 
-  programs, 
-  onOpenCreateModal 
-}: { 
-  programs: Program[]; 
+export function InitiatorPanel({
+  programs,
+  onOpenCreateModal,
+  hideHeading = false,
+}: {
+  programs: Program[];
   onOpenCreateModal: () => void;
+  /** The surrounding tab already names this section. */
+  hideHeading?: boolean;
 }) {
   const { t } = useT();
   const [manageCommitteeFor, setManageCommitteeFor] = useState<number | null>(null);
@@ -55,11 +62,13 @@ export function InitiatorPanel({
   const [selectWinnersFor, setSelectWinnersFor] = useState<Program | null>(null);
 
   return (
-    <section>
-      <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpink pl-4 leading-none">
-        {t('panel.initiated')}
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section className="w-full">
+      {!hideHeading && (
+        <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpink pl-4 leading-none">
+          {t('panel.initiated')}
+        </h2>
+      )}
+      <div className={`grid grid-cols-1 gap-4 ${programs.length > 1 ? 'md:grid-cols-2' : ''}`}>
         {programs.length === 0 ? (
           <NeoCard hoverable={false} className="bg-skpink-light/30 border-dashed col-span-2">
             <NeoCardBody className="py-12 text-center">
@@ -158,142 +167,143 @@ function InitiatorProgramCard({
 
   const [isExtending, setIsExtending] = useState(false);
 
+  // Same query key as everywhere else a program name is shown, so this is shared.
+  const { data: meta } = useQuery({
+    queryKey: ['ipfs-meta', program.metadataCID],
+    queryFn: () => fetchProgramMeta(program.metadataCID),
+    enabled: !!program.metadataCID,
+    staleTime: Infinity,
+  });
+
   const isFinal = ['COMPLETED', 'CANCELLED'].includes(program.status);
+  const canClaim = program.status === 'COMPLETED' && BigInt(program.yieldAccrued) > 0n;
+  const nextHintKey = `panel.next.${program.status}` as TranslationKey;
 
   return (
-    <NeoCard>
-      <NeoCardBody>
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="font-bold text-lg">{t('panel.program', { id: program.pid })}</h3>
-            <p className="text-xs text-gray-500 uppercase font-bold">
-              {statusLabel(t, program.status)}
-              {!program.openDonation && (
-                <span className="ml-2 bg-black text-white px-1.5 py-0.5 rounded text-[10px]">{t('panel.private')}</span>
-              )}
-            </p>
-            <p className="text-sm mt-1">
-              {fmt(program.totalFund, program.token)}
-            </p>
+    <div className="w-full rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] p-5 md:p-6 space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-data text-sm font-black text-gray-400">#{program.pid}</span>
+            <NeoBadge status={program.status} />
+            {!program.openDonation && (
+              <span className="bg-black text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider">
+                {t('panel.private')}
+              </span>
+            )}
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">{t('panel.earnings')}</p>
-            <p className="font-paytone text-emerald-700">
-              {fmt(program.yieldAccrued, program.token)}
-            </p>
-          </div>
+          <h3 className="font-paytone text-2xl leading-tight [overflow-wrap:anywhere]">
+            {meta?.name ?? t('panel.program', { id: program.pid })}
+          </h3>
+        </div>
+        <Link to="/programs/$id" params={{ id: String(program.pid) }}>
+          <NeoButton label={t('panel.view')} variant="secondary" size="sm" className="!rounded-xl" />
+        </Link>
+      </div>
+
+      {/* Numbers */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl border-2 border-black bg-skpurple-light p-3 col-span-2 lg:col-span-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.fund')}</p>
+          <p className="font-paytone text-xl mt-1 [overflow-wrap:anywhere]">{fmt(program.totalFund, program.token)}</p>
+        </div>
+        <div className="rounded-xl border-2 border-black bg-skgreen p-3 col-span-2 lg:col-span-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.earnings')}</p>
+          <p className="font-paytone text-xl mt-1 text-emerald-800 [overflow-wrap:anywhere]">{fmt(program.yieldAccrued, program.token)}</p>
+        </div>
+        <div className="rounded-xl border-2 border-black bg-white p-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.applicants')}</p>
+          <p className="font-paytone text-xl mt-1">
+            {program.applicantCount}
+            <span className="ml-1.5 text-xs font-bold text-gray-400 font-data">
+              {program.shortlistedCount} {t('panel.shortlisted')}
+            </span>
+          </p>
+        </div>
+        <div className="rounded-xl border-2 border-black bg-white p-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.scholars')}</p>
+          <p className="font-paytone text-xl mt-1">{program.activeScholarCount}</p>
+        </div>
+      </div>
+
+      {/* What to do next — the single primary action for this stage */}
+      <div className="rounded-xl border-2 border-black bg-skyellow-light p-4 space-y-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.nextStep')}</p>
+          <p className="text-sm font-bold mt-0.5">{t(nextHintKey)}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Link to="/programs/$id" params={{ id: String(program.pid) }} className="col-span-2">
-            <NeoButton label={t('panel.view')} variant="secondary" fullWidth />
-          </Link>
-
+        <div className="flex flex-wrap gap-2">
           {program.status === 'CREATED' && (
-            <div className="col-span-2">
-              <NeoButton
-                label={openingApps ? t('panel.opening') : t('panel.openApps')}
-                variant="primary"
-                fullWidth
-                loading={openingApps}
-                disabled={openingApps}
-                onClick={() => openApplications(BigInt(program.pid))}
-              />
-            </div>
+            <NeoButton
+              label={openingApps ? t('panel.opening') : t('panel.openApps')}
+              variant="primary"
+              className="!rounded-xl"
+              loading={openingApps}
+              disabled={openingApps}
+              onClick={() => openApplications(BigInt(program.pid))}
+            />
           )}
 
           {program.status === 'APPLICATION_OPEN' && (
-            <>
-              <div className="col-span-1">
-                <NeoButton
-                  label={openingScreen ? t('panel.opening') : t('panel.screening')}
-                  variant="primary"
-                  fullWidth
-                  loading={openingScreen}
-                  disabled={openingScreen}
-                  onClick={() => openScreening(BigInt(program.pid))}
-                />
-              </div>
-              <div className="col-span-1">
-                <NeoButton
-                  label={t('panel.extend')}
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setIsExtending(true)}
-                />
-              </div>
-            </>
+            <NeoButton
+              label={openingScreen ? t('panel.opening') : t('panel.screening')}
+              variant="primary"
+              className="!rounded-xl"
+              loading={openingScreen}
+              disabled={openingScreen}
+              onClick={() => openScreening(BigInt(program.pid))}
+            />
           )}
 
           {program.status === 'SCREENING' && (
-            <div className="col-span-2">
-              <NeoButton
-                label={t('panel.resolve')}
-                variant="primary"
-                fullWidth
-                onClick={onResolveShortlist}
-              />
-            </div>
+            <NeoButton label={t('panel.resolve')} variant="primary" className="!rounded-xl" onClick={onResolveShortlist} />
           )}
 
           {program.status === 'VOTING' && (
-            <>
-              <div className="col-span-1">
-                <NeoButton
-                  label={t('panel.selectWinners')}
-                  variant="success"
-                  fullWidth
-                  onClick={onSelectWinners}
-                />
-              </div>
-              <div className="col-span-1">
-                <NeoButton
-                  label={t('panel.extend')}
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setIsExtending(true)}
-                />
-              </div>
-            </>
+            <NeoButton label={t('panel.selectWinners')} variant="success" className="!rounded-xl" onClick={onSelectWinners} />
           )}
 
-          {!isFinal && (
-            <NeoButton
-              label={t('panel.manageCommittee')}
-              variant="secondary"
-              fullWidth
-              onClick={onManageCommittee}
-            />
-          )}
-
-          {program.status === 'COMPLETED' && BigInt(program.yieldAccrued) > 0n && (
+          {canClaim && (
             <NeoButton
               label={claiming ? t('panel.claiming') : t('panel.claimEarnings')}
               variant="success"
-              fullWidth
+              className="!rounded-xl"
               loading={claiming}
               disabled={claiming}
-              onClick={() =>
-                claimYield(
-                  BigInt(program.pid),
-                  '0x0000000000000000000000000000000000000000',
-                )
-              }
+              onClick={() => claimYield(BigInt(program.pid), '0x0000000000000000000000000000000000000000')}
             />
           )}
 
+          {(program.status === 'APPLICATION_OPEN' || program.status === 'VOTING') && (
+            <NeoButton label={t('panel.extend')} variant="secondary" className="!rounded-xl" onClick={() => setIsExtending(true)} />
+          )}
+
           {!isFinal && (
-            <NeoButton
-              label={cancelling ? t('panel.cancelling') : t('panel.cancel')}
-              variant="danger"
-              fullWidth
-              loading={cancelling}
-              disabled={cancelling}
-              onClick={() => cancelProgram(BigInt(program.pid))}
-            />
+            <NeoButton label={t('panel.manageCommittee')} variant="secondary" className="!rounded-xl" onClick={onManageCommittee} />
           )}
         </div>
-      </NeoCardBody>
+      </div>
+
+      {/* Destructive action kept apart from the routine ones */}
+      {!isFinal && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-black/10 pt-4">
+          <p className="text-xs text-gray-500 font-medium">{t('panel.dangerHint')}</p>
+          <NeoButton
+            label={cancelling ? t('panel.cancelling') : t('panel.cancel')}
+            variant="danger"
+            size="sm"
+            className="!rounded-xl"
+            loading={cancelling}
+            disabled={cancelling}
+            onClick={() => {
+              // Irreversible — make it a deliberate click.
+              if (window.confirm(t('panel.cancelConfirm'))) cancelProgram(BigInt(program.pid));
+            }}
+          />
+        </div>
+      )}
 
       {isExtending && (
         <ExtendDeadlineModal
@@ -302,7 +312,7 @@ function InitiatorProgramCard({
           program={program}
         />
       )}
-    </NeoCard>
+    </div>
   );
 }
 

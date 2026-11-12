@@ -1,3 +1,4 @@
+import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useState, useEffect } from 'react';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -165,15 +166,16 @@ export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, ta
                       </div>
                       <div>
                         <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.platform')}</label>
-                        <select
-                          className="w-full border-2 border-black rounded p-1.5 text-xs focus:outline-none focus:border-skblue h-[34px]"
+                        <NeoSelect
+                          size="sm"
                           value={m.provider}
-                          onChange={(e) => updateMilestone(wi, mi, 'provider', e.target.value)}
-                        >
-                          <option value="">{t('winners.manual')}</option>
-                          <option value="hackquest">HackQuest</option>
-                          <option value="udemy">Udemy</option>
-                        </select>
+                          onChange={(v) => updateMilestone(wi, mi, 'provider', v)}
+                          options={[
+                            { value: '', label: t('winners.manual') },
+                            { value: 'hackquest', label: 'HackQuest' },
+                            { value: 'udemy', label: 'Udemy' },
+                          ]}
+                        />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.externalId')}</label>

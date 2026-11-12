@@ -278,6 +278,7 @@ input, textarea, select {
 input:hover, textarea:hover, select:hover {
   box-shadow: 3px 3px 0 0 #000;
 }
+
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--color-skpurple);

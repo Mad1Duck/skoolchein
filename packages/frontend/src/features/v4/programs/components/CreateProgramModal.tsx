@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { uploadToIPFS } from '@/lib/ipfs';
+import { uploadToIPFS, rememberProgramMeta } from '@/lib/ipfs';
 import { useCreateProgram, useApproveUSDC } from '@/lib/contracts/write-hooks';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -90,6 +90,9 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
       const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'program';
       const res = await uploadToIPFS({ meta, type: 'program', name: `${slug}-${Date.now()}` });
       const cid = res?.metaCID || 'QmFallbackTestingCID1234567890abcdefg';
+      // The creator's own browser always knows the program name — remember it so
+      // it shows even if the IPFS gateway is unreachable later.
+      rememberProgramMeta(cid, meta);
       setMetaCID(cid);
       // Native funding needs no ERC20 approval — skip straight to create.
       setStep(needsApproval(formData.token) ? "approve" : "create");
