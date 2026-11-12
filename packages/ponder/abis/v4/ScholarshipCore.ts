@@ -22,6 +22,11 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "ApplicantCannotDonate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ApplicantListIncomplete",
     "type": "error"
   },
@@ -42,6 +47,11 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "CannotVoteForSelf",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ConfidenceStakeAlreadyExists",
     "type": "error"
   },
@@ -58,6 +68,11 @@ export const scholarshipCoreAbi = [
   {
     "inputs": [],
     "name": "DisputeResolutionFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DonorCannotApply",
     "type": "error"
   },
   {
@@ -2146,30 +2161,6 @@ export const scholarshipCoreAbi = [
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
-    ],
-    "name": "isStudentEligible",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "eligible",
-        "type": "bool"
-      },
-      {
-        "internalType": "string",
-        "name": "reason",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {

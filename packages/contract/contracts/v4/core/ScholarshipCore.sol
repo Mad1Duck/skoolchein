@@ -51,6 +51,8 @@ contract ScholarshipCore is ScholarshipCoreBase {
     error InvalidMaxOptional();
     error TokenNotSupported(address token);
     error DisputeResolutionFailed();
+    error ApplicantCannotDonate();
+    error DonorCannotApply();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -195,13 +197,6 @@ contract ScholarshipCore is ScholarshipCoreBase {
         return scholars[wallet][pid];
     }
 
-    function isStudentEligible(address wallet) external view returns (bool eligible, string memory reason) {
-        ScholarshipTypes.StudentStatus s = globalStudentStatus[wallet];
-        if (s == ScholarshipTypes.StudentStatus.BLACKLISTED) return (false, "BLACKLISTED");
-        if (s == ScholarshipTypes.StudentStatus.FROZEN && block.timestamp < globalFreezeUntil[wallet]) return (false, "FROZEN");
-        return (true, "");
-    }
-
     function getRemainingFund(address wallet, uint256 pid) external view returns (uint256) {
         ScholarshipTypes.Scholar memory s = scholars[wallet][pid];
         ScholarshipTypes.Program memory p = programs[pid];
@@ -273,6 +268,8 @@ contract ScholarshipCore is ScholarshipCoreBase {
 
         ScholarshipTypes.VoterInfo storage voter = voterInfo[pid][msg.sender];
         if (voter.donatedAmount > 0) revert AlreadyDonated();
+        // Donating buys voting power, so someone competing for the scholarship cannot donate to it.
+        if (applicants[pid][msg.sender].wallet != address(0)) revert ApplicantCannotDonate();
         token.pullIn(msg.sender, address(treasury), grossAmount);
         uint256 net = grossAmount - fee;
         voter.donatedAmount = net; voter.remainingVotingPower = net;
@@ -294,6 +291,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
         _requireStudentEligible(msg.sender);
         ScholarshipTypes.Program storage prog = programs[pid];
         if (msg.sender == prog.initiator) revert CannotApplyToOwnProgram();
+        if (voterInfo[pid][msg.sender].donatedAmount != 0) revert DonorCannotApply(); // the other half of the rule above
         if (retryCount[pid][msg.sender] >= _config.maxRetry) revert MaxRetriesExceeded();
         ScholarshipTypes.ApplicationStatus es = applicants[pid][msg.sender].status;
         if (es == ScholarshipTypes.ApplicationStatus.SHORTLISTED) revert AlreadyApplied();

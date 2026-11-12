@@ -27,6 +27,32 @@ export async function fetchIPFS<T = unknown>(cid: string): Promise<T | null> {
   }
 }
 
+/**
+ * Load a JSON document by CID for display. Unlike fetchIPFS it THROWS on failure, so TanStack Query
+ * retries and the UI can offer "try again" instead of treating a busy gateway as "empty". A CID's
+ * content never changes, so a successful result is kept in localStorage for good.
+ */
+export async function loadIPFSJson<T = unknown>(cid: string): Promise<T | null> {
+  if (!cid || /Fallback/.test(cid)) return null; // dev placeholder: points at nothing
+  const key = "skc:json:" + cid;
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) return JSON.parse(cached) as T;
+  } catch { /* unavailable: fall through to the network */ }
+
+  const res = await fetch(ipfsUrl(cid));
+  if (!res.ok) throw new Error(`IPFS gateway responded ${res.status}`);
+  const json = (await res.json()) as T;
+  try { localStorage.setItem(key, JSON.stringify(json)); } catch { /* storage full: caching is optional */ }
+  return json;
+}
+
+/** Keep a document we just wrote, so its author can read it back even if the gateway is busy. */
+export function rememberIPFSJson(cid: string, json: unknown) {
+  if (!cid || /Fallback/.test(cid)) return;
+  try { localStorage.setItem("skc:json:" + cid, JSON.stringify(json)); } catch { /* optional */ }
+}
+
 // ── Local metadata cache ──────────────────────────────────────────────────────
 // CIDs are content-addressed, so a CID's metadata can never change: cache it
 // forever. This keeps program names visible when the public gateway rate-limits
