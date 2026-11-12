@@ -10,6 +10,8 @@ const ROLES = {
   BURNER_ROLE: "0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848",
   LOCKER_ROLE: "0xaf9a8bb3cbd6b84fbccefa71ff73e26e798553c6914585a84886212a46a90279",
   GOVERNANCE_ROLE: "0x71840dc4906352362b0cdaf79870196c8e42acafade72d5d5a6d59291253ceb1", // keccak256("GOVERNANCE_ROLE")
+  CONFIG_ADMIN_ROLE: "0xb92d52e77ebaa0cae5c23e882d85609efbcb44029214147dd132daf9ef1018af", // keccak256("CONFIG_ADMIN_ROLE")
+  SELECTION_ROLE: "0x2ec00530a41a3ca02c8faeddab7e1a5e47daefdbb41bf9eb2a7ab18ded0c0313",    // keccak256("SELECTION_ROLE")
 };
 
 const USDC_ADDRESS = process.env.USDC_ADDRESS ?? "";
@@ -100,14 +102,34 @@ export default buildModule("ScholarshipV4", (m) => {
   ], { id: "CommitteeGovernance_Proxy", after: [bountyProxy] });
   const committee = m.contractAt("CommitteeGovernance", committeeProxy, { id: "CommitteeGovernance" });
 
+  // ── STEP 10b — ScholarshipSelection (UUPS) ──────────────────────────────────
+  // Ranks the shortlist and chooses winners. Separate from Core because Core is at
+  // the EIP-170 size limit; it reaches Core through the SELECTION_ROLE hooks.
+  const selectionImpl = m.contract("ScholarshipSelection", [], { id: "ScholarshipSelection_Impl" });
+  const selectionProxy = m.contract("ERC1967Proxy", [
+    selectionImpl,
+    m.encodeFunctionCall(selectionImpl, "initialize", [deployer, coreProxy]),
+  ], { id: "ScholarshipSelection_Proxy", after: [committeeProxy] });
+  const selection = m.contractAt("ScholarshipSelection", selectionProxy, { id: "ScholarshipSelection" });
+
   // ── STEP 11 — WIRE ROLES ───────────────────────────────────────────────────
-  const afterAll = { after: [committeeProxy] };
+  const afterAll = { after: [selectionProxy] };
 
   // Core Access
   m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, adminProxy], { id: "core_grantGovernanceRole", ...afterAll });
   const deployerGovernanceRole = m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, deployer], { id: "core_grantGovernanceRoleDeployer", ...afterAll });
   m.call(core, "setBounty", [bountyProxy], { id: "core_setBounty", ...afterAll });
   m.call(core, "grantRole", [ROLES.COMMITTEE_ROLE, committeeProxy], { id: "core_grantCommitteeRole", ...afterAll });
+  // ScholarshipAdmin forwards setProtocolConfig / extend*Deadline to Core, which only accepts
+  // CONFIG_ADMIN_ROLE. Without this grant those calls revert on a fresh deployment.
+  m.call(core, "grantRole", [ROLES.CONFIG_ADMIN_ROLE, adminProxy], { id: "core_grantConfigAdminRole", ...afterAll });
+  // Selection records shortlist/winner outcomes on Core, and sets Core's per-voter cap.
+  const grantSelection = m.call(core, "grantRole", [ROLES.SELECTION_ROLE, selectionProxy], { id: "core_grantSelectionRole", ...afterAll });
+  // Selection creates each winner's mandatory milestones directly.
+  const mmSetSelection = m.call(milestoneManager, "setSelection", [selectionProxy], { id: "mm_setSelection", ...afterAll });
+  // Defaults: creators may weight votes up to 100% (30% if they do not choose);
+  // one donor's counted votes are capped at 25% of the program fund.
+  m.call(selection, "setConfig", [10_000n, 3_000n, 2_500n], { id: "selection_setConfig", after: [grantSelection, mmSetSelection] });
 
   // ── STEP 12 — MULTI-TOKEN WHITELIST ────────────────────────────────────────
   // Without this, tokenConfig[usdc].enabled stays false forever and
@@ -174,6 +196,6 @@ export default buildModule("ScholarshipV4", (m) => {
   m.call(bounty, "grantRole", [ROLES.RESOLVER_ROLE, committeeProxy], { id: "bounty_grantResolverRole", ...afterAll });
 
   return {
-    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee, priceOracle
+    usdc, donorNFT, studentNFT, reputation, treasury, milestoneManager, core, scholarshipAdmin, bounty, committee, priceOracle, selection
   };
 });

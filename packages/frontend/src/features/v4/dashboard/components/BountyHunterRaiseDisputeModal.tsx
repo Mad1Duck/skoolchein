@@ -1,3 +1,4 @@
+import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useState, useEffect } from 'react';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { formatUnits, isAddress } from 'viem';
@@ -157,15 +158,15 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
 
             <div>
               <label className="block text-sm font-bold mb-1">{t('dispute.type')} <span className="text-red-500">*</span></label>
-              <select
+              <NeoSelect
                 value={disputeType}
-                onChange={(e) => setDisputeType(Number(e.target.value))}
-                className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple bg-white"
-              >
-                <option value={0}>{t('dispute.typeLight')}</option>
-                <option value={1}>{t('dispute.typeFraud')}</option>
-                <option value={2}>{t('dispute.typeHeavy')}</option>
-              </select>
+                onChange={setDisputeType}
+                options={[
+                  { value: 0, label: t('dispute.typeLight') },
+                  { value: 1, label: t('dispute.typeFraud') },
+                  { value: 2, label: t('dispute.typeHeavy') },
+                ]}
+              />
             </div>
 
             {disputeType === 1 && (

@@ -119,7 +119,7 @@ export function AdminProtocolConfig() {
         <ConfigSection title="Scoring & Quorum">
           {renderInput("Max Raw Score", "scoreMax", "number")}
           {renderInput("Shortlist Threshold", "screeningThreshold", "number")}
-          {renderInput("Quorum %", "quorumPercent", "number", "Min turnout to select winners")}
+          {renderInput("Vote Quorum %", "quorumPercent", "number", "Votes count toward the score only if turnout reaches this % of the fund (0 = always)")}
         </ConfigSection>
 
         {/* Confidence Stakes */}

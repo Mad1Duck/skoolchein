@@ -70,6 +70,11 @@ export const scholarshipAdminAbi = [
   },
   {
     "inputs": [],
+    "name": "NotInitiator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "UUPSUnauthorizedCallContext",
     "type": "error"
   },

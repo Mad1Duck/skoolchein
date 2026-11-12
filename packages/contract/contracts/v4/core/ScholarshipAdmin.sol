@@ -61,14 +61,24 @@ contract ScholarshipAdmin is Initializable, AccessControlUpgradeable, UUPSUpgrad
         core.adminUpdateDates(pid, appStart, appEnd, voteStart, voteEnd);
     }
 
-    // ── Extension Wrappers (Initiator only) ──────────────────────────────────
-    // Note: ScholarshipCore will perform the onlyInitiator check.
+    // ── Extension Wrappers (Initiator or admin) ──────────────────────────────
+    // ScholarshipCore only checks that the CALLER HOLDS the config-admin role, and that
+    // caller is this contract, so it cannot tell who is behind the call. The check on who
+    // may extend a given program therefore has to happen here.
+
+    error NotInitiator();
+
+    function _requireInitiatorOrAdmin(uint256 pid) internal view {
+        if (msg.sender != core.getProgram(pid).initiator && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotInitiator();
+    }
 
     function extendApplicationDeadline(uint256 pid, uint256 newEnd) external {
+        _requireInitiatorOrAdmin(pid);
         core.extendApplicationDeadline(pid, newEnd);
     }
 
     function extendVotingDeadline(uint256 pid, uint256 newEnd) external {
+        _requireInitiatorOrAdmin(pid);
         core.extendVotingDeadline(pid, newEnd);
     }
 }

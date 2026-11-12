@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import { NumericFormat } from 'react-number-format';
 import { twMerge } from 'tailwind-merge';
+import { NeoSelect } from '@/components/ui/NeoSelect';
 
 type Option = {
   label: string;
@@ -168,16 +169,13 @@ export const Input = forwardRef<HTMLDivElement | null, InputProps>((param, ref) 
 
       {/* DROPDOWN */}
       {type === 'dropdown' && (
-        <select className={inputClass} value={value} onChange={(e) => onChange?.(e.target.value)}>
-          <option value="" disabled>
-            {placeholder || 'Select an option'}
-          </option>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <NeoSelect
+          value={value ?? ''}
+          onChange={(v) => onChange?.(v)}
+          options={options.map((o) => ({ value: o.value, label: o.label, disabled: o.disabled }))}
+          placeholder={placeholder || 'Select an option'}
+          disabled={isDisabled}
+        />
       )}
 
       {/* SLIDER with Token + IDR Conversion */}

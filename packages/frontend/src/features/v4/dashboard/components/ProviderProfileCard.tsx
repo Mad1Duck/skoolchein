@@ -1,7 +1,6 @@
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardCard } from "./DashboardCard";
-import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program } from "@/lib/api/types";
 import { formatTokenCompact } from "@/lib/contracts/v4/token";
 import { fetchProgramMeta } from "@/lib/ipfs";
@@ -10,10 +9,9 @@ import { useT } from '@/lib/i18n';
 interface ProviderProfileCardProps {
   program: Program | undefined;
   isLoading: boolean;
-  onNext: () => void;
 }
 
-export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProfileCardProps) {
+export function ProviderProfileCard({ program, isLoading }: ProviderProfileCardProps) {
   const { t } = useT();
   const { address } = useAccount();
   const { data: meta } = useQuery({
@@ -50,17 +48,6 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
               {description || t('dash.impact')}
             </p>
           </div>
-          <NeoButton
-            onClick={onNext}
-            variant="secondary"
-            size="sm"
-            className="!p-2 !rounded-2xl !w-10 !h-10 shrink-0"
-            aria-label={t('dash.nextProgram')}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </NeoButton>
         </div>
 
         <div className="space-y-3">

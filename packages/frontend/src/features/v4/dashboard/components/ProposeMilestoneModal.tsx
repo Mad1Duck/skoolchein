@@ -1,3 +1,4 @@
+import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useState, useEffect } from 'react';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
@@ -260,15 +261,15 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-bold mb-1">Platform</label>
-                <select
-                  className="w-full bg-white h-[50px]"
+                <NeoSelect
                   value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
-                >
-                  <option value="">Manual / Other</option>
-                  <option value="hackquest">HackQuest</option>
-                  <option value="udemy">Udemy</option>
-                </select>
+                  onChange={setProvider}
+                  options={[
+                    { value: '', label: 'Manual / Other' },
+                    { value: 'hackquest', label: 'HackQuest' },
+                    { value: 'udemy', label: 'Udemy' },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">External ID</label>

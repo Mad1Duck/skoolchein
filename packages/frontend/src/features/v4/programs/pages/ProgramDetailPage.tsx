@@ -6,6 +6,7 @@ import { DonateModal } from '../components/DonateModal';
 import { VoteModal } from '../components/VoteModal';
 import { ConfidenceStakeModal } from '../components/ConfidenceStakeModal';
 import { SelectWinnersModal } from '../components/SelectWinnersModal';
+import { ResolveShortlistModal } from '../components/ResolveShortlistModal';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +28,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
+import { toDate } from '@/lib/time';
 import { useFormatMoney } from '@/lib/money';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
@@ -46,6 +48,7 @@ export function ProgramDetailPage() {
   const [isStakeOpen, setIsStakeOpen] = useState(false);
   const [selectedScholar, setSelectedScholar] = useState<{ address: `0x${string}`; name?: string } | null>(null);
   const [isSelectWinnersOpen, setIsSelectWinnersOpen] = useState(false);
+  const [isResolveOpen, setIsResolveOpen] = useState(false);
 
   const { address: userAddress } = useAccount();
   const { toggle, isPending: isToggling } = useToggleOpenDonation();
@@ -103,6 +106,10 @@ export function ProgramDetailPage() {
       </div>
     );
   }
+
+  // Stages move by the clock, so the stored status can lag: a program whose application window
+  // has ended is ready to be finalized even if it still reads APPLICATION_OPEN.
+  const applicationsClosed = Date.now() >= (toDate(program.applicationEnd)?.getTime() ?? Infinity);
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
@@ -188,7 +195,16 @@ export function ProgramDetailPage() {
               }}
             />
           )}
-          {userAddress === program.initiator && program.status === 'VOTING' && (
+          {(program.status === 'SCREENING' || (program.status === 'APPLICATION_OPEN' && applicationsClosed)) &&
+            (program.openDonation || userAddress === program.initiator) && (
+              <NeoButton
+                label={t('panel.resolve')}
+                variant="secondary"
+                size="md"
+                onClick={() => setIsResolveOpen(true)}
+              />
+            )}
+          {program.status === 'VOTING' && (program.openDonation || userAddress === program.initiator) && (
             <NeoButton
               label={t('detail.selectWinners')}
               variant="secondary"
@@ -232,10 +248,11 @@ export function ProgramDetailPage() {
       )}
 
       {isSelectWinnersOpen && (
-        <SelectWinnersForProgram
-          program={program}
-          onClose={() => setIsSelectWinnersOpen(false)}
-        />
+        <SelectWinnersModal isOpen onClose={() => setIsSelectWinnersOpen(false)} programId={program.pid} />
+      )}
+
+      {isResolveOpen && (
+        <ResolveShortlistModal isOpen onClose={() => setIsResolveOpen(false)} programId={program.pid} />
       )}
 
       <ProgramFundingCard
@@ -458,6 +475,14 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.scoring')}</dt>
               <dd className="font-bold">{program.screeningMode === 0 ? t('detail.byCommittee') : t('detail.byStudent')}</dd>
             </div>
+            {program.openDonation && (
+              <div className="flex justify-between items-baseline">
+                <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.voteWeight')}</dt>
+                <dd className="font-bold font-data">
+                  {program.voteWeightBps != null ? `${program.voteWeightBps / 100}%` : t('detail.voteWeightDefault')}
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.eduLevel')}</dt>
               <dd className="font-bold">{[t('create.edu.elementary'), t('create.edu.junior'), t('create.edu.senior'), t('create.edu.university')][program.educationLevel] ?? '—'}</dd>
@@ -547,19 +572,5 @@ function ListTab<T>({
     <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg overflow-hidden">
       <div className="divide-y-2 divide-gray-100">{data.map(renderItem)}</div>
     </div>
-  );
-}
-
-function SelectWinnersForProgram({ program, onClose }: { program: any; onClose: () => void }) {
-  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
-  const shortlisted = applicants.filter((a) => a.status === 'SHORTLISTED');
-  return (
-    <SelectWinnersModal
-      isOpen
-      onClose={onClose}
-      programId={program.pid}
-      shortlisted={shortlisted}
-      targetWinners={program.targetWinners}
-    />
   );
 }

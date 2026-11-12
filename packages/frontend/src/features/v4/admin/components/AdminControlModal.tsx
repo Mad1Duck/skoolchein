@@ -1,3 +1,4 @@
+import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useState, useEffect } from 'react';
 import { useAdminForceStatus, useAdminUpdateDates } from '@/lib/contracts/write-hooks';
 import { type Program } from '@/lib/api';
@@ -99,16 +100,11 @@ export function AdminControlModal({
 
           <div>
             <label className="block text-sm font-bold mb-2">Target Status</label>
-            <select
-              className="w-full p-3 border-2 border-black font-bold bg-white"
+            <NeoSelect
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(Number(e.target.value))}>
-              {PROGRAM_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.value} - {s.label}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedStatus}
+              options={PROGRAM_STATUSES.map((s) => ({ value: s.value, label: `${s.value} - ${s.label}` }))}
+            />
             <p className="text-[10px] text-red-500 font-bold mt-1 uppercase italic">
               Warning: Side-effects (like fund locking) may not run during forced bypass.
             </p>

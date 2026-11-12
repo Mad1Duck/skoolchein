@@ -46,6 +46,7 @@ abstract contract ScholarshipCoreBase is Initializable {
     bytes32 public constant MILESTONE_ROLE  = keccak256("MILESTONE_ROLE"); 
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE"); 
     bytes32 public constant CONFIG_ADMIN_ROLE = keccak256("CONFIG_ADMIN_ROLE"); 
+    bytes32 public constant SELECTION_ROLE    = keccak256("SELECTION_ROLE");
     string  public constant VERSION         = "5.0.0";
 
     address public admin;
@@ -148,6 +149,19 @@ abstract contract ScholarshipCoreBase is Initializable {
      */
     uint256 public legacyTokenBoundary;
 
+    // ── Per-voter influence cap ──────────────────────────────────────────────
+    // APPENDED DELIBERATELY, after every existing variable (same reason as above:
+    // this is a live UUPS proxy). The rest of the selection settings live in
+    // ScholarshipSelection; only the vote path needs this one, so it is kept here
+    // as a single slot to spare Core's bytecode (EIP-170 limit).
+    uint16 public voterCapBps;
+
+    /// @notice Cap one donor's counted vote power at this share of the program fund (basis points, 0 = no cap).
+    function setVoterCapBps(uint16 bps) external onlyRole(SELECTION_ROLE) {
+        if (bps > 10_000) revert InvalidConfig();
+        voterCapBps = bps;
+    }
+
     event TokenConfigUpdated(address indexed token, bool enabled, uint256 minDonation, uint256 transactionFee);
     event LegacyTokenBoundarySet(uint256 boundary);
 
@@ -249,7 +263,7 @@ abstract contract ScholarshipCoreBase is Initializable {
         ScholarshipTypes.ScoreWeights memory w = programs[pid].scoreWeights;
         a = a > 100 ? 100 : a; i = i > 100 ? 100 : i; r = r > 100 ? 100 : r;
         uint256 sw = uint256(w.academicWeight) + w.incomeWeight + w.recommendWeight;
-        uint256 norm = sw > 0 ? ((a * w.academicWeight + i * w.incomeWeight + r * w.recommendWeight) * ScholarshipTypes.SCORE_MAX) / (sw * 100) : 0;
+        uint256 norm = sw > 0 ? ((a * w.academicWeight + i * w.incomeWeight + r * w.recommendWeight) * _config.scoreMax) / (sw * 100) : 0;
         scoreComponents[pid][applicant] = ScholarshipTypes.ScoreComponents({ academicScore: a, incomeScore: i, recommendScore: r, isSubmitted: true, scoredBy: scoredBy });
         applicants[pid][applicant].screeningScore = uint32(norm);
         applicants[pid][applicant].totalScore = uint32(norm);
@@ -321,6 +335,10 @@ abstract contract ScholarshipCoreBase is Initializable {
         } else {
             power = voterInfo[pid][msg.sender].remainingVotingPower;
             voterInfo[pid][msg.sender].remainingVotingPower = 0; // Spend donation power
+            // One large donor must not decide the vote share alone. Reputation votes are
+            // already bounded by what a wallet has earned, so only donation power is capped.
+            uint256 cap = (p.totalFund * voterCapBps) / 10_000;
+            if (cap != 0 && power > cap) power = cap;
         }
 
         if (power == 0) revert InsufficientVotingPower();
@@ -432,48 +450,6 @@ abstract contract ScholarshipCoreBase is Initializable {
             globalFreezeUntil[wallet] = block.timestamp + _config.freezeHeavy;
         }
         emit ScholarSlashed(wallet, pid, dtype);
-    }
-
-    function _selectWinners(
-        uint256 pid,
-        address[] calldata ranked,
-        uint256[][] calldata amounts,
-        string[][] calldata descs,
-        bytes32[][] calldata providers,
-        bytes32[][] calldata externalIds
-    ) internal {
-        _requireInitiator(pid);
-        _requireStatus(pid, ScholarshipTypes.ProgramStatus.VOTING);
-        
-        // Private programs funded by initiator skip the public voting quorum/time check
-        if (programs[pid].openDonation) {
-            if (block.timestamp < uint256(programs[pid].votingEnd)) revert VotingNotEnded();
-            if (programs[pid].totalVotes == 0) revert QuorumNotMet();
-        }
-
-        programs[pid].status = ScholarshipTypes.ProgramStatus.ACTIVE;
-        emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.ACTIVE);
-
-        for (uint256 i; i < ranked.length; i++) {
-            address s = ranked[i];
-            if (applicants[pid][s].status != ScholarshipTypes.ApplicationStatus.SHORTLISTED) revert CandidateNotShortlisted();
-            
-            scholars[s][pid] = ScholarshipTypes.Scholar({
-                pid: pid,
-                wallet: s,
-                status: ScholarshipTypes.StudentStatus.ACTIVE,
-                isBlacklisted: false,
-                mandatoryTotal: uint32(amounts[i].length),
-                mandatoryCompleted: 0,
-                optionalApproved: 0,
-                optionalCompleted: 0,
-                freezeUntil: 0,
-                totalReceived: 0
-            });
-
-            milestoneManager.createMandatoryBatch(pid, s, amounts[i], descs[i], providers[i], externalIds[i]);
-            emit ScholarSelected(pid, s);
-        }
     }
 
     function _resolveDisputeBH(uint256) internal {}

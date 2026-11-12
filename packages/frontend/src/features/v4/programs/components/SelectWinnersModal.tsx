@@ -1,236 +1,196 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAccount } from 'wagmi';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
-import { useSelectWinners } from '@/lib/contracts/write-hooks';
-import type { Applicant } from '@/lib/api/types';
-import { useProgram } from '@/lib/api/hooks';
-import { getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
+import { useProgram, useProgramApplicants, useProgramVotes } from '@/lib/api/hooks';
+import {
+  useEffectiveVoteWeight,
+  useMilestonePlan,
+  useRankedShortlist,
+  useSelectionAddress,
+  useSelectWinners,
+} from '@/lib/contracts/v4/hooks/selection';
 import { useT } from '@/lib/i18n';
-
-interface MilestoneConfig {
-  amount: string;
-  description: string;
-  provider: string;   // e.g. 'hackquest', 'udemy'
-  externalId: string; // e.g. 'course_123'
-}
-
-interface WinnerConfig {
-  applicant: Applicant;
-  milestones: MilestoneConfig[];
-}
+import { toDate } from '@/lib/time';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   programId: number;
-  shortlisted: Applicant[];
-  targetWinners: number;
 }
 
-const DEFAULT_MILESTONE: MilestoneConfig = { 
-  amount: '10', 
-  description: '',
-  provider: '',
-  externalId: ''
-};
+/**
+ * Chooses the winners.
+ *
+ * Public program: the system does it. rankShortlist() orders the whole shortlist by final score
+ * (screening plus the votes' share) and the contract rejects any other order, so this only shows
+ * the result and submits it; anyone can run it once voting has ended.
+ *
+ * Private program: the money is the creator's own, so the creator picks, up to the quota.
+ */
+export function SelectWinnersModal({ isOpen, onClose, programId }: Props) {
+  const { t, tr } = useT();
+  const { address } = useAccount();
+  const selection = useSelectionAddress();
 
-export function SelectWinnersModal({ isOpen, onClose, programId, shortlisted, targetWinners }: Props) {
-  const { t } = useT();
+  const { data: program } = useProgram(String(programId));
+  const { data: applicants = [] } = useProgramApplicants(String(programId));
+  const { data: votes = [] } = useProgramVotes(isOpen ? String(programId) : '');
+  const { weightBps } = useEffectiveVoteWeight(programId);
+  const { plan } = useMilestonePlan(programId);
+
+  const isPublic = program?.openDonation ?? true;
+  const targetWinners = program?.targetWinners ?? 0;
+  const { data: ranked = [] } = useRankedShortlist(programId, isOpen && isPublic);
   const { selectWinners, isPending, isSuccess } = useSelectWinners();
 
-  // Milestone amounts are denominated in the program's token, which determines
-  // the decimals they scale by (native 18, USDC 6).
-  const { data: program } = useProgram(String(programId));
-  const token = program?.token;
-  const tokenMeta = getTokenMeta(token);
+  const isCreator = !!address && !!program && address.toLowerCase() === program.initiator.toLowerCase();
+  const votingEnd = toDate(program?.votingEnd);
+  const tooEarly = isPublic && !!votingEnd && Date.now() < votingEnd.getTime();
+  const creatorOnly = !isPublic && !isCreator;
 
-  // Sort by voteScore desc, pick up to targetWinners
-  const [winners, setWinners] = useState<WinnerConfig[]>([]);
+  // Votes received per candidate, as a share of all votes.
+  const voteShare = useMemo(() => {
+    const per = new Map<string, bigint>();
+    let total = 0n;
+    for (const v of votes) {
+      const w = BigInt(v.votingWeight || '0');
+      per.set(v.candidateAddress.toLowerCase(), (per.get(v.candidateAddress.toLowerCase()) ?? 0n) + w);
+      total += w;
+    }
+    return (wallet: string) => (total > 0n ? Number(((per.get(wallet.toLowerCase()) ?? 0n) * 1000n) / total) / 10 : 0);
+  }, [votes]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const sorted = [...shortlisted]
-      .filter((a) => a.status === 'SHORTLISTED')
-      .sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0))
-      .slice(0, targetWinners);
+  const scoreOf = useMemo(() => new Map(applicants.map((a) => [a.wallet.toLowerCase(), Number(a.screeningScore)])), [applicants]);
 
-    setWinners(
-      sorted.map((a) => ({
-        applicant: a,
-        milestones: [{ ...DEFAULT_MILESTONE }],
-      }))
-    );
-  }, [isOpen, shortlisted, targetWinners]);
+  // Private programs: the creator's own picks.
+  const shortlisted = useMemo(() => applicants.filter((a) => a.status === 'SHORTLISTED'), [applicants]);
+  const [picked, setPicked] = useState<`0x${string}`[]>([]);
+  useEffect(() => { if (!isOpen) setPicked([]); }, [isOpen]);
+  const toggle = (w: `0x${string}`) =>
+    setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : p.length < targetWinners ? [...p, w] : p));
 
   useEffect(() => {
     if (isSuccess) onClose();
   }, [isSuccess, onClose]);
 
-  const addMilestone = (wi: number) => {
-    setWinners((prev) => {
-      const next = [...prev];
-      next[wi] = { ...next[wi], milestones: [...next[wi].milestones, { ...DEFAULT_MILESTONE }] };
-      return next;
-    });
-  };
+  const handleConfirm = () => selectWinners(BigInt(programId), isPublic ? ranked : picked);
 
-  const removeMilestone = (wi: number, mi: number) => {
-    setWinners((prev) => {
-      const next = [...prev];
-      const ms = [...next[wi].milestones];
-      ms.splice(mi, 1);
-      next[wi] = { ...next[wi], milestones: ms };
-      return next;
-    });
-  };
-
-  const updateMilestone = (wi: number, mi: number, field: keyof MilestoneConfig, value: string) => {
-    setWinners((prev) => {
-      const next = [...prev];
-      const ms = [...next[wi].milestones];
-      ms[mi] = { ...ms[mi], [field]: value };
-      next[wi] = { ...next[wi], milestones: ms };
-      return next;
-    });
-  };
-
-  const handleConfirm = () => {
-    const ranked = winners.map((w) => w.applicant.wallet as `0x${string}`);
-    const amounts = winners.map((w) =>
-      w.milestones.map((m) => parseTokenAmount(m.amount || '0', token))
-    );
-    const descs = winners.map((w) => w.milestones.map((m) => m.description));
-    const providers = winners.map((w) => w.milestones.map((m) => m.provider));
-    const externalIds = winners.map((w) => w.milestones.map((m) => m.externalId));
-    
-    selectWinners(BigInt(programId), ranked, amounts, descs, providers, externalIds);
-  };
-
-  const totalFundNeeded = winners.reduce(
-    (acc, w) => acc + w.milestones.reduce((a, m) => a + Number(m.amount || 0), 0),
-    0
-  );
+  const winnerCount = isPublic ? Math.min(targetWinners, ranked.length) : picked.length;
+  const blocked =
+    !selection || !program || tooEarly || creatorOnly || winnerCount === 0;
 
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title={t('winners.title', { id: programId })}>
       <div className="space-y-4">
-        <div className="flex justify-between items-center bg-skblue-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
-          <span className="font-bold">{t('winners.total', { symbol: tokenMeta.symbol })}</span>
-          <span className="font-paytone text-lg text-skblue">{totalFundNeeded.toLocaleString('en-US', { maximumFractionDigits: 4 })} {tokenMeta.symbol}</span>
+        <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm space-y-1.5">
+          <p className="text-gray-700">
+            {isPublic
+              ? t('winners.introPublic', { weight: (weightBps ?? 0) / 100 })
+              : t('winners.introPrivate', { max: targetWinners })}
+          </p>
+          <p className="text-xs font-bold text-gray-600">{t('winners.planNote', { count: plan?.shareBps.length || 1 })}</p>
         </div>
 
-        <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
-          {winners.map((w, wi) => (
-            <div key={w.applicant.wallet} className="border-2 border-black overflow-hidden shadow-[3px_3px_0_0_#000]">
-              {/* Winner header */}
-              <div className="bg-skpink-light px-4 py-3 flex items-center gap-3 border-b-2 border-black">
-                <div className="w-6 h-6 bg-skpink text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">
-                  {wi + 1}
-                </div>
-                <WalletAvatar address={w.applicant.wallet} size={24} />
-                <span className="font-bold text-sm">{shortenAddress(w.applicant.wallet)}</span>
-                <span className="ml-auto text-xs text-gray-500">
-                  {t('winners.score', { score: w.applicant.totalScore || '—' })}
-                </span>
-              </div>
+        {!selection && <Notice>{t('winners.noContract')}</Notice>}
+        {selection && tooEarly && votingEnd && <Notice>{t('winners.notEnded', { date: votingEnd.toLocaleString() })}</Notice>}
+        {selection && creatorOnly && <Notice>{t('winners.creatorOnly')}</Notice>}
 
-              {/* Milestones */}
-              <div className="p-4 space-y-3">
-                <p className="text-xs font-bold uppercase text-gray-500">{t('winners.mandatory')}</p>
-                {w.milestones.map((m, mi) => (
-                  <div key={mi} className="flex gap-2 items-start">
-                    <div className="flex-shrink-0 w-6 h-6 bg-gray-200 border-2 border-black flex items-center justify-center text-xs mt-2">
-                      {mi + 1}
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 flex-1">
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.amount')}</label>
-                        <input
-                          type="number"
-                          className="w-full border-2 border-black rounded p-1.5 text-xs focus:outline-none focus:border-skblue"
-                          value={m.amount}
-                          onChange={(e) => updateMilestone(wi, mi, 'amount', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.description')}</label>
-                        <input
-                          type="text"
-                          className="w-full border-2 border-black rounded p-1.5 text-xs focus:outline-none focus:border-skblue"
-                          value={m.description}
-                          onChange={(e) => updateMilestone(wi, mi, 'description', e.target.value)}
-                          placeholder={t('winners.descriptionPlaceholder')}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.platform')}</label>
-                        <select
-                          className="w-full border-2 border-black rounded p-1.5 text-xs focus:outline-none focus:border-skblue h-[34px]"
-                          value={m.provider}
-                          onChange={(e) => updateMilestone(wi, mi, 'provider', e.target.value)}
-                        >
-                          <option value="">{t('winners.manual')}</option>
-                          <option value="hackquest">HackQuest</option>
-                          <option value="udemy">Udemy</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.externalId')}</label>
-                        <input
-                          type="text"
-                          className="w-full border-2 border-black rounded p-1.5 text-xs focus:outline-none focus:border-skblue"
-                          value={m.externalId}
-                          onChange={(e) => updateMilestone(wi, mi, 'externalId', e.target.value)}
-                          placeholder={t('winners.externalIdPlaceholder')}
-                          disabled={!m.provider}
-                        />
-                      </div>
-                    </div>
-                    {w.milestones.length > 1 && (
-                      <button
-                        onClick={() => removeMilestone(wi, mi)}
-                        className="mt-2 text-red-500 hover:text-red-700 text-lg leading-none"
-                        title={t('winners.remove')}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
+        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          {isPublic
+            ? ranked.map((wallet, i) => {
+                const win = i < targetWinners;
+                return (
+                  <Row
+                    key={wallet}
+                    rank={i + 1}
+                    wallet={wallet}
+                    highlight={win}
+                    detail={
+                      <>
+                        {t('winners.screening')} <b className="font-data">{scoreOf.get(wallet.toLowerCase()) ?? '—'}</b>
+                        {' · '}
+                        {t('winners.votes')} <b className="font-data">{voteShare(wallet).toFixed(1)}%</b>
+                      </>
+                    }
+                    tag={win ? t('winners.winner') : t('winners.notSelected')}
+                    tagOn={win}
+                  />
+                );
+              })
+            : shortlisted.map((a, i) => {
+                const wallet = a.wallet as `0x${string}`;
+                const on = picked.includes(wallet);
+                return (
+                  <button key={wallet} type="button" onClick={() => toggle(wallet)} disabled={creatorOnly} className="block w-full text-left">
+                    <Row
+                      rank={i + 1}
+                      wallet={wallet}
+                      highlight={on}
+                      detail={<>{t('winners.screening')} <b className="font-data">{a.screeningScore}</b></>}
+                      tag={on ? t('winners.winner') : t('winners.notSelected')}
+                      tagOn={on}
+                    />
+                  </button>
+                );
+              })}
 
-                <NeoButton
-                  label={t('winners.add')}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => addMilestone(wi)}
-                />
-              </div>
-            </div>
-          ))}
-
-          {winners.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>{t('winners.empty')}</p>
-            </div>
+          {(isPublic ? ranked.length === 0 : shortlisted.length === 0) && (
+            <p className="text-center py-8 text-gray-500">{t('winners.empty')}</p>
           )}
         </div>
 
+        {!isPublic && (
+          <p className="text-xs font-bold text-gray-600">{tr('winners.pick', { count: picked.length, max: targetWinners })}</p>
+        )}
+
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
-          <NeoButton label={t('common.cancel')} variant="ghost" onClick={onClose} disabled={isPending} fullWidth />
+          <NeoButton label={t('common.cancel')} variant="ghost" className="!rounded-xl" onClick={onClose} disabled={isPending} fullWidth />
           <NeoButton
-            label={isPending ? t('winners.selecting') : !program ? t('winners.loadingProgram') : t('winners.confirm', { count: winners.length })}
+            label={isPending ? t('winners.selecting') : !program ? t('winners.loadingProgram') : t('winners.confirm', { count: winnerCount })}
             variant="success"
+            className="!rounded-xl"
             onClick={handleConfirm}
             loading={isPending}
-            // Wait for the program: getTokenMeta() treats an unknown token as
-            // native (18 decimals), so confirming early would scale a USDC
-            // program's milestone amounts by 10^12.
-            disabled={isPending || !program || winners.length === 0}
+            disabled={isPending || blocked}
             fullWidth
           />
         </div>
       </div>
     </NeoModal>
   );
+}
+
+function Row({
+  rank, wallet, detail, tag, tagOn, highlight,
+}: {
+  rank: number;
+  wallet: string;
+  detail: React.ReactNode;
+  tag: string;
+  tagOn: boolean;
+  highlight: boolean;
+}) {
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-xl border-2 border-black ${highlight ? 'bg-skgreen' : 'bg-white'}`}>
+      <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">{rank}</div>
+      <WalletAvatar address={wallet} size={28} />
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm font-data truncate">{shortenAddress(wallet)}</p>
+        <p className="text-xs text-gray-600">{detail}</p>
+      </div>
+      <span
+        className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 border-2 border-black rounded-full ${
+          tagOn ? 'bg-white' : 'bg-gray-200 text-gray-600'
+        }`}
+      >
+        {tag}
+      </span>
+    </div>
+  );
+}
+
+function Notice({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-xl border-2 border-black bg-skred-light px-3 py-2 text-sm font-bold">{children}</p>;
 }

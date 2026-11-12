@@ -11,10 +11,14 @@ import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { WalletAvatar } from "@/components/ui/WalletAvatar";
 import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
 import { LiveBadge } from "@/components/ui/LiveBadge";
+import { NeoSelect } from "@/components/ui/NeoSelect";
+import { useT } from "@/lib/i18n";
+import { statusLabel } from "@/lib/i18n/status";
 import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProgramDetail } from "../components/AdminProgramDetail";
 import { AdminProtocolConfig } from "../components/AdminProtocolConfig";
 import { AdminTokenOracle } from "../components/AdminTokenOracle";
+import { AdminSelectionConfig } from "../components/AdminSelectionConfig";
 import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 
 type Tab = "programs" | "users" | "treasury" | "config";
@@ -45,6 +49,7 @@ function timeAgo(d?: string | null): string {
 }
 
 export function AdminDashboardPage() {
+  const { t } = useT();
   const v4Addresses = useV4Addresses();
   const { chainId } = useActiveChain();
   const { address } = useAccount();
@@ -189,16 +194,17 @@ export function AdminDashboardPage() {
                 placeholder="Search #id or wallet"
                 className="!py-1.5 !text-sm w-48 !rounded-xl"
               />
-              <select
+              <NeoSelect
+                size="sm"
+                className="w-44"
+                ariaLabel="Filter by status"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border-2 border-black rounded-xl px-2 py-1.5 text-sm font-bold bg-white"
-              >
-                <option value="ALL">All status</option>
-                {statuses.map((s) => (
-                  <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-                ))}
-              </select>
+                onChange={setStatusFilter}
+                options={[
+                  { value: "ALL", label: "All status" },
+                  ...statuses.map((s) => ({ value: s as string, label: statusLabel(t, s) })),
+                ]}
+              />
             </div>
           }
         >
@@ -357,6 +363,7 @@ export function AdminDashboardPage() {
       {activeTab === "config" && (
         <div className="space-y-8">
           <AdminProtocolConfig />
+          <AdminSelectionConfig />
           <AdminTokenOracle />
         </div>
       )}

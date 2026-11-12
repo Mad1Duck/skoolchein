@@ -1,3 +1,4 @@
+import { toEpochSec } from '@/lib/time';
 import { useState, useEffect } from 'react';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -16,7 +17,7 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
   const isAppOpen = program.status === 'APPLICATION_OPEN';
   const isVoting = program.status === 'VOTING';
   
-  const currentEnd = isAppOpen ? (program.applicationEnd ? Number(program.applicationEnd) : 0) : (program.votingEnd ? Number(program.votingEnd) : 0);
+  const currentEnd = toEpochSec(isAppOpen ? program.applicationEnd : program.votingEnd) ?? 0;
   
   // Helper to ensure timestamp is in milliseconds (API vs Contract mix)
   const ensureMs = (ts: number) => {

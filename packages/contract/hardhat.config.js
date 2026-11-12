@@ -58,7 +58,9 @@ const config = {
     nawasena: {
       type: "http",
       chainId: 31338,
-      url: "http://100.73.196.95:8550",
+      // Public RPC (Caddy -> node) by default: it needs no VPN. The node's Tailscale address
+      // (http://100.73.196.95:8550) still works from inside the tailnet; set NAWASENA_RPC_URL to use it.
+      url: process.env.NAWASENA_RPC_URL ?? "https://rpc.nawasena-labs.com",
       accounts: {
         mnemonic: "test test test test test test test test test test test junk",
         count: 5,

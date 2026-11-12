@@ -6,6 +6,7 @@ import { useReputation } from '@/lib/api/hooks';
 import type { Program, ProgramMetadata } from '@/lib/api/types';
 import { donationPresets, formatTokenAmount, getTokenMeta } from '@/lib/contracts/v4/token';
 import { useT } from '@/lib/i18n';
+import { toEpochSec } from '@/lib/time';
 import { useFormatMoney } from '@/lib/money';
 import { DonationPresets } from './DonationPresets';
 
@@ -24,8 +25,7 @@ function activeDeadline(program: Program): number | null {
       : program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING'
         ? program.applicationEnd
         : null;
-  const n = raw ? Number(raw) : 0;
-  return n > 0 ? n : null;
+  return toEpochSec(raw);
 }
 
 function useCountdown(endSec: number | null): string | null {

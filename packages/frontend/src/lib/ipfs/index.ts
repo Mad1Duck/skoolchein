@@ -27,10 +27,49 @@ export async function fetchIPFS<T = unknown>(cid: string): Promise<T | null> {
   }
 }
 
-/** Fetch program metadata from IPFS */
+// ── Local metadata cache ──────────────────────────────────────────────────────
+// CIDs are content-addressed, so a CID's metadata can never change: cache it
+// forever. This keeps program names visible when the public gateway rate-limits
+// (429) and avoids refetching on every visit.
+
+const META_CACHE_PREFIX = "skc:meta:";
+
+function readCachedMeta(cid: string): ProgramMetadata | null {
+  try {
+    const raw = localStorage.getItem(META_CACHE_PREFIX + cid);
+    return raw ? (JSON.parse(raw) as ProgramMetadata) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Remember metadata for a CID. Also called at creation time, when the name is known locally. */
+export function rememberProgramMeta(cid: string, meta: ProgramMetadata) {
+  if (!cid || cid.startsWith("QmFallback")) return;
+  try {
+    localStorage.setItem(META_CACHE_PREFIX + cid, JSON.stringify(meta));
+  } catch {
+    /* storage full or unavailable — the cache is only an optimisation */
+  }
+}
+
+/**
+ * Fetch program metadata from IPFS.
+ *
+ * Resolves to null only when there is genuinely nothing to fetch (placeholder
+ * CID). A gateway failure THROWS, so TanStack Query treats it as an error and
+ * retries instead of caching "no metadata" for the rest of the session.
+ */
 export async function fetchProgramMeta(cid: string): Promise<ProgramMetadata | null> {
-  const meta = await fetchIPFS<ProgramMetadata>(cid);
-  if (!meta) return null;
+  if (!cid || cid.startsWith("QmFallback")) return null;
+
+  let meta = readCachedMeta(cid);
+  if (!meta) {
+    const res = await fetch(ipfsUrl(cid));
+    if (!res.ok) throw new Error(`IPFS gateway responded ${res.status}`);
+    meta = (await res.json()) as ProgramMetadata;
+    rememberProgramMeta(cid, meta);
+  }
   // The stored name keeps the backend's naming prefix ("skoolchein_program_My Program").
   // That is for storage only — display just what the creator typed.
   return meta.name ? { ...meta, name: stripNamePrefix(meta.name) } : meta;

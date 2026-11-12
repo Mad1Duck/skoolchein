@@ -1,3 +1,4 @@
+import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useActiveChain } from "@/lib/chain/useActiveChain";
 import { chainLabel } from "@/lib/chain/chains";
 import { useT } from "@/lib/i18n";
@@ -9,17 +10,15 @@ export function ChainSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <select
-        aria-label={t('chain.networkLabel')}
-        className="border-2 border-black rounded-lg px-2 py-1 text-sm font-bold bg-white"
+      <NeoSelect
+        size="sm"
+        className="w-40"
+        ariaLabel={t('chain.networkLabel')}
         value={chainId}
         disabled={isSwitching}
-        onChange={(e) => switchTo(Number(e.target.value))}
-      >
-        {supportedChainIds.map((id) => (
-          <option key={id} value={id}>{chainLabel(id)}</option>
-        ))}
-      </select>
+        onChange={switchTo}
+        options={supportedChainIds.map((id) => ({ value: id, label: chainLabel(id) }))}
+      />
       {!isSupported && (
         <span className="text-xs font-bold text-skred" title={`Wallet is on chain ${walletChainId}`}>
           {t('chain.unsupported')}

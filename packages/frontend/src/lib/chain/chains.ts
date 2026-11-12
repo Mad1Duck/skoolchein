@@ -15,7 +15,7 @@ import { v4Deployments } from "@/constants/contractsV4";
 export type ContractName =
   | "ScholarshipCore" | "ScholarshipTreasury" | "ScholarshipBounty"
   | "ScholarshipReputation" | "CommitteeGovernance" | "MilestoneManager"
-  | "ScholarshipAdmin" | "ScholarshipPriceOracle" | "MockUSDC" | "FraudNFT"
+  | "ScholarshipAdmin" | "ScholarshipSelection" | "ScholarshipPriceOracle" | "MockUSDC" | "FraudNFT"
   /** Real USDC on public chains — set `USDC` in deployments/<chainId>.json. */
   | "USDC";
 

@@ -1090,6 +1090,19 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "SELECTION_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "UPGRADER_ROLE",
     "outputs": [
       {
@@ -1486,6 +1499,45 @@ export const scholarshipCoreAbi = [
         "internalType": "contract ICredentialNFT",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
+      }
+    ],
+    "name": "getApplicant",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      },
+      {
+        "internalType": "enum ScholarshipTypes.ApplicationStatus",
+        "name": "status",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint32",
+        "name": "screeningScore",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint128",
+        "name": "voteScore",
+        "type": "uint128"
       }
     ],
     "stateMutability": "view",
@@ -2314,29 +2366,6 @@ export const scholarshipCoreAbi = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "pid",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address[]",
-        "name": "rankedSegment",
-        "type": "address[]"
-      },
-      {
-        "internalType": "bool",
-        "name": "isLastBatch",
-        "type": "bool"
-      }
-    ],
-    "name": "resolveShortlistBatch",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "",
         "type": "uint256"
       },
@@ -2384,31 +2413,44 @@ export const scholarshipCoreAbi = [
       },
       {
         "internalType": "address[]",
-        "name": "ranked",
+        "name": "winners",
         "type": "address[]"
       },
       {
-        "internalType": "uint256[][]",
-        "name": "amounts",
-        "type": "uint256[][]"
-      },
-      {
-        "internalType": "string[][]",
-        "name": "descs",
-        "type": "string[][]"
-      },
-      {
-        "internalType": "bytes32[][]",
-        "name": "providers",
-        "type": "bytes32[][]"
-      },
-      {
-        "internalType": "bytes32[][]",
-        "name": "externalIds",
-        "type": "bytes32[][]"
+        "internalType": "uint32",
+        "name": "mandatoryTotal",
+        "type": "uint32"
       }
     ],
-    "name": "selectWinners",
+    "name": "selectionActivate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "shortlisted",
+        "type": "address[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "screenedOut",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "isLast",
+        "type": "bool"
+      }
+    ],
+    "name": "selectionApplyBatch",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2606,6 +2648,19 @@ export const scholarshipCoreAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "bps",
+        "type": "uint16"
+      }
+    ],
+    "name": "setVoterCapBps",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "studentNFT",
     "outputs": [
@@ -2763,6 +2818,19 @@ export const scholarshipCoreAbi = [
     "name": "voteForCandidate",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "voterCapBps",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
