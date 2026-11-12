@@ -130,28 +130,36 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
 
             {/* Milestone Kind */}
             <div>
-              <label className="block text-sm font-bold mb-2">Milestone Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setKind(1)}
-                  className={`p-3 border-2 text-sm font-bold transition-all duration-75 ${
-                    kind === 1 ? 'border-skpurple bg-skpurple-light' : 'border-black bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  OPTIONAL
-                  <p className="text-xs font-normal text-gray-600 mt-0.5">Extra deliverable proposed by scholar</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKind(2)}
-                  className={`p-3 border-2 text-sm font-bold transition-all duration-75 ${
-                    kind === 2 ? 'border-skblue bg-skblue-light' : 'border-black bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  NEGOTIATED
-                  <p className="text-xs font-normal text-gray-600 mt-0.5">Co-designed with program initiator</p>
-                </button>
+              <label className="block text-sm font-bold mb-2" id="milestone-kind-label">Milestone Type</label>
+              <div role="radiogroup" aria-labelledby="milestone-kind-label" className="grid grid-cols-2 gap-3 items-stretch">
+                {([
+                  { value: 1 as const, title: 'OPTIONAL', body: 'Extra deliverable proposed by scholar' },
+                  { value: 2 as const, title: 'NEGOTIATED', body: 'Co-designed with program initiator' },
+                ]).map((opt) => {
+                  const selected = kind === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setKind(opt.value)}
+                      className={`relative h-full flex flex-col items-center justify-center text-center gap-1 px-3 py-4 rounded-xl border-2 border-black transition-all duration-75 ${
+                        selected
+                          ? 'bg-skpurple text-white shadow-none translate-x-[2px] translate-y-[2px]'
+                          : 'bg-white text-black shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]'
+                      }`}
+                    >
+                      {selected && (
+                        <span className="absolute top-1.5 right-2 text-xs font-black" aria-hidden="true">✓</span>
+                      )}
+                      <span className="text-sm font-extrabold tracking-wide">{opt.title}</span>
+                      <span className={`text-xs font-medium leading-snug ${selected ? 'text-white/90' : 'text-gray-600'}`}>
+                        {opt.body}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
