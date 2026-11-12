@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { fetchProgramMeta } from '@/lib/ipfs';
 import type { Program } from '@/lib/api/types';
+import { useT } from '@/lib/i18n';
 
 interface ProgramCardV2Props {
   program: Program;
@@ -66,9 +67,10 @@ function getStatusKey(status: string): 'active' | 'vote' | 'soon' | 'done' {
 
 export function ProgramCardV2({
   program,
-  labelButton = 'Apply Now',
+  labelButton,
   size = 'large',
 }: ProgramCardV2Props) {
+  const { t } = useT();
   const { address } = useAccount();
   const { rate } = useTokenRate();
   const { data: meta } = useQuery({
@@ -123,7 +125,7 @@ export function ProgramCardV2({
               >
                 <div className="flex flex-col gap-1">
                   <p className={getTextSize(size, 'text-sm', 'text-xs')}>
-                    Registration close in...
+                    {t('card.closesIn')}
                   </p>
                   <div className="flex gap-2 py-2 px-3 items-center rounded-2xl border bg-error-container border-on-error-container">
                     <img src="/icons/alarm-clock.svg" alt="clock-icon" />
@@ -137,7 +139,7 @@ export function ProgramCardV2({
 
                 <div className="flex flex-col gap-1">
                   <p className={getTextSize(size, 'text-sm', 'text-xs')}>
-                    Eligible for
+                    {t('card.eligible')}
                   </p>
                   <div className="flex gap-2 py-2 px-3 items-center rounded-2xl border bg-skyellow">
                     <img src="/icons/student.svg" alt="student-icon" />
@@ -148,13 +150,13 @@ export function ProgramCardV2({
                         'text-[0.625rem]',
                       )}
                     >
-                      {program.targetWinners} Uni Students*
+                      {t('card.students', { n: program.targetWinners })}
                     </span>
                   </div>
                   <p
                     className={`self-stretch text-right ${getTextSize(size, 'text-xs', 'text-[0.625rem]')}`}
                   >
-                    *verified via PDDIKTI
+                    {t('card.verified')}
                   </p>
                 </div>
               </div>
@@ -173,7 +175,7 @@ export function ProgramCardV2({
                   ))}
                 </div>
                 <p className="text-sm">
-                  + {program.applicantCount} other students have applied
+                  {t('card.applied', { n: program.applicantCount })}
                 </p>
               </div>
             </div>
@@ -182,7 +184,7 @@ export function ProgramCardV2({
               <div className="flex flex-col justify-end items-end gap-1">
                 <div className="flex justify-end items-start gap-2">
                   <span className={getTextSize(size, 'text-sm', 'text-xs')}>
-                    Total Fund:
+                    {t('card.totalFund')}
                   </span>
                   <div
                     className={`flex flex-col items-start ${size === 'small' ? 'gap-0.5' : 'gap-1'}`}
@@ -209,7 +211,7 @@ export function ProgramCardV2({
                         className={`flex items-start gap-1 ${getTextSize(size, 'text-sm', 'text-xs')}`}
                       >
                         <img src="/icons/information-diamond.svg" alt="info" />
-                        <span>worth around</span>
+                        <span>{t('card.worth')}</span>
                         <span className="font-bold">{getLocalValue(fund, rate || 0)}</span>
                       </div>
                     )}
@@ -230,7 +232,7 @@ export function ProgramCardV2({
                   className="flex relative -left-1 -top-1 font-nunito px-6 py-3 text-2xl items-center gap-2.5 rounded-lg border-solid border-black bg-skpurple text-white hover:bg-skpurple-hover active:shadow-[inset_8px_8px_8px_0_rgba(0,0,0,0.25)] transition-transform active:translate-x-1 active:translate-y-1 border-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {labelButton}
+                  {labelButton ?? t('tabs.btnApply')}
                 </button>
               </Link>
             )}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { Program } from '@/lib/api/types';
 import { ProgramCardV2 } from './ProgramCardV2';
+import { useT } from '@/lib/i18n';
 
 type Tab = {
   id: string;
@@ -43,6 +44,7 @@ function TabButton({
 }
 
 export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<string>(tabs[0]?.id ?? '');
   const breakpoint = useBreakpoint();
 
@@ -70,9 +72,9 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[3.75rem] p-20 max-sm:p-5 max-sm:gap-5">
             {filtered.length === 0 ? (
               <div className="col-span-full text-center py-10">
-                <p className="font-paytone text-2xl">No scholarships here yet</p>
+                <p className="font-paytone text-2xl">{t('tabs.emptyTitle')}</p>
                 <p className="text-gray-500 text-sm mt-2">
-                  Check another tab or create a new program.
+                  {t('tabs.emptyBody')}
                 </p>
               </div>
             ) : (
@@ -82,10 +84,10 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
                   program={program}
                   labelButton={
                     activeTab === 'vote'
-                      ? 'Vote Now'
+                      ? t('tabs.btnVote')
                       : activeTab === 'soon'
-                        ? 'Details'
-                        : 'Apply Now'
+                        ? t('tabs.btnDetails')
+                        : t('tabs.btnApply')
                   }
                   size={size}
                 />

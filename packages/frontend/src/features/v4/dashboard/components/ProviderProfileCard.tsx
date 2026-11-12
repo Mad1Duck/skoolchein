@@ -5,6 +5,7 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program } from "@/lib/api/types";
 import { formatTokenCompact } from "@/lib/contracts/v4/token";
 import { fetchProgramMeta } from "@/lib/ipfs";
+import { useT } from '@/lib/i18n';
 
 interface ProviderProfileCardProps {
   program: Program | undefined;
@@ -13,6 +14,7 @@ interface ProviderProfileCardProps {
 }
 
 export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProfileCardProps) {
+  const { t } = useT();
   const { address } = useAccount();
   const { data: meta } = useQuery({
     queryKey: ["ipfs-meta", program?.metadataCID],
@@ -38,14 +40,14 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
         <div className="flex justify-between items-start">
           <div className="space-y-2">
             <div className="bg-skgreen font-bold text-xs w-max px-2 py-1 text-black rounded-full border border-black">
-              Scholarship Program
+              {t('dash.programTag')}
             </div>
             <h1 className="font-paytone text-2xl flex items-center gap-2">
               <img className="size-6 rounded-full" src={image} alt="creator" />
               {title}
             </h1>
             <p className="text-sm text-gray-700 line-clamp-2">
-              {description || "Here’s where your impact unfolds—in milestones, stories, and students you’ve empowered."}
+              {description || t('dash.impact')}
             </p>
           </div>
           <NeoButton
@@ -53,7 +55,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
             variant="secondary"
             size="sm"
             className="!p-2 !rounded-2xl !w-10 !h-10"
-            aria-label="Next program"
+            aria-label={t('dash.nextProgram')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M12 5l7 7-7 7" />
@@ -63,7 +65,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
 
         <div className="space-y-3">
           <h2 className="text-lg font-bold leading-snug">
-            {program ? title : "Create your first scholarship program"}
+            {program ? title : t('dash.createFirst')}
           </h2>
           <div className="flex items-center gap-2">
             <img className="size-5 rounded-full" src={image} alt="creator" />
@@ -73,7 +75,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
           </div>
           <div className="h-px bg-black/10" />
           <div className="space-y-1">
-            <p className="text-sm font-medium">Total Fund:</p>
+            <p className="text-sm font-medium">{t('dash.totalFund')}</p>
             <div className="flex items-center gap-2">
               <img
                 className="size-4"

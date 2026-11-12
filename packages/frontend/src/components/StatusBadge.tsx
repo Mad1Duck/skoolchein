@@ -1,3 +1,5 @@
+import { useT } from "@/lib/i18n";
+
 type StatusType = "active" | "vote" | "soon" | "done" | "pddikti" | "disbursed";
 
 interface StatusBadgeProps {
@@ -5,19 +7,20 @@ interface StatusBadgeProps {
   size?: "small" | "large";
 }
 
-const STATUS_STYLES: Record<StatusType, { bg: string; label: string }> = {
-  active: { bg: "bg-black", label: "Active" },
-  pddikti: { bg: "bg-black", label: "PDDIKTI Verified" },
-  vote: { bg: "bg-skred", label: "On Vote" },
-  soon: { bg: "bg-skgreen", label: "Soon" },
-  done: { bg: "bg-skgreen", label: "Done" },
-  disbursed: { bg: "bg-skgreen", label: "Disbursed" },
-};
+const STATUS_STYLES = {
+  active: { bg: "bg-black", label: "badge.active" },
+  pddikti: { bg: "bg-black", label: "badge.pddikti" },
+  vote: { bg: "bg-skred", label: "badge.vote" },
+  soon: { bg: "bg-skgreen", label: "badge.soon" },
+  done: { bg: "bg-skgreen", label: "badge.done" },
+  disbursed: { bg: "bg-skgreen", label: "badge.disbursed" },
+} as const;
 
 export const StatusBadge = ({
   status = "active",
   size = "large",
 }: StatusBadgeProps) => {
+  const { t } = useT();
   const key = status.toLowerCase() as StatusType;
   const style = STATUS_STYLES[key];
 
@@ -29,7 +32,7 @@ export const StatusBadge = ({
       <div
         className={`flex rounded-2xl px-4 py-2 text-sm bg-gray-400 text-white font-bold justify-center items-center`}
       >
-        Invalid status
+        {t('badge.invalid')}
       </div>
     );
   }
@@ -38,7 +41,7 @@ export const StatusBadge = ({
     <div
       className={`flex rounded-2xl ${style.bg} ${sizeClasses} justify-center items-center ${status === "active" || status === "PDDIKTI" ? "text-white" : "text-black"} font-bold`}
     >
-      {style.label}
+      {t(style.label)}
     </div>
   );
 };

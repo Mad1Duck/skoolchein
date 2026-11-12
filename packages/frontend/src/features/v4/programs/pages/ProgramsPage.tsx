@@ -8,18 +8,17 @@ import { CreateProgramModal } from '../components/CreateProgramModal';
 import { ProgramTabs } from '../components/ProgramTabs';
 import SplitText from '@/components/ui/split-text';
 import { ApproachableWrapper } from '@/components/ornaments/ApproachableWrapper';
+import { useT } from '@/lib/i18n';
+import type { TranslationKey } from '@/lib/i18n/en';
 
-const messages = [
-  'Looking for a fair, transparent way to fund your education?',
-  'Ready to turn your funds into real student success stories?',
-];
+const messageKeys = ['home.msg1', 'home.msg2'] as const;
 
-const TABS = [
+const getTabs = (t: (key: TranslationKey) => string) => [
   {
     id: 'active',
     label: (
       <span>
-        Active <span className="max-sm:sr-only">Scholarships</span>
+        {t('tabs.active')} <span className="max-sm:sr-only">{t('tabs.activeMore')}</span>
       </span>
     ),
     color: 'bg-skpurple',
@@ -28,24 +27,25 @@ const TABS = [
   },
   {
     id: 'vote',
-    label: 'On Voting',
+    label: t('tabs.vote'),
     color: 'bg-skred',
     filter: (p: Program) => p.status === 'VOTING',
   },
   {
     id: 'soon',
-    label: 'Coming Soon',
+    label: t('tabs.soon'),
     color: 'bg-skgreen',
     filter: (p: Program) => p.status === 'CREATED',
   },
 ];
 
 const Title = memo(function Title() {
+  const { t } = useT();
   return (
     <div className="z-[20] max-lg:text-4xl max-sm:text-[32px]">
       <h1>
         <SplitText
-          text="Empower the Future."
+          text={t('home.t1')}
           delay={200}
           duration={0.6}
           ease="power3.out"
@@ -59,7 +59,7 @@ const Title = memo(function Title() {
       </h1>
       <h1>
         <SplitText
-          text="or Be Empowered."
+          text={t('home.t2')}
           delay={200}
           duration={0.6}
           ease="power3.out"
@@ -73,7 +73,7 @@ const Title = memo(function Title() {
       </h1>
       <div className="font-nunito text-2xl max-sm:text-sm">
         <SplitText
-          text="All scholarships are powered by smart contracts. "
+          text={t('home.t3')}
           delay={50}
           duration={0.6}
           ease="power3.out"
@@ -86,7 +86,7 @@ const Title = memo(function Title() {
         />
         <br />
         <SplitText
-          text="Funds go directly to students, no middlemen."
+          text={t('home.t4')}
           delay={50}
           duration={0.6}
           ease="power3.out"
@@ -103,6 +103,7 @@ const Title = memo(function Title() {
 });
 
 export function ProgramsPage() {
+  const { t } = useT();
   const { chainId } = useActiveChain();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [messagesIndex, setMessagesIndex] = useState(0);
@@ -127,7 +128,7 @@ export function ProgramsPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setPrevMessagesIndex(messagesIndex);
-      setMessagesIndex((prev) => (prev + 1) % messages.length);
+      setMessagesIndex((prev) => (prev + 1) % messageKeys.length);
     }, 2000);
     return () => clearInterval(interval);
   }, [messagesIndex]);
@@ -181,20 +182,20 @@ export function ProgramsPage() {
               key={`prev-${prevMessagesIndex}`}
               className="absolute font-bold text-center animate-slideDown-fadeOut"
             >
-              {messages[prevMessagesIndex]}
+              {t(messageKeys[prevMessagesIndex])}
             </span>
           )}
           <span
             key={`curr-${messagesIndex}`}
             className="absolute font-bold text-center animate-slideUp-fadeIn"
           >
-            {messages[messagesIndex]}
+            {t(messageKeys[messagesIndex])}
           </span>
         </div>
         <div className="flex items-center justify-center gap-7 self-stretch [&_button]:max-sm:text-sm max-sm:flex-col max-sm:gap-4">
-          <NeoButton label="Open Scholarships" size="lg" onClick={() => setIsCreateModalOpen(true)} />
+          <NeoButton label={t('home.open')} size="lg" onClick={() => setIsCreateModalOpen(true)} />
           <NeoButton
-            label="Explore Scholarships"
+            label={t('home.explore')}
             variant="secondary"
             size="lg"
             onClick={() => {
@@ -207,8 +208,8 @@ export function ProgramsPage() {
 
       <div id="find-scholarship" className="px-9 py-12 z-[2] max-sm:px-3">
         <div className="inline-flex flex-col justify-center items-start gap-3.5">
-          <h2 className="font-paytone text-5xl max-sm:text-[24px]">Find a Scholarship...</h2>
-          <p className="text-2xl max-sm:text-xs">Your Next Opportunity Starts Here</p>
+          <h2 className="font-paytone text-5xl max-sm:text-[24px]">{t('home.find')}</h2>
+          <p className="text-2xl max-sm:text-xs">{t('home.findHint')}</p>
         </div>
         <div className="py-7">
           {isLoading ? (
@@ -216,7 +217,7 @@ export function ProgramsPage() {
               <div className="w-12 h-12 border-2 border-black bg-skyellow animate-pulse shadow-[3px_3px_0_0_#000]" />
             </div>
           ) : (
-            <ProgramTabs programs={programs} tabs={TABS} />
+            <ProgramTabs programs={programs} tabs={getTabs(t)} />
           )}
         </div>
       </div>

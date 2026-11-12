@@ -22,6 +22,8 @@ import { StudentProfileCard } from '../components/StudentProfileCard';
 import { DashboardMessageCard } from '../components/DashboardMessageCard';
 import { DashboardNftCollections } from '../components/DashboardNftCollections';
 import { ProviderMilestonesPanel } from '../components/ProviderMilestonesPanel';
+import { useT } from '@/lib/i18n';
+import type { TranslationKey } from '@/lib/i18n/en';
 import {
   DashboardTabs,
   DashboardTabsList,
@@ -37,28 +39,28 @@ const arc = `polygon(
 
 const PUBLIC_CARDS = [
   {
-    title: 'Your Fund',
-    subtitle: 'Thug Credential',
-    description: 'Create, fund, or track scholarships you initiated.',
-    cta: 'Open Fund',
+    title: 'dash.c1.title' as const,
+    subtitle: 'dash.c1.subtitle' as const,
+    description: 'dash.c1.desc' as const,
+    cta: 'dash.c1.cta' as const,
     href: '/programs',
     image: '/img/scholarships-left.svg',
     color: 'bg-skcream',
   },
   {
-    title: "Let's Find Scholarships",
-    subtitle: 'What Fit For You',
-    description: 'Browse active scholarships and apply with one click.',
-    cta: 'Explore',
+    title: 'dash.c2.title' as const,
+    subtitle: 'dash.c2.subtitle' as const,
+    description: 'dash.c2.desc' as const,
+    cta: 'dash.c2.cta' as const,
     href: '/programs',
     image: '/img/scholarships-right.svg',
     color: 'bg-skyellow',
   },
   {
-    title: 'Dashboard',
-    subtitle: 'Nothing to see here... yet!',
-    description: 'Connect your wallet to view your roles, votes, and milestones.',
-    cta: 'Connect Wallet',
+    title: 'dash.c3.title' as const,
+    subtitle: 'dash.c3.subtitle' as const,
+    description: 'dash.c3.desc' as const,
+    cta: 'dash.c3.cta' as const,
     href: undefined,
     image: '/img/milestone-plan.svg',
     color: 'bg-skcream',
@@ -66,6 +68,7 @@ const PUBLIC_CARDS = [
 ];
 
 function PublicView() {
+  const { t } = useT();
   return (
     <main className="flex flex-col px-9 pb-9 w-full min-h-screen relative isolate bg-skyellow">
       <div
@@ -75,10 +78,10 @@ function PublicView() {
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-12 md:pt-20">
         <div className="text-center mb-12 md:mb-16">
           <h1 className="font-paytone text-4xl md:text-6xl text-black mb-3">
-            Nothing to see here... yet!
+            {t('dash.emptyTitle')}
           </h1>
           <p className="text-lg md:text-xl text-black/80 max-w-2xl mx-auto">
-            You haven't owned, funded, or followed any scholarships. Let's get started and help someone thrive!
+            {t('dash.emptyBody')}
           </p>
         </div>
 
@@ -92,17 +95,17 @@ function PublicView() {
                 <img src={card.image} alt={card.title} className="h-32 w-auto object-contain" />
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-bold uppercase tracking-wider text-gray-700">{card.title}</p>
-                <h3 className="font-paytone text-2xl md:text-3xl leading-tight">{card.subtitle}</h3>
-                <p className="text-sm text-gray-600">{card.description}</p>
+                <p className="text-sm font-bold uppercase tracking-wider text-gray-700">{t(card.title)}</p>
+                <h3 className="font-paytone text-2xl md:text-3xl leading-tight">{t(card.subtitle)}</h3>
+                <p className="text-sm text-gray-600">{t(card.description)}</p>
               </div>
               {card.href ? (
                 <Link to={card.href} className="mt-6">
-                  <NeoButton label={card.cta} variant="primary" size="md" fullWidth />
+                  <NeoButton label={t(card.cta)} variant="primary" size="md" fullWidth />
                 </Link>
               ) : (
                 <div className="mt-6">
-                  <NeoButton label={card.cta} variant="connect" size="md" fullWidth />
+                  <NeoButton label={t(card.cta)} variant="connect" size="md" fullWidth />
                 </div>
               )}
             </div>
@@ -114,6 +117,7 @@ function PublicView() {
 }
 
 export function DashboardPage() {
+  const { t } = useT();
   const { chainId } = useActiveChain();
   const { address } = useAccount();
   const { data: dashboard, isLoading } = useDashboard(address || '');
@@ -199,19 +203,19 @@ export function DashboardPage() {
                     key={r}
                     className={`px-2 py-1 ${roleFills[r] ?? 'bg-gray-100 text-black'} border-2 border-black text-[10px] font-extrabold uppercase tracking-widest`}
                   >
-                    {r.replace('_', ' ')}
+                    {t(`role.${r}` as TranslationKey)}
                   </span>
                 ))}
                 {roles.length === 0 && (
                   <span className="px-2 py-1 bg-gray-100 text-black border-2 border-black text-[10px] font-extrabold uppercase tracking-widest">
-                    NEWCOMER
+                    {t('role.NEWCOMER')}
                   </span>
                 )}
               </div>
-              <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">My Dashboard</h1>
+              <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">{t('nav.dashboard')}</h1>
             </div>
             <div className="flex flex-col items-start md:items-end gap-1">
-              <p className="text-xs font-data text-gray-400 uppercase tracking-widest">Connected</p>
+              <p className="text-xs font-data text-gray-400 uppercase tracking-widest">{t('dash.connected')}</p>
               <p className="text-sm font-data text-gray-600">{address}</p>
             </div>
           </div>
@@ -220,7 +224,7 @@ export function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
           <StatCard
-            label="Reputation"
+            label={t('dash.statRep')}
             value={
               reputation
                 ? Number(formatUnits(BigInt(reputation.repBalance), 18)).toFixed(2)
@@ -229,13 +233,13 @@ export function DashboardPage() {
             color="purple"
           />
           <StatCard
-            label="USDC Balance"
+            label={t('dash.statUsdc')}
             value={usdcBalance ? Number(formatUnits(usdcBalance.value, 6)).toFixed(2) : '0'}
             color="yellow"
           />
-          <StatCard label="Scholarships" value={summary.scholarshipsCount.toString()} color="green" />
-          <StatCard label="Votes Cast" value={summary.votesCount.toString()} color="cyan" />
-          <StatCard label="Disputes" value={summary.disputesCount.toString()} color="red" />
+          <StatCard label={t('dash.statScholarships')} value={summary.scholarshipsCount.toString()} color="green" />
+          <StatCard label={t('dash.statVotes')} value={summary.votesCount.toString()} color="cyan" />
+          <StatCard label={t('dash.statReports')} value={summary.disputesCount.toString()} color="red" />
         </div>
 
         {/* Provider / Student switcher */}
@@ -251,7 +255,7 @@ export function DashboardPage() {
                     : 'bg-white hover:bg-skpink/50'
                 }`}
               >
-                Provider Screen
+                {t('dash.viewProvider')}
               </button>
             )}
             {isStudent && (
@@ -264,7 +268,7 @@ export function DashboardPage() {
                     : 'bg-white hover:bg-skcyan/50'
                 }`}
               >
-                Students Screen
+                {t('dash.viewStudent')}
               </button>
             )}
           </div>
@@ -287,13 +291,13 @@ export function DashboardPage() {
             <DashboardTabs defaultValue="milestones" className="grow min-w-0">
               <DashboardTabsList>
                 <DashboardTabsTrigger value="milestones" className="bg-skpink">
-                  Milestones Progress & Proof
+                  {t('dash.tabMilestones')}
                 </DashboardTabsTrigger>
                 <DashboardTabsTrigger value="programs" className="bg-skcyan">
-                  Programs & Actions
+                  {t('dash.tabPrograms')}
                 </DashboardTabsTrigger>
                 <DashboardTabsTrigger value="achievements" className="bg-skyellow">
-                  My Achievements
+                  {t('dash.tabAchievements')}
                 </DashboardTabsTrigger>
               </DashboardTabsList>
               <DashboardTabsContent value="milestones">
@@ -339,10 +343,10 @@ export function DashboardPage() {
             <DashboardTabs defaultValue="milestones" className="grow min-w-0">
               <DashboardTabsList>
                 <DashboardTabsTrigger value="milestones" className="bg-skpink">
-                  Milestones Progress & Proof
+                  {t('dash.tabMilestones')}
                 </DashboardTabsTrigger>
                 <DashboardTabsTrigger value="achievements" className="bg-skyellow">
-                  My Achievements
+                  {t('dash.tabAchievements')}
                 </DashboardTabsTrigger>
               </DashboardTabsList>
               <DashboardTabsContent value="milestones">
