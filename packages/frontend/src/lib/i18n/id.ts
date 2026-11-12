@@ -61,6 +61,7 @@ export const id: Record<TranslationKey, string> = {
   'vote.locked': 'Bobot suara Anda sedang dikunci karena ada sengketa atau masa tunggu.',
   'vote.submitting': 'Mengirim Suara',
   'vote.submittingBody': 'Silakan konfirmasi untuk memberikan suara bagi {name}.',
+  'vote.noPower': 'Anda belum punya bobot suara. Donasi dulu ke program ini untuk mendapatkannya, lalu kembali untuk memilih.',
   'vote.loading': 'Memuat…',
   'vote.confirm': 'Konfirmasi Suara',
 
@@ -116,8 +117,6 @@ export const id: Record<TranslationKey, string> = {
   'candidate.screening': 'Seleksi',
   'candidate.total': 'Total',
   'candidate.vote': 'Beri Suara',
-  'candidate.voted': 'Sudah memilih!',
-  'candidate.confirming': 'Mengonfirmasi…',
   'candidate.back': 'Dukung',
 
   // resolve shortlist

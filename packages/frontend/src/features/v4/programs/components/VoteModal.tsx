@@ -22,9 +22,22 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
   const { address } = useAccount();
   const [step, setStep] = useState<Step>('choose');
   const [useReputationMode, setUseReputationMode] = useState(false);
+  // Once the user picks a mode themselves we stop auto-selecting one.
+  const [pickedMode, setPickedMode] = useState(false);
 
   const { data: repData, isLoading: loadingRep } = useReputation(address ?? '');
   const { vote, isPending, isSuccess, error, reset } = useVoteForCandidate();
+
+  const hasDonationPower = Number(repData?.remainingVotingPower ?? 0) > 0;
+  const hasReputation = Number(repData?.repBalance ?? 0) > 0 && !repData?.isVotingLocked;
+  const noVotingPower = !!repData && !hasDonationPower && !hasReputation;
+
+  // Start on whichever mode the user can actually use: donation weight first,
+  // reputation only when there is no donation weight left.
+  useEffect(() => {
+    if (pickedMode || !repData) return;
+    setUseReputationMode(!hasDonationPower && hasReputation);
+  }, [repData, pickedMode, hasDonationPower, hasReputation]);
 
   useEffect(() => {
     if (isSuccess && step === 'voting') setStep('done');
@@ -37,6 +50,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
 
   const handleClose = () => {
     setStep('choose');
+    setPickedMode(false);
     reset();
     onClose();
   };
@@ -73,9 +87,18 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
               <p className="text-xs text-gray-700 leading-relaxed">{t('vote.introBody')}</p>
             </div>
 
+            {noVotingPower && (
+              <div className="bg-skyellow-light border-2 border-black p-3 text-xs shadow-[2px_2px_0_0_#000]">
+                {t('vote.noPower')}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-3">
               <button
-                onClick={() => setUseReputationMode(false)}
+                onClick={() => {
+                  setPickedMode(true);
+                  setUseReputationMode(false);
+                }}
                 className={`p-4 border-2 border-black text-left transition-all duration-75 ${
                   !useReputationMode ? 'bg-skgreen-light shadow-[3px_3px_0_0_#000]' : 'bg-white hover:bg-gray-50'
                 }`}
@@ -89,7 +112,10 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
               </button>
 
               <button
-                onClick={() => setUseReputationMode(true)}
+                onClick={() => {
+                  setPickedMode(true);
+                  setUseReputationMode(true);
+                }}
                 className={`p-4 border-2 border-black text-left transition-all duration-75 ${
                   useReputationMode ? 'bg-skblue-light shadow-[3px_3px_0_0_#000]' : 'bg-white hover:bg-gray-50'
                 }`}

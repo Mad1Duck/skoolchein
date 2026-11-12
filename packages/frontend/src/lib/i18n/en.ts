@@ -67,6 +67,7 @@ export const en = {
   'vote.locked': 'Your voting weight is locked for now because of a pending dispute or cooldown.',
   'vote.submitting': 'Submitting Vote',
   'vote.submittingBody': 'Please confirm to cast your vote for {name}.',
+  'vote.noPower': 'You have no voting weight yet. Donate to this program first to earn some, then come back to vote.',
   'vote.loading': 'Loading…',
   'vote.confirm': 'Confirm Vote',
 
@@ -122,8 +123,6 @@ export const en = {
   'candidate.screening': 'Screening',
   'candidate.total': 'Total',
   'candidate.vote': 'Cast Vote',
-  'candidate.voted': 'Voted!',
-  'candidate.confirming': 'Confirming…',
   'candidate.back': 'Back',
 
   // resolve shortlist

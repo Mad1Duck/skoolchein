@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchApplicantProfile } from '@/lib/ipfs';
-import { useVoteForCandidate } from '@/lib/contracts/write-hooks';
+import { VoteModal } from '@/features/v4/programs/components/VoteModal';
 import type { Applicant } from '@/lib/api/types';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -18,13 +18,13 @@ interface CandidateCardProps {
 export function CandidateCard({ applicant, programId, token }: CandidateCardProps) {
   const { t } = useT();
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
   const { data: profile } = useQuery({
     queryKey: ['applicant-profile', applicant.profileCID],
     queryFn: () => fetchApplicantProfile(applicant.profileCID),
     enabled: !!applicant.profileCID,
   });
 
-  const { vote: castVote, isPending, isSuccess } = useVoteForCandidate();
 
   return (
     <>
@@ -64,18 +64,25 @@ export function CandidateCard({ applicant, programId, token }: CandidateCardProp
           <div className="flex gap-2 mt-auto pt-2">
             <div className="flex-1">
               <NeoButton
-                label={isSuccess ? t('candidate.voted') : isPending ? t('candidate.confirming') : t('candidate.vote')}
-                variant={isSuccess ? 'success' : 'primary'}
+                label={t('candidate.vote')}
+                variant="primary"
                 fullWidth
-                disabled={isPending || isSuccess}
-                loading={isPending}
-                onClick={() => castVote(BigInt(programId), applicant.wallet as `0x${string}`, true)}
+                onClick={() => setIsVoteModalOpen(true)}
               />
             </div>
             <NeoButton label={t('candidate.back')} variant="ghost" onClick={() => setIsStakeModalOpen(true)} />
           </div>
         </NeoCardBody>
       </NeoCard>
+      {isVoteModalOpen && (
+        <VoteModal
+          isOpen
+          onClose={() => setIsVoteModalOpen(false)}
+          programId={BigInt(programId)}
+          candidateAddress={applicant.wallet as `0x${string}`}
+          candidateName={profile?.fullName}
+        />
+      )}
       <ConfidenceStakeModal
         isOpen={isStakeModalOpen}
         onClose={() => setIsStakeModalOpen(false)}
