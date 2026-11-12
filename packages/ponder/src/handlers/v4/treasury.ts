@@ -108,6 +108,7 @@ export const scholarshipTreasuryHandlers = () => {
     try {
       const chainId = context.chain.id;
       await insertBlock({ db: context.db, chainId, event, eventName: "ScholarshipTreasury:ConfidenceStakeDeposited" });
+      await sendSseToAll("main", { chainId, step: "ConfidenceStakeDeposited", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ConfidenceStakeDeposited handler error");
     }
@@ -153,6 +154,7 @@ export const scholarshipTreasuryHandlers = () => {
       }
 
       await insertBlock({ db, chainId, event, eventName: "ScholarshipTreasury:YieldAdded" });
+      await sendSseToAll("main", { chainId, step: "YieldAdded", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "YieldAdded handler error");
     }
@@ -222,6 +224,7 @@ export const scholarshipReputationHandlers = () => {
       const { to, amount } = event.args;
       await upsertReputation(db, chainId, String(to), BigInt(amount), true);
       await insertBlock({ db, chainId, event, eventName: "ScholarshipReputation:ReputationMinted" });
+      await sendSseToAll("main", { chainId, step: "ReputationMinted", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ReputationMinted handler error");
     }
@@ -234,6 +237,7 @@ export const scholarshipReputationHandlers = () => {
       const { from, amount } = event.args;
       await upsertReputation(db, chainId, String(from), BigInt(amount), false);
       await insertBlock({ db, chainId, event, eventName: "ScholarshipReputation:ReputationBurned" });
+      await sendSseToAll("main", { chainId, step: "ReputationBurned", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ReputationBurned handler error");
     }
@@ -253,6 +257,7 @@ export const scholarshipReputationHandlers = () => {
         await db.update(v4Reputation, { chainId, address: String(voter) })
           .set({ votingLockedUntil: lockDate, updatedAt: new Date() });
       }
+      await sendSseToAll("main", { chainId, step: "VotingPowerLocked", data: { voter: String(voter) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "VotingPowerLocked handler error");
     }

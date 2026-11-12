@@ -119,6 +119,7 @@ export const scholarshipCoreHandlers = () => {
           committeeContract: String(committeeContract),
         })
         .onConflictDoUpdate({ committeeContract: String(committeeContract), updatedAt: new Date() });
+      await sendSseToAll("main", { chainId, step: "CommitteeAssigned", data: { pid: Number(pid) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "CommitteeAssigned handler error");
     }
@@ -214,6 +215,7 @@ export const scholarshipCoreHandlers = () => {
         .set({ screeningScore: String(totalScore), totalScore: String(totalScore), updatedAt: new Date() });
 
       await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ScoreSubmitted" });
+      await sendSseToAll("main", { chainId, step: "ScoreSubmitted", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScoreSubmitted handler error");
     }
@@ -238,6 +240,7 @@ export const scholarshipCoreHandlers = () => {
         }));
 
       await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:StudentScreenedOut" });
+      await sendSseToAll("main", { chainId, step: "StudentScreenedOut", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "StudentScreenedOut handler error");
     }
@@ -321,6 +324,7 @@ export const scholarshipCoreHandlers = () => {
       }).onConflictDoUpdate({ amount: String(amount), updatedAt: new Date() });
 
       await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ConfidenceStaked" });
+      await sendSseToAll("main", { chainId, step: "ConfidenceStaked", data: {}, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ConfidenceStaked handler error");
     }

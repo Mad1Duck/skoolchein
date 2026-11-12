@@ -5,10 +5,35 @@ import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
 import { hexToString } from "viem";
+import { milestoneManagerAbi } from "abis/v4/MilestoneManager";
 import { programTokenOf } from "./helpers";
 
 const decodeBytes32 = (value: `0x${string}`) =>
   /^0x0+$/.test(value) ? "" : hexToString(value, { size: 32 }).replace(/\0/g, "");
+
+/**
+ * MilestoneCreated / MilestoneProposed don't carry the amount, so read it from
+ * the contract. Without this the row keeps its default "0" until the milestone
+ * is disbursed, and the UI shows every pending/proposed milestone as 0.
+ */
+async function readMilestoneAmount(
+  context: { client: { readContract: (args: any) => Promise<any> } },
+  managerAddress: `0x${string}`,
+  id: bigint,
+): Promise<string> {
+  try {
+    const m: any = await context.client.readContract({
+      abi: milestoneManagerAbi,
+      address: managerAddress,
+      functionName: "getMilestone",
+      args: [id],
+    });
+    return String(m.amount ?? 0);
+  } catch (err) {
+    logger.warn({ err, id: String(id) }, "could not read milestone amount");
+    return "0";
+  }
+}
 
 export const milestoneManagerHandlers = () => {
 
@@ -29,6 +54,7 @@ export const milestoneManagerHandlers = () => {
       const externalId = decodeBytes32(event.args.externalId);
 
       const token = await programTokenOf(db, chainId, Number(pid));
+      const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
       await db.insert(v4Milestones).values({ chainId,
         blockchainId: mId,
         pid: Number(pid),
@@ -36,12 +62,14 @@ export const milestoneManagerHandlers = () => {
         scholarWallet: String(scholar),
         kind: kindStr,
         requiresProof: kindStr !== "MANDATORY",
+        amount,
         provider,
         externalId,
         status: "PENDING",
       }).onConflictDoUpdate({
         kind: kindStr,
         requiresProof: kindStr !== "MANDATORY",
+        amount,
         provider,
         externalId,
         status: "PENDING",
@@ -77,6 +105,7 @@ export const milestoneManagerHandlers = () => {
       const externalId = decodeBytes32(event.args.externalId);
 
       const token = await programTokenOf(db, chainId, Number(pid));
+      const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
       await db.insert(v4Milestones).values({ chainId,
         blockchainId: mId,
         pid: Number(pid),
@@ -84,6 +113,7 @@ export const milestoneManagerHandlers = () => {
         scholarWallet: String(scholar),
         kind: kindStr,
         requiresProof: kindStr !== "MANDATORY",
+        amount,
         proposedBy: String(scholar),
         provider,
         externalId,
@@ -91,6 +121,7 @@ export const milestoneManagerHandlers = () => {
       }).onConflictDoUpdate({
         status: "PROPOSED",
         requiresProof: kindStr !== "MANDATORY",
+        amount,
         proposedBy: String(scholar),
         provider,
         externalId,

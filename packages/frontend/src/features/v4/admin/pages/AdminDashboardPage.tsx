@@ -10,6 +10,7 @@ import { NeoBadge } from "@/components/ui/NeoBadge";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { WalletAvatar } from "@/components/ui/WalletAvatar";
 import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
+import { LiveBadge } from "@/components/ui/LiveBadge";
 import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProgramDetail } from "../components/AdminProgramDetail";
 import { AdminProtocolConfig } from "../components/AdminProtocolConfig";
@@ -140,6 +141,7 @@ export function AdminDashboardPage() {
         </div>
         <div className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[3px_3px_0_0_#000]">
           <WalletAvatar address={address as string} size={22} />
+          <LiveBadge />
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Admin</span>
           <CopyableText value={address as string} display={short(address as string)} className="!text-sm" />
         </div>

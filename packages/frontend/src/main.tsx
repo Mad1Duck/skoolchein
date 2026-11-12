@@ -13,6 +13,7 @@ import { queryClientConfig } from './constants/queryclient.config';
 import { darkTheme, XellarKitProvider } from '@xellar/kit';
 import { TokenRateProvider } from './components/providers/TokenProvider';
 import { ChainSync } from './components/ChainSync';
+import { RealtimeSync } from './lib/realtime/realtime';
 import { I18nProvider } from './lib/i18n';
 
 // Create a new router instance
@@ -36,6 +37,7 @@ if (!rootElement.innerHTML) {
         <QueryClientProvider client={queryClientConfig}>
           <XellarKitProvider theme={darkTheme}>
             <ChainSync />
+            <RealtimeSync />
             <TokenRateProvider>
               <RouterProvider router={router} />
             </TokenRateProvider>
