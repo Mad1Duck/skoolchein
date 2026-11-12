@@ -70,6 +70,29 @@ export const en = {
   'vote.loading': 'Loading…',
   'vote.confirm': 'Confirm Vote',
 
+  // errors (contract-specific)
+  'error.mustVote': 'Vote for this candidate first, then you can back them.',
+  'error.alreadyStaked': 'You have already placed a deposit on this candidate.',
+  'error.noPower': 'You have no voting weight for this program.',
+
+  // confidence stake (backing a scholar)
+  'stake.title': 'Back a Scholar',
+  'stake.intro': 'Backing a scholar with a refundable deposit earns you a bonus if they complete their milestones. If they act dishonestly and are penalized, you lose part of your deposit.',
+  'stake.available': 'Available voting weight',
+  'stake.amountLabel': 'Deposit amount ({symbol})',
+  'stake.limit': 'The most you can put down is limited by your donation.',
+  'stake.scholar': 'Scholar: {name}',
+  'stake.approving': 'Preparing {symbol}',
+  'stake.approvingBody': 'Please confirm to set aside {amount} {symbol} for this deposit.',
+  'stake.confirming': 'Confirm Deposit',
+  'stake.confirmingBody': 'Please confirm to place your deposit.',
+  'stake.submit': 'Place Deposit',
+  'stake.placing': 'Placing…',
+  'stake.successTitle': 'Deposit Placed',
+  'stake.successHeading': "You're backing this scholar!",
+  'stake.successBody': 'You put down {amount} {symbol} to back {name}.',
+  'stake.shortfall': 'Your balance is about {amount} short for this deposit.',
+
   // dispute (report a problem)
   'dispute.title': 'Report a Problem',
   'dispute.rulesTitle': 'Before You Report',

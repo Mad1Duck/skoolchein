@@ -10,6 +10,10 @@ export function friendlyErrorKey(error: unknown): TranslationKey {
   if (msg.includes('user rejected') || msg.includes('user denied') || msg.includes('rejected the request')) {
     return 'error.rejected';
   }
+  // Custom contract errors appear by name in viem's message.
+  if (msg.includes('mustvotebeforestaking')) return 'error.mustVote';
+  if (msg.includes('confidencestakealreadyexists')) return 'error.alreadyStaked';
+  if (msg.includes('insufficientvotingpower')) return 'error.noPower';
   if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('transfer amount exceeds')) {
     return 'error.insufficient';
   }

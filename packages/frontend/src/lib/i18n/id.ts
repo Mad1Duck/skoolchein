@@ -64,6 +64,29 @@ export const id: Record<TranslationKey, string> = {
   'vote.loading': 'Memuat…',
   'vote.confirm': 'Konfirmasi Suara',
 
+  // errors (contract-specific)
+  'error.mustVote': 'Pilih kandidat ini dulu, baru Anda bisa mendukungnya.',
+  'error.alreadyStaked': 'Anda sudah menyetor deposit untuk kandidat ini.',
+  'error.noPower': 'Anda tidak punya bobot suara untuk program ini.',
+
+  // confidence stake (backing a scholar)
+  'stake.title': 'Dukung Penerima Beasiswa',
+  'stake.intro': 'Mendukung penerima beasiswa dengan deposit yang dapat dikembalikan memberi Anda bonus jika ia menyelesaikan milestone. Jika ia curang dan dikenai sanksi, sebagian deposit Anda hangus.',
+  'stake.available': 'Bobot suara tersedia',
+  'stake.amountLabel': 'Jumlah deposit ({symbol})',
+  'stake.limit': 'Jumlah maksimum deposit dibatasi oleh donasi Anda.',
+  'stake.scholar': 'Penerima beasiswa: {name}',
+  'stake.approving': 'Menyiapkan {symbol}',
+  'stake.approvingBody': 'Silakan konfirmasi untuk menyisihkan {amount} {symbol} sebagai deposit ini.',
+  'stake.confirming': 'Konfirmasi Deposit',
+  'stake.confirmingBody': 'Silakan konfirmasi untuk menyetor deposit Anda.',
+  'stake.submit': 'Setor Deposit',
+  'stake.placing': 'Menyetor…',
+  'stake.successTitle': 'Deposit Tersetor',
+  'stake.successHeading': 'Anda mendukung penerima beasiswa ini!',
+  'stake.successBody': 'Anda menyetor {amount} {symbol} untuk mendukung {name}.',
+  'stake.shortfall': 'Saldo Anda kurang sekitar {amount} untuk deposit ini.',
+
   // dispute (report a problem)
   'dispute.title': 'Laporkan Masalah',
   'dispute.rulesTitle': 'Sebelum Melaporkan',
