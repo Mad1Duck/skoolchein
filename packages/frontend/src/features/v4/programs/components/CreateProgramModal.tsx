@@ -12,6 +12,7 @@ import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
+import { friendlyErrorKey } from '@/lib/errors';
 
 interface Props {
   isOpen: boolean;
@@ -56,8 +57,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
     protocolPercent: 20,
   });
 
-  const { approve, isPending: isApproving, isSuccess: approved, hash: approveHash } = useApproveUSDC();
-  const { create, isPending: isCreating, isSuccess: created } = useCreateProgram();
+  const { approve, isPending: isApproving, isSuccess: approved, hash: approveHash, error: approveError } = useApproveUSDC();
+  const { create, isPending: isCreating, isSuccess: created, error: createError } = useCreateProgram();
   const [metaCID, setMetaCID] = useState('');
 
   const tokenMeta = getTokenMeta(formData.token);
@@ -480,6 +481,13 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
             <p className="font-bold">{t('create.confirming')}</p>
             <p className="text-sm text-gray-600">{t('create.confirmingBody')}</p>
+          </div>
+        )}
+
+        {/* Wallet/contract failures (e.g. missing USDC allowance or balance) used to be silent. */}
+        {(step === 'approve' || step === 'create') && (step === 'approve' ? approveError : createError) && (
+          <div className="bg-skred-light border-2 border-black p-3 text-xs text-skred shadow-[2px_2px_0_0_#000]">
+            {t(friendlyErrorKey(step === 'approve' ? approveError : createError))}
           </div>
         )}
 

@@ -49,6 +49,9 @@ export const en = {
   'error.rejected': 'No problem — nothing was charged.',
   'error.insufficient': 'Your balance is too low for this. Add funds and try again.',
   'error.generic': 'Something went wrong. Please try again in a moment.',
+  'error.allowance': 'The transfer of your funds is not approved yet. Approve it first, then try again.',
+  'error.tokenNotSupported': 'This currency is not enabled for programs yet. Choose another currency.',
+  'error.candidateRange': 'The number of candidates is outside the allowed range. Adjust it and try again.',
 
   // vote
   'vote.title': 'Cast Your Vote',

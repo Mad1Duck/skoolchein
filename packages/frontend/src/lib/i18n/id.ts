@@ -43,6 +43,9 @@ export const id: Record<TranslationKey, string> = {
   'error.rejected': 'Tidak apa-apa — tidak ada yang ditagih.',
   'error.insufficient': 'Saldo Anda kurang untuk ini. Isi saldo lalu coba lagi.',
   'error.generic': 'Terjadi kesalahan. Coba lagi sebentar lagi.',
+  'error.allowance': 'Izin transfer dana Anda belum cukup. Konfirmasi izin dulu, lalu coba lagi.',
+  'error.tokenNotSupported': 'Mata uang ini belum diaktifkan untuk program. Pilih mata uang lain.',
+  'error.candidateRange': 'Jumlah kandidat di luar batas yang diizinkan. Ubah lalu coba lagi.',
 
   // vote
   'vote.title': 'Berikan Suara Anda',

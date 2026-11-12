@@ -18,6 +18,12 @@ export function friendlyErrorKey(error: unknown): TranslationKey {
   if (msg.includes('maxretriesexceeded')) return 'error.maxRetries';
   if (msg.includes('cannotapplytoownprogram')) return 'error.ownProgram';
   if (msg.includes('invalidprogramstatus')) return 'error.notOpen';
+  // ERC20 errors usually arrive as a bare selector because the contract ABI doesn't list them:
+  // 0xfb8f41b2 = ERC20InsufficientAllowance, 0xe450d38c = ERC20InsufficientBalance.
+  if (msg.includes('erc20insufficientallowance') || msg.includes('0xfb8f41b2')) return 'error.allowance';
+  if (msg.includes('erc20insufficientbalance') || msg.includes('0xe450d38c')) return 'error.insufficient';
+  if (msg.includes('tokennotsupported')) return 'error.tokenNotSupported';
+  if (msg.includes('invalidcandidaterange')) return 'error.candidateRange';
   if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('transfer amount exceeds')) {
     return 'error.insufficient';
   }
