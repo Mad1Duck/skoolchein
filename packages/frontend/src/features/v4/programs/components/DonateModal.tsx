@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useApproveUSDC, useDonate, needsApproval } from '@/lib/contracts/write-hooks';
-import { v4Addresses } from '@/constants/contractsV4';
+import { useV4Addresses } from '@/lib/chain/useActiveChain';
 import { getTokenMeta } from '@/lib/contracts/v4/token';
+import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
+import { formatToIDR } from '@/util/localCurrency';
+import { TopUpModal } from '@/components/ramp/TopUpModal';
 
 interface Props {
   isOpen: boolean;
@@ -18,6 +21,7 @@ interface Props {
 type Step = 'form' | 'approve' | 'donate' | 'done';
 
 export function DonateModal({ isOpen, onClose, programId, programName, token }: Props) {
+  const v4Addresses = useV4Addresses();
   // Declared before the state below, which seeds its default from it.
   const tokenMeta = getTokenMeta(token);
   // Native payments travel as msg.value — there's nothing to approve, and
@@ -27,6 +31,9 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
   const [step, setStep] = useState<Step>('form');
   const [amount, setAmount] = useState(tokenMeta.minDonationHint);
   const [nftUri, setNftUri] = useState('ipfs://QmDonorNFT');
+
+  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(token, amount);
+  const [topUpOpen, setTopUpOpen] = useState(false);
 
   const { approve, isPending: isApproving, isSuccess: approved } = useApproveUSDC();
   const { donate, isPending: isDonating, isSuccess: donated } = useDonate();
@@ -103,6 +110,22 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
                 onChange={(e) => setAmount(e.target.value)}
               />
               <p className="text-xs text-gray-500 mt-1">{`Minimum  ; a protocol fee is deducted`}</p>
+              {!hasEnough && (
+                <p className="text-xs font-bold text-skred mt-2">
+                  {shortfallIdr !== null
+                    ? `Saldo kurang sekitar ${formatToIDR(shortfallIdr)}. Isi saldo dulu untuk melanjutkan.`
+                    : `Saldo ${tokenMeta.symbol} Anda tidak cukup.`}
+                </p>
+              )}
+              {!hasEnough && !tokenMeta.isNative && (
+                <button
+                  type="button"
+                  className="text-xs font-bold underline mt-1"
+                  onClick={() => setTopUpOpen(true)}
+                >
+                  Isi saldo
+                </button>
+              )}
             </div>
 
             <div>
@@ -152,7 +175,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
               label="Continue"
               variant="success"
               onClick={handleAction}
-              disabled={!amount || Number(amount) < Number(tokenMeta.minDonationHint)}
+              disabled={!amount || Number(amount) < Number(tokenMeta.minDonationHint) || !hasEnough}
               fullWidth
             />
           )}
@@ -168,6 +191,12 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
           )}
         </div>
       </div>
+      <TopUpModal
+        isOpen={topUpOpen}
+        onClose={() => setTopUpOpen(false)}
+        suggestedIdr={shortfallIdr}
+        onSuccess={() => refetchBalance()}
+      />
     </NeoModal>
   );
 }

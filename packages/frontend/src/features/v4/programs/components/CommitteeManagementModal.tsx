@@ -4,7 +4,8 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { useAddCommitteeMember, useRemoveCommitteeMember } from '@/lib/contracts/write-hooks';
-import { committeeGovernanceAbi, v4Addresses } from '@/constants/contractsV4';
+import { committeeGovernanceAbi } from '@/constants/contractsV4';
+import { useV4Addresses } from '@/lib/chain/useActiveChain';
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) {
+  const v4Addresses = useV4Addresses();
   const [newMember, setNewMember] = useState('');
 
   const { data: membersRaw, refetch } = useReadContract({

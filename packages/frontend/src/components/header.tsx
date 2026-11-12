@@ -1,10 +1,12 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { NeoButton } from "./ui/NeoButton";
+import { ChainSwitcher } from "./ChainSwitcher";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import gsap from "gsap";
-import { v4Addresses, scholarshipCoreAbi } from "@/constants/contractsV4";
+import { scholarshipCoreAbi } from "@/constants/contractsV4";
+import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
 
 const navItems = [
   { href: "/",          label: "Home" },
@@ -14,6 +16,8 @@ const navItems = [
 ];
 
 export function Header() {
+  const v4Addresses = useV4Addresses();
+  const { chainId } = useActiveChain();
   const [open, setOpen] = useState(false);
   const breakpoint = useBreakpoint();
   const location = useLocation();
@@ -22,6 +26,7 @@ export function Header() {
 
   const { address } = useAccount();
   const { data: adminAddress } = useReadContract({
+    chainId,
     address: v4Addresses.ScholarshipCore,
     abi: scholarshipCoreAbi,
     functionName: "admin",
@@ -116,13 +121,17 @@ export function Header() {
           )}
         </ul>
         {breakpoint.isLessThan("lg") && (
-          <div className="mt-5">
+          <div className="mt-5 flex flex-col gap-3">
+            <ChainSwitcher />
             <NeoButton label="Connect Wallet" variant="connect" size="md" />
           </div>
         )}
       </nav>
       {breakpoint.isAtLeast("lg") && (
-        <NeoButton label="Connect Wallet" variant="connect" size="sm" />
+        <div className="flex items-center gap-3">
+          <ChainSwitcher />
+          <NeoButton label="Connect Wallet" variant="connect" size="sm" />
+        </div>
       )}
     </header>
   );

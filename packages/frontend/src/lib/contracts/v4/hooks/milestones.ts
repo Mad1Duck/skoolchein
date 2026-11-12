@@ -1,8 +1,8 @@
-import { milestoneManagerAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr } from "@/lib/chain/addr";
+import { milestoneManagerAbi } from "@/constants/contractsV4";
 import { stringToHex } from "viem";
 import { useTxHook } from "./use-tx-base";
 
-const MILESTONE_ADDRESS = v4Addresses.MilestoneManager;
 
 // ── MilestoneManager — Scholar & Committee Actions ──────────────────────────
 
@@ -11,7 +11,7 @@ export function useSubmitMilestone() {
 
   const submitMilestone = (milestoneId: bigint, proofCID: string) => {
     writeContract({
-      address: MILESTONE_ADDRESS,
+      address: addr("MilestoneManager"),
       abi: milestoneManagerAbi,
       functionName: "submitProof",
       args: [milestoneId, proofCID],
@@ -26,7 +26,7 @@ export function useExecuteMilestone() {
 
   const executeMilestone = (milestoneId: bigint) => {
     writeContract({
-      address: MILESTONE_ADDRESS,
+      address: addr("MilestoneManager"),
       abi: milestoneManagerAbi,
       functionName: "executeMilestone",
       args: [milestoneId],
@@ -51,7 +51,7 @@ export function useProposeMilestone() {
     externalId: string
   ) => {
     writeContract({
-      address: MILESTONE_ADDRESS,
+      address: addr("MilestoneManager"),
       abi: milestoneManagerAbi,
       functionName: "proposeMilestone",
       args: [

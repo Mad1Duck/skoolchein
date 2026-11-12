@@ -1,7 +1,7 @@
-import { scholarshipAdminAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr } from "@/lib/chain/addr";
+import { scholarshipAdminAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
 
-const ADMIN_ADDRESS = v4Addresses.ScholarshipAdmin;
 
 // ── ScholarshipAdmin — Protocol & Lifecycle Date Management ─────────────────
 
@@ -10,7 +10,7 @@ export function useExtendApplicationDeadline() {
 
   const extendApplicationDeadline = (pid: bigint, newEnd: bigint) => {
     writeContract({
-      address: ADMIN_ADDRESS,
+      address: addr("ScholarshipAdmin"),
       abi: scholarshipAdminAbi,
       functionName: "extendApplicationDeadline",
       args: [pid, newEnd],
@@ -25,7 +25,7 @@ export function useExtendVotingDeadline() {
 
   const extendVotingDeadline = (pid: bigint, newEnd: bigint) => {
     writeContract({
-      address: ADMIN_ADDRESS,
+      address: addr("ScholarshipAdmin"),
       abi: scholarshipAdminAbi,
       functionName: "extendVotingDeadline",
       args: [pid, newEnd],
@@ -41,7 +41,7 @@ export function useUpdateProtocolConfig() {
 
   const updateProtocolConfig = (config: unknown) => {
     writeContract({
-      address: ADMIN_ADDRESS,
+      address: addr("ScholarshipAdmin"),
       abi: scholarshipAdminAbi,
       functionName: "setProtocolConfig",
       args: [config as never],
@@ -56,7 +56,7 @@ export function useAdminForceStatus() {
 
   const forceStatus = (pid: bigint, newStatus: number) => {
     writeContract({
-      address: ADMIN_ADDRESS,
+      address: addr("ScholarshipAdmin"),
       abi: scholarshipAdminAbi,
       functionName: "adminForceStatus",
       args: [pid, newStatus],
@@ -77,7 +77,7 @@ export function useAdminUpdateDates() {
     voteEnd: bigint
   ) => {
     writeContract({
-      address: ADMIN_ADDRESS,
+      address: addr("ScholarshipAdmin"),
       abi: scholarshipAdminAbi,
       functionName: "adminUpdateDates",
       args: [pid, appStart, appEnd, voteStart, voteEnd],

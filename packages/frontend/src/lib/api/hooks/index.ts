@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useChainQuery as useQuery } from "../useChainQuery";
 import { api } from "../client";
 import type {
   Program, ProgramDetail, Applicant, Scholar, Milestone,

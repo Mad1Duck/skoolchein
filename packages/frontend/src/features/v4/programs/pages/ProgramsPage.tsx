@@ -1,6 +1,7 @@
 import { useState, useEffect, memo } from 'react';
 import { usePrograms } from '@/lib/api/hooks';
 import { useSSE } from '@/lib/sse/useSSE';
+import { useActiveChain } from '@/lib/chain/useActiveChain';
 import type { Program } from '@/lib/api/types';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { CreateProgramModal } from '../components/CreateProgramModal';
@@ -102,11 +103,12 @@ const Title = memo(function Title() {
 });
 
 export function ProgramsPage() {
+  const { chainId } = useActiveChain();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [messagesIndex, setMessagesIndex] = useState(0);
   const [prevMessagesIndex, setPrevMessagesIndex] = useState<number | null>(null);
 
-  const { data: sseEvent } = useSSE<{ step: string }>({
+  const { data: sseEvent } = useSSE<{ step: string; chainId?: number }>({
     url: `${import.meta.env.VITE_BACKEND_HOST}/sse`,
     event: 'main',
   });
@@ -115,10 +117,12 @@ export function ProgramsPage() {
   const programs = result?.data ?? [];
 
   useEffect(() => {
+    // Events carry the chain they came from; ignore other chains (older events without one still match).
+    if (sseEvent?.chainId !== undefined && sseEvent.chainId !== chainId) return;
     if (sseEvent?.step === 'ProgramCreated' || sseEvent?.step === 'ProgramStatusChanged') {
       refetch();
     }
-  }, [sseEvent, refetch]);
+  }, [sseEvent, refetch, chainId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
