@@ -390,6 +390,61 @@ export const id: Record<TranslationKey, string> = {
   'apply.confirmBody': 'Silakan konfirmasi untuk mengirim pendaftaran Anda.',
   'disputes.activeHint': 'Laporan yang butuh tanggapan dari penerima beasiswa, atau sedang menunggu peninjauan.',
 
+  // navigation
+  'nav.home': 'Beranda',
+  'nav.programs': 'Beasiswa',
+  'nav.vote': 'Pilih',
+  'nav.dashboard': 'Dasbor Saya',
+  'nav.admin': 'Admin',
+
+  // candidate list
+  'candList.empty': 'Belum ada kandidat daftar pendek untuk program ini.',
+  'candList.title': 'Kandidat Daftar Pendek',
+  'candList.hint': 'Pilih kandidat yang menurut Anda paling layak.',
+  'candList.target': 'Target Penerima',
+
+  // committee management
+  'committee.title': 'Kelola Komite — Program #{id}',
+  'committee.members': 'Anggota Saat Ini ({n})',
+  'committee.empty': 'Belum ada anggota komite. Tambahkan anggota pertama di bawah.',
+  'committee.remove': 'Hapus',
+  'committee.add': 'Tambah Anggota Komite',
+  'committee.addHint': 'Maksimal 15 anggota. Pembuat program tidak boleh menjadi anggota.',
+  'committee.placeholder': 'Alamat akun anggota (0x…)',
+  'committee.addBtn': 'Tambah',
+  'committee.adding': 'Menambahkan…',
+  'committee.done': 'Selesai',
+
+  // extend deadline
+  'extend.cannotTitle': 'Tidak Bisa Memperpanjang Tenggat',
+  'extend.cannotBody': 'Tenggat hanya bisa diperpanjang saat pendaftaran dibuka atau pemungutan suara berlangsung.',
+  'extend.titleApp': 'Perpanjang Tenggat Pendaftaran',
+  'extend.titleVote': 'Perpanjang Tenggat Pemilihan',
+  'extend.policy': 'Aturan Perpanjangan',
+  'extend.p1': 'Tenggat hanya bisa diperpanjang, tidak bisa dipersingkat.',
+  'extend.p2': 'Tiap perpanjangan maksimal 7 hari (batas bawaan).',
+  'extend.p3': 'Maksimal 2 kali perpanjangan.',
+  'extend.current': 'Tenggat Saat Ini',
+  'extend.new': 'Tenggat Baru',
+  'extend.extending': 'Memperpanjang…',
+
+  // committee score
+  'score.title': 'Kirim Skor Komite',
+  'score.academic': 'Skor Akademik',
+  'score.income': 'Skor Penghasilan',
+  'score.recommend': 'Skor Rekomendasi',
+  'score.submit': 'Kirim Skor',
+  'score.submitting': 'Mengirim…',
+
+  // provider milestones panel
+  'pm.title': 'Milestone Program #{id}',
+  'pm.hint': 'Tinjau bukti yang dikirim dan cairkan dana setelah masa tinjau lewat.',
+  'pm.empty': 'Belum Ada Milestone',
+  'pm.emptyHint': 'Usulkan milestone pertama untuk program ini.',
+  'pm.proof': 'Bukti: {cid}',
+  'pm.release': 'Cairkan Dana',
+  'pm.windowOpen': 'Masa tinjau berlangsung',
+
   // dispute (report a problem)
   'dispute.title': 'Laporkan Masalah',
   'dispute.rulesTitle': 'Sebelum Melaporkan',

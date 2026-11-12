@@ -396,6 +396,61 @@ export const en = {
   'apply.confirmBody': 'Please confirm to submit your application.',
   'disputes.activeHint': 'Reports that need a response from the scholar, or are waiting for review.',
 
+  // navigation
+  'nav.home': 'Home',
+  'nav.programs': 'Scholarships',
+  'nav.vote': 'Vote',
+  'nav.dashboard': 'My Dashboard',
+  'nav.admin': 'Admin',
+
+  // candidate list
+  'candList.empty': 'No shortlisted candidates found for this program.',
+  'candList.title': 'Shortlisted Candidates',
+  'candList.hint': 'Select the candidate you believe is most deserving.',
+  'candList.target': 'Target Winners',
+
+  // committee management
+  'committee.title': 'Manage Committee — Program #{id}',
+  'committee.members': 'Current Members ({n})',
+  'committee.empty': 'No committee members yet. Add the first member below.',
+  'committee.remove': 'Remove',
+  'committee.add': 'Add Committee Member',
+  'committee.addHint': 'Up to 15 members. The program creator cannot be a member.',
+  'committee.placeholder': 'Member account address (0x…)',
+  'committee.addBtn': 'Add',
+  'committee.adding': 'Adding…',
+  'committee.done': 'Done',
+
+  // extend deadline
+  'extend.cannotTitle': 'Cannot Extend Deadline',
+  'extend.cannotBody': 'Deadlines can only be extended while applications are open or voting is active.',
+  'extend.titleApp': 'Extend Application Deadline',
+  'extend.titleVote': 'Extend Voting Deadline',
+  'extend.policy': 'Extension Policy',
+  'extend.p1': 'You can only extend the deadline, not shorten it.',
+  'extend.p2': 'Each extension can be at most 7 days (default limit).',
+  'extend.p3': 'At most 2 extensions in total.',
+  'extend.current': 'Current Deadline',
+  'extend.new': 'New Deadline',
+  'extend.extending': 'Extending…',
+
+  // committee score
+  'score.title': 'Submit Committee Score',
+  'score.academic': 'Academic Score',
+  'score.income': 'Income Score',
+  'score.recommend': 'Recommendation Score',
+  'score.submit': 'Submit Score',
+  'score.submitting': 'Submitting…',
+
+  // provider milestones panel
+  'pm.title': 'Program #{id} Milestones',
+  'pm.hint': 'Review submitted proofs and release payouts once the review window has passed.',
+  'pm.empty': 'No Milestones Yet',
+  'pm.emptyHint': 'Propose the first milestone for this program.',
+  'pm.proof': 'Proof: {cid}',
+  'pm.release': 'Release Payout',
+  'pm.windowOpen': 'Review window open',
+
   // dispute (report a problem)
   'dispute.title': 'Report a Problem',
   'dispute.rulesTitle': 'Before You Report',

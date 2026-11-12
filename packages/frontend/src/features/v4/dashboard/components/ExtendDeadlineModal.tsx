@@ -3,6 +3,7 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useExtendApplicationDeadline, useExtendVotingDeadline } from '@/lib/contracts/write-hooks';
 import type { Program } from '@/lib/api/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
+  const { t } = useT();
   const isAppOpen = program.status === 'APPLICATION_OPEN';
   const isVoting = program.status === 'VOTING';
   
@@ -59,26 +61,26 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
 
   if (!isAppOpen && !isVoting) {
     return (
-      <NeoModal isOpen={isOpen} onClose={onClose} title="Cannot Extend Deadline">
-        <p className="p-4 text-center text-gray-500">Deadlines can only be extended when Applications are Open or Voting is active.</p>
+      <NeoModal isOpen={isOpen} onClose={onClose} title={t('extend.cannotTitle')}>
+        <p className="p-4 text-center text-gray-500">{t('extend.cannotBody')}</p>
       </NeoModal>
     );
   }
 
   return (
-    <NeoModal isOpen={isOpen} onClose={onClose} title={`Extend ${isAppOpen ? 'Application' : 'Voting'} Deadline`}>
+    <NeoModal isOpen={isOpen} onClose={onClose} title={isAppOpen ? t('extend.titleApp') : t('extend.titleVote')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-skyellow-light border-2 border-black rounded p-3 text-sm">
-          <p className="font-bold">Extension Policy</p>
+          <p className="font-bold">{t('extend.policy')}</p>
           <ul className="list-disc ml-5 mt-1 text-gray-700">
-            <li>You can only extend the deadline (cannot shorten).</li>
-            <li>Maximum extension per time is 7 days (by default limits).</li>
-            <li>Maximum 2 extensions total.</li>
+            <li>{t('extend.p1')}</li>
+            <li>{t('extend.p2')}</li>
+            <li>{t('extend.p3')}</li>
           </ul>
         </div>
 
         <div>
-          <label className="block text-sm font-bold mb-1">Current Deadline</label>
+          <label className="block text-sm font-bold mb-1">{t('extend.current')}</label>
           <input
             type="text"
             disabled
@@ -88,7 +90,7 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-bold mb-1">New Deadline <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-bold mb-1">{t('extend.new')} <span className="text-red-500">*</span></label>
           <input
             type="datetime-local"
             required
@@ -100,8 +102,8 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
         </div>
 
         <div className="flex gap-2 pt-2 border-t border-gray-200">
-          <NeoButton label="Cancel" variant="ghost" fullWidth onClick={onClose} disabled={isPending} type="button" />
-          <NeoButton label={isPending ? 'Extending…' : 'Confirm'} variant="primary" fullWidth loading={isPending} disabled={isPending || !newEndStr} type="submit" />
+          <NeoButton label={t('common.cancel')} variant="ghost" fullWidth onClick={onClose} disabled={isPending} type="button" />
+          <NeoButton label={isPending ? t('extend.extending') : t('common.confirm')} variant="primary" fullWidth loading={isPending} disabled={isPending || !newEndStr} type="submit" />
         </div>
       </form>
     </NeoModal>

@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { formatTokenWithSymbol } from '@/lib/contracts/v4/token';
 import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { DashboardCard } from "./DashboardCard";
 import { useExecuteMilestone } from "@/lib/contracts/write-hooks";
 import type { Milestone, Program } from "@/lib/api/types";
 import { ProposeMilestoneModal } from "./ProposeMilestoneModal";
+import { useT } from '@/lib/i18n';
+import { statusLabel } from '@/lib/i18n/status';
+import { useFormatMoney } from '@/lib/money';
 
 interface ProviderMilestonesPanelProps {
   program: Program | undefined;
@@ -14,6 +16,7 @@ interface ProviderMilestonesPanelProps {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useT();
   const colors: Record<string, string> = {
     PENDING: "bg-skyellow text-black",
     SUBMITTED: "bg-skpurple text-white",
@@ -29,12 +32,14 @@ function StatusPill({ status }: { status: string }) {
         colors[status] ?? "bg-gray-100 text-black"
       }`}
     >
-      {status}
+      {statusLabel(t, status)}
     </span>
   );
 }
 
 export function ProviderMilestonesPanel({ program, milestones, isLoading }: ProviderMilestonesPanelProps) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
   const { executeMilestone, isPending: isExecuting } = useExecuteMilestone();
   const [proposeOpen, setProposeOpen] = useState(false);
 
@@ -52,13 +57,13 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
     <div className="space-y-4 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="font-paytone text-xl">Program #{program.pid} Milestones</h3>
+          <h3 className="font-paytone text-xl">{t('pm.title', { id: program.pid })}</h3>
           <p className="text-sm text-gray-600">
-            Review submitted proofs and execute payouts when the dispute window is clear.
+            {t('pm.hint')}
           </p>
         </div>
         <NeoButton
-          label="+ Propose Milestone"
+          label={t('panel.propose')}
           variant="secondary"
           size="sm"
           onClick={() => setProposeOpen(true)}
@@ -67,8 +72,8 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
 
       {programMilestones.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-black rounded-2xl bg-white/50">
-          <p className="font-paytone text-lg">No Milestones Yet</p>
-          <p className="text-sm text-gray-500">Propose the first milestone for this program.</p>
+          <p className="font-paytone text-lg">{t('pm.empty')}</p>
+          <p className="text-sm text-gray-500">{t('pm.emptyHint')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -84,19 +89,19 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
                     <span className="font-bold">#{m.blockchainId}</span>
                     <StatusPill status={m.status} />
                     <span className="text-xs font-bold uppercase px-1.5 py-0.5 border border-black rounded bg-white">
-                      {m.kind}
+                      {statusLabel(t, m.kind)}
                     </span>
                   </div>
                   <p className="text-sm font-data break-all line-clamp-1" title={m.proofCID}>
-                    Proof: {m.proofCID}
+                    {t('pm.proof', { cid: m.proofCID })}
                   </p>
                   <p className="font-bold text-skgreen">
-                    {formatTokenWithSymbol(m.amount, m.token)}
+                    {fmt(m.amount, m.token)}
                   </p>
                 </div>
                 {canExecute && (
                   <NeoButton
-                    label={isExecuting ? "Executing…" : "Execute Payout"}
+                    label={isExecuting ? t('panel.executing') : t('pm.release')}
                     variant="success"
                     size="sm"
                     loading={isExecuting}
@@ -105,7 +110,7 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
                   />
                 )}
                 {m.status === "SUBMITTED" && !canExecute && (
-                  <span className="text-xs font-bold text-gray-500">Dispute window open</span>
+                  <span className="text-xs font-bold text-gray-500">{t('pm.windowOpen')}</span>
                 )}
               </DashboardCard>
             );
