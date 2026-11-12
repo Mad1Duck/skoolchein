@@ -14,6 +14,10 @@ export function friendlyErrorKey(error: unknown): TranslationKey {
   if (msg.includes('mustvotebeforestaking')) return 'error.mustVote';
   if (msg.includes('confidencestakealreadyexists')) return 'error.alreadyStaked';
   if (msg.includes('insufficientvotingpower')) return 'error.noPower';
+  if (msg.includes('alreadyapplied')) return 'error.alreadyApplied';
+  if (msg.includes('maxretriesexceeded')) return 'error.maxRetries';
+  if (msg.includes('cannotapplytoownprogram')) return 'error.ownProgram';
+  if (msg.includes('invalidprogramstatus')) return 'error.notOpen';
   if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('transfer amount exceeds')) {
     return 'error.insufficient';
   }

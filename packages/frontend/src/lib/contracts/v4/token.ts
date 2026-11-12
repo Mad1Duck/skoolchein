@@ -71,6 +71,11 @@ export function getTokenMeta(token?: string | null): TokenMeta {
   return { address: token as `0x${string}`, symbol: "TOKEN", decimals: 18, isNative: false , minDonationHint: "0" };
 }
 
+/** Quick-pick donation amounts. Sized per token: native amounts are far smaller than USDC. */
+export function donationPresets(token?: string | null): string[] {
+  return isNativeToken(token) ? ["0.1", "0.5", "1", "5"] : ["100", "250", "500", "1000"];
+}
+
 /** Human string → on-chain bigint, using the token's own decimals. */
 export function parseTokenAmount(amount: string, token?: string | null): bigint {
   return parseUnits(amount || "0", getTokenMeta(token).decimals);

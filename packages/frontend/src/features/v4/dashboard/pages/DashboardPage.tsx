@@ -277,7 +277,7 @@ export function DashboardPage() {
         {/* Two-column layout */}
         {activeView === 'provider' && isProvider && (
           <div className="flex flex-col lg:flex-row gap-8 mb-12">
-            <div className="lg:max-w-[24rem] space-y-6 w-full">
+            <div className="lg:w-[24rem] lg:shrink-0 min-w-0 space-y-6 w-full">
               <ProviderProfileCard
                 program={selectedProgram}
                 isLoading={false}
@@ -328,7 +328,7 @@ export function DashboardPage() {
 
         {activeView === 'student' && isStudent && (
           <div className="flex flex-col lg:flex-row gap-8 mb-12">
-            <div className="lg:max-w-[24rem] space-y-6 w-full">
+            <div className="lg:w-[24rem] lg:shrink-0 min-w-0 space-y-6 w-full">
               <StudentProfileCard
                 scholar={selectedScholarship?.scholar}
                 program={selectedScholarship?.program}

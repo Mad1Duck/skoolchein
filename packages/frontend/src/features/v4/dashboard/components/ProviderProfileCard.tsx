@@ -30,23 +30,23 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
   const description = meta?.description ?? "";
 
   return (
-    <DashboardCard className="space-y-4 relative isolate min-w-[20rem]">
+    <DashboardCard className="space-y-4 relative isolate w-full min-w-0">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-20 bg-white/80 rounded-2xl">
           <div className="animate-spin h-10 w-10 border-4 border-black border-t-transparent rounded-full" />
         </div>
       )}
       <div className={`space-y-4 transition-opacity ${isLoading ? "opacity-0" : "opacity-100"}`}>
-        <div className="flex justify-between items-start">
-          <div className="space-y-2">
+        <div className="flex justify-between items-start gap-3">
+          <div className="space-y-2 min-w-0">
             <div className="bg-skgreen font-bold text-xs w-max px-2 py-1 text-black rounded-full border border-black">
               {t('dash.programTag')}
             </div>
-            <h1 className="font-paytone text-2xl flex items-center gap-2">
-              <img className="size-6 rounded-full" src={image} alt="creator" />
-              {title}
+            <h1 className="font-paytone text-2xl flex items-center gap-2 min-w-0">
+              <img className="size-6 rounded-full shrink-0" src={image} alt="creator" />
+              <span className="min-w-0 [overflow-wrap:anywhere]">{title}</span>
             </h1>
-            <p className="text-sm text-gray-700 line-clamp-2">
+            <p className="text-sm text-gray-700 line-clamp-2 [overflow-wrap:anywhere]">
               {description || t('dash.impact')}
             </p>
           </div>
@@ -54,7 +54,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
             onClick={onNext}
             variant="secondary"
             size="sm"
-            className="!p-2 !rounded-2xl !w-10 !h-10"
+            className="!p-2 !rounded-2xl !w-10 !h-10 shrink-0"
             aria-label={t('dash.nextProgram')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -64,7 +64,7 @@ export function ProviderProfileCard({ program, isLoading, onNext }: ProviderProf
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-lg font-bold leading-snug">
+          <h2 className="text-lg font-bold leading-snug [overflow-wrap:anywhere]">
             {program ? title : t('dash.createFirst')}
           </h2>
           <div className="flex items-center gap-2">

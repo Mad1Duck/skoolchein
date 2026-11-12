@@ -6,6 +6,7 @@ import { DonateModal } from '../components/DonateModal';
 import { VoteModal } from '../components/VoteModal';
 import { ConfidenceStakeModal } from '../components/ConfidenceStakeModal';
 import { SelectWinnersModal } from '../components/SelectWinnersModal';
+import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -39,6 +40,7 @@ export function ProgramDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [donateAmount, setDonateAmount] = useState<string | undefined>();
   const [isVoteOpen, setIsVoteOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<{ address: `0x${string}`; name?: string } | null>(null);
   const [isStakeOpen, setIsStakeOpen] = useState(false);
@@ -180,7 +182,10 @@ export function ProgramDetailPage() {
               label={t('detail.donate')}
               variant="success"
               size="md"
-              onClick={() => setIsDonateOpen(true)}
+              onClick={() => {
+                setDonateAmount(undefined);
+                setIsDonateOpen(true);
+              }}
             />
           )}
           {userAddress === program.initiator && program.status === 'VOTING' && (
@@ -201,6 +206,7 @@ export function ProgramDetailPage() {
           programId={program.pid}
           programName={meta?.name}
           token={program.token as `0x${string}` | undefined}
+          initialAmount={donateAmount}
         />
       )}
 
@@ -231,6 +237,15 @@ export function ProgramDetailPage() {
           onClose={() => setIsSelectWinnersOpen(false)}
         />
       )}
+
+      <ProgramFundingCard
+        program={program}
+        meta={meta ?? undefined}
+        onDonate={(amount) => {
+          setDonateAmount(amount);
+          setIsDonateOpen(true);
+        }}
+      />
 
       {/* Phase timeline */}
       <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-5 md:p-6">
