@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useCreateProgram, useApproveUSDC } from '@/lib/contracts/write-hooks';
 import { NeoModal } from '@/components/ui/NeoModal';
@@ -12,6 +13,7 @@ import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
+import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 
 interface Props {
   isOpen: boolean;
@@ -56,11 +58,14 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
     protocolPercent: 20,
   });
 
-  const { approve, isPending: isApproving, isSuccess: approved, hash: approveHash } = useApproveUSDC();
-  const { create, isPending: isCreating, isSuccess: created } = useCreateProgram();
+  const { approve, isPending: isApproving, isSuccess: approved, hash: approveHash, error: approveError } = useApproveUSDC();
+  const { create, isPending: isCreating, isSuccess: created, error: createError } = useCreateProgram();
   const [metaCID, setMetaCID] = useState('');
 
   const tokenMeta = getTokenMeta(formData.token);
+  const limits = useProtocolLimits();
+  const candidatesOk = formData.maxCandidates >= limits.minCandidates && formData.maxCandidates <= limits.maxCandidates;
+  const winnersOk = formData.targetWinners >= 1 && formData.targetWinners <= formData.maxCandidates;
   // The creator funds the program from their own wallet, so check it can cover the fund first.
   const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(formData.token, formData.totalFund);
   const fundIdr =
@@ -270,20 +275,28 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <input
                   type="number"
                   min={1}
-                  className="w-full"
+                  max={formData.maxCandidates}
+                  aria-invalid={!winnersOk}
+                  className={`w-full ${winnersOk ? '' : '!border-skred'}`}
                   value={formData.targetWinners}
                   onChange={(e) => set('targetWinners', Number(e.target.value))}
                 />
+                {!winnersOk && <p className="text-[11px] font-bold text-skred mt-1">{t('create.winnersRange')}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1">{t('create.maxCandidates')}</label>
                 <input
                   type="number"
-                  min={1}
-                  className="w-full"
+                  min={limits.minCandidates}
+                  max={limits.maxCandidates}
+                  aria-invalid={!candidatesOk}
+                  className={`w-full ${candidatesOk ? '' : '!border-skred'}`}
                   value={formData.maxCandidates}
                   onChange={(e) => set('maxCandidates', Number(e.target.value))}
                 />
+                <p className={`text-[11px] mt-1 ${candidatesOk ? 'text-gray-500' : 'font-bold text-skred'}`}>
+                  {t('create.candidatesRange', { min: limits.minCandidates, max: limits.maxCandidates })}
+                </p>
               </div>
             </div>
 
@@ -334,7 +347,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               <input
                 type="range"
                 min={0}
-                max={5}
+                max={limits.maxOptional}
                 value={formData.maxOptionalMilestones}
                 onChange={(e) => set('maxOptionalMilestones', Number(e.target.value))}
                 className="w-full accent-skpurple"
@@ -483,6 +496,14 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
           </div>
         )}
 
+        {/* Wallet/contract failures (e.g. missing USDC allowance or balance) used to be silent. */}
+        {(step === 'approve' || step === 'create') && (step === 'approve' ? approveError : createError) && (
+          <ErrorNotice
+            error={step === 'approve' ? approveError : createError}
+            ctx={{ min: limits.minCandidates, max: limits.maxCandidates, maxOptional: limits.maxOptional, maxCandidates: formData.maxCandidates }}
+          />
+        )}
+
         {/* Footer */}
         <div className="pt-4 border-t-2 border-gray-100 flex justify-end gap-2 sticky bottom-0 bg-white pb-1">
           <NeoButton
@@ -501,6 +522,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 !formData.totalFund ||
                 weightSum !== 100 ||
                 slashSum !== 100 ||
+                !candidatesOk ||
+                !winnersOk ||
                 !hasEnough
               }
             />

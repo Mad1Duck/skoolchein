@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { formatUnits, isAddress } from 'viem';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
@@ -11,7 +12,6 @@ import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
-import { friendlyErrorKey } from '@/lib/errors';
 
 interface Props {
   isOpen: boolean;
@@ -109,11 +109,7 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
             <p className="text-sm text-gray-600 mt-1">
               {phase === 'approving' ? t('dispute.approvingBody') : t('dispute.confirmingBody')}
             </p>
-            {error && (
-              <div className="bg-skred-light p-3 mt-4 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
-                {t(friendlyErrorKey(error))}
-              </div>
-            )}
+            {error && <ErrorNotice error={error} className="mt-4" />}
           </div>
         )}
 

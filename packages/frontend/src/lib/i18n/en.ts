@@ -48,7 +48,17 @@ export const en = {
   // errors
   'error.rejected': 'No problem — nothing was charged.',
   'error.insufficient': 'Your balance is too low for this. Add funds and try again.',
+  'error.title': 'This could not be completed',
+  'error.rejectedTitle': 'Cancelled',
+  'error.howToFix': 'How to fix:',
+  'error.technical': 'Technical detail',
   'error.generic': 'Something went wrong. Please try again in a moment.',
+  'error.allowance': 'The transfer of your funds is not approved yet. Approve it first, then try again.',
+  'error.tokenNotSupported': 'This currency is not enabled for programs yet. Choose another currency.',
+  'error.targetWinners': 'The number of winners cannot be more than the number of candidates.',
+  'create.candidatesRange': 'Allowed: {min}–{max} candidates',
+  'create.winnersRange': 'Between 1 and the number of candidates.',
+  'error.candidateRange': 'The number of candidates is outside the allowed range. Adjust it and try again.',
 
   // vote
   'vote.title': 'Cast Your Vote',
