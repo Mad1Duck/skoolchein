@@ -1,6 +1,7 @@
 import { Injectable, Singleton } from "hono-forge";
 import { eq, or, and, desc } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
+import { onChain } from "@/config/chain-context";
 
 const {
   v4Programs, v4Applicants, v4Scholars,
@@ -30,7 +31,7 @@ export class DashboardService {
       committeeMemberships,
     ] = await Promise.all([
       ponderClient.db.select().from(v4Programs)
-        .where(eq(v4Programs.initiator, wallet))
+        .where(onChain(v4Programs, eq(v4Programs.initiator, wallet)))
         .orderBy(desc(v4Programs.createdAt)),
 
       ponderClient.db.select({
@@ -44,8 +45,8 @@ export class DashboardService {
         },
       })
         .from(v4Applicants)
-        .leftJoin(v4Programs, eq(v4Applicants.pid, v4Programs.pid))
-        .where(eq(v4Applicants.wallet, wallet))
+        .leftJoin(v4Programs, and(eq(v4Applicants.chainId, v4Programs.chainId), eq(v4Applicants.pid, v4Programs.pid)))
+        .where(onChain(v4Applicants, eq(v4Applicants.wallet, wallet)))
         .orderBy(desc(v4Applicants.createdAt)),
 
       ponderClient.db.select({
@@ -59,31 +60,31 @@ export class DashboardService {
         },
       })
         .from(v4Scholars)
-        .leftJoin(v4Programs, eq(v4Scholars.pid, v4Programs.pid))
-        .where(eq(v4Scholars.wallet, wallet))
+        .leftJoin(v4Programs, and(eq(v4Scholars.chainId, v4Programs.chainId), eq(v4Scholars.pid, v4Programs.pid)))
+        .where(onChain(v4Scholars, eq(v4Scholars.wallet, wallet)))
         .orderBy(desc(v4Scholars.createdAt)),
 
       ponderClient.db.select().from(v4Milestones)
-        .where(eq(v4Milestones.scholarWallet, wallet))
+        .where(onChain(v4Milestones, eq(v4Milestones.scholarWallet, wallet)))
         .orderBy(v4Milestones.blockchainId),
 
       ponderClient.db.select().from(v4Votes)
-        .where(eq(v4Votes.voterAddress, wallet))
+        .where(onChain(v4Votes, eq(v4Votes.voterAddress, wallet)))
         .orderBy(desc(v4Votes.createdAt)),
 
       ponderClient.db.select().from(v4ConfidenceStakes)
-        .where(eq(v4ConfidenceStakes.voterAddress, wallet))
+        .where(onChain(v4ConfidenceStakes, eq(v4ConfidenceStakes.voterAddress, wallet)))
         .orderBy(desc(v4ConfidenceStakes.createdAt)),
 
       ponderClient.db.select().from(v4Disputes)
-        .where(or(
+        .where(onChain(v4Disputes, or(
           eq(v4Disputes.bountyHunter, wallet),
           eq(v4Disputes.scholarAddress, wallet),
-        ))
+        )))
         .orderBy(desc(v4Disputes.createdAt)),
 
       ponderClient.db.select().from(v4Reputation)
-        .where(eq(v4Reputation.address, wallet))
+        .where(onChain(v4Reputation, eq(v4Reputation.address, wallet)))
         .limit(1),
 
       ponderClient.db.select({
@@ -91,8 +92,8 @@ export class DashboardService {
         program: v4Programs,
       })
         .from(v4CommitteeMembers)
-        .innerJoin(v4Programs, eq(v4CommitteeMembers.pid, v4Programs.pid))
-        .where(and(
+        .innerJoin(v4Programs, and(eq(v4CommitteeMembers.chainId, v4Programs.chainId), eq(v4CommitteeMembers.pid, v4Programs.pid)))
+        .where(onChain(v4CommitteeMembers,
           eq(v4CommitteeMembers.memberAddress, wallet),
           eq(v4CommitteeMembers.isActive, true),
         ))

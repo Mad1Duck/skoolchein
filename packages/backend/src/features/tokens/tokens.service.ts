@@ -1,6 +1,7 @@
 import { Injectable, Singleton } from "hono-forge";
 import { eq, asc } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
+import { onChain } from "@/config/chain-context";
 
 const { v4TokenRegistry } = ponderSchema;
 
@@ -18,7 +19,7 @@ export class TokensService {
     const rows = await ponderClient.db
       .select()
       .from(v4TokenRegistry)
-      .where(opts.includeDeregistered ? undefined : eq(v4TokenRegistry.isRegistered, true))
+      .where(onChain(v4TokenRegistry, opts.includeDeregistered ? undefined : eq(v4TokenRegistry.isRegistered, true)))
       .orderBy(asc(v4TokenRegistry.symbol));
 
     return rows;
@@ -28,7 +29,7 @@ export class TokensService {
     const [row] = await ponderClient.db
       .select()
       .from(v4TokenRegistry)
-      .where(eq(v4TokenRegistry.token, token.toLowerCase()))
+      .where(onChain(v4TokenRegistry, eq(v4TokenRegistry.token, token.toLowerCase())))
       .limit(1);
 
     return row ?? null;

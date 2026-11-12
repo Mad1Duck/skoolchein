@@ -1,6 +1,7 @@
 import { Injectable, Singleton } from "hono-forge";
 import { eq, and, desc } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
+import { onChain } from "@/config/chain-context";
 
 const { v4Votes, v4ConfidenceStakes } = ponderSchema;
 
@@ -11,7 +12,7 @@ export class VotesService {
     const conditions = [];
     if (opts.voter) conditions.push(eq(v4Votes.voterAddress, opts.voter));
     if (opts.candidate) conditions.push(eq(v4Votes.candidateAddress, opts.candidate));
-    const where = conditions.length ? and(...conditions) : undefined;
+    const where = onChain(v4Votes, ...conditions);
 
     return ponderClient.db.select().from(v4Votes)
       .where(where)
@@ -24,7 +25,7 @@ export class VotesService {
     const conditions = [];
     if (opts.voter) conditions.push(eq(v4ConfidenceStakes.voterAddress, opts.voter));
     if (opts.resolved !== undefined) conditions.push(eq(v4ConfidenceStakes.isResolved, opts.resolved));
-    const where = conditions.length ? and(...conditions) : undefined;
+    const where = onChain(v4ConfidenceStakes, ...conditions);
 
     return ponderClient.db.select().from(v4ConfidenceStakes)
       .where(where)
