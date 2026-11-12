@@ -5,8 +5,10 @@ import { useApproveUSDC, useDonate, needsApproval } from '@/lib/contracts/write-
 import { useV4Addresses } from '@/lib/chain/useActiveChain';
 import { getTokenMeta } from '@/lib/contracts/v4/token';
 import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
-import { formatToIDR } from '@/util/localCurrency';
+import { useTokenRate } from '@/context/token-rate-context';
+import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -21,7 +23,9 @@ interface Props {
 type Step = 'form' | 'approve' | 'donate' | 'done';
 
 export function DonateModal({ isOpen, onClose, programId, programName, token }: Props) {
+  const { t, tr } = useT();
   const v4Addresses = useV4Addresses();
+  const { rate } = useTokenRate();
   // Declared before the state below, which seeds its default from it.
   const tokenMeta = getTokenMeta(token);
   // Native payments travel as msg.value — there's nothing to approve, and
@@ -30,6 +34,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
 
   const [step, setStep] = useState<Step>('form');
   const [amount, setAmount] = useState(tokenMeta.minDonationHint);
+  // Metadata link for the donor badge. Technical, so it lives under "Advanced".
   const [nftUri, setNftUri] = useState('ipfs://QmDonorNFT');
 
   const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(token, amount);
@@ -67,39 +72,46 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
     onClose();
   };
 
+  // Rupiah equivalent, shown first when we know a USDC/IDR rate (USDC only).
+  const amountIdr =
+    !tokenMeta.isNative && rate && Number(amount) > 0 ? formatToIDR(usdcToIdr(Number(amount), rate)) : null;
+  const amountText = amountIdr ?? `${amount} ${tokenMeta.symbol}`;
+
   if (step === 'done') {
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Donation Successful!">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('donate.successTitle')}>
         <div className="text-center py-10 space-y-4">
-          <h2 className="font-paytone text-2xl">Thank you for your contribution!</h2>
+          <h2 className="font-paytone text-2xl">{t('donate.thanks')}</h2>
           <p className="text-gray-600">
-            You donated <span className="font-bold">{amount} {tokenMeta.symbol}</span> to{' '}
-            {programName ?? `Program #${programId}`}. A Donor NFT has been minted to your wallet.
+            {t('donate.successBody', {
+              amount: amountText,
+              program: programName ?? `Program #${programId}`,
+            })}
           </p>
-          <NeoButton label="Close" variant="primary" onClick={handleClose} fullWidth />
+          <NeoButton label={t('common.close')} variant="primary" onClick={handleClose} fullWidth />
         </div>
       </NeoModal>
     );
   }
 
   return (
-    <NeoModal isOpen={isOpen} onClose={handleClose} title="Donate to Program">
+    <NeoModal isOpen={isOpen} onClose={handleClose} title={t('donate.title')}>
       <div className="space-y-5">
         {step === 'form' && (
           <>
             <div className="bg-skgreen-light border-2 border-black p-4 text-sm shadow-[3px_3px_0_0_#000]">
-              <p className="font-extrabold uppercase tracking-wider text-[10px] mb-2">How Donations Work</p>
+              <p className="font-extrabold uppercase tracking-wider text-[10px] mb-2">{t('donate.howTitle')}</p>
               <ul className="text-gray-700 space-y-1 text-xs list-disc list-inside">
-                <li>Your donation gives you <strong>voting power</strong> equal to the net amount</li>
-                <li>A protocol fee is deducted from all donations</li>
-                <li>You'll receive a <strong>Donor NFT</strong> as proof of contribution</li>
-                <li>Place a confidence stake on your chosen scholar to earn bonus yield</li>
+                <li>{tr('donate.how1')}</li>
+                <li>{t('donate.how2')}</li>
+                <li>{tr('donate.how3')}</li>
+                <li>{t('donate.how4')}</li>
               </ul>
             </div>
 
             <div>
               <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
-                Donation Amount ({tokenMeta.symbol}) <span className="text-skred">*</span>
+                {t('donate.amountLabel', { symbol: tokenMeta.symbol })} <span className="text-skred">*</span>
               </label>
               <input
                 type="number"
@@ -109,12 +121,17 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-gray-500 mt-1">{`Minimum  ; a protocol fee is deducted`}</p>
+              {amountIdr && (
+                <p className="text-sm font-black mt-1">{t('donate.approx', { amount: amountIdr })}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {t('donate.minimum', { min: tokenMeta.minDonationHint, symbol: tokenMeta.symbol })}
+              </p>
               {!hasEnough && (
                 <p className="text-xs font-bold text-skred mt-2">
                   {shortfallIdr !== null
-                    ? `Saldo kurang sekitar ${formatToIDR(shortfallIdr)}. Isi saldo dulu untuk melanjutkan.`
-                    : `Saldo ${tokenMeta.symbol} Anda tidak cukup.`}
+                    ? t('donate.shortfall', { amount: formatToIDR(shortfallIdr) })
+                    : t('donate.shortfallToken', { symbol: tokenMeta.symbol })}
                 </p>
               )}
               {!hasEnough && !tokenMeta.isNative && (
@@ -123,31 +140,36 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
                   className="text-xs font-bold underline mt-1"
                   onClick={() => setTopUpOpen(true)}
                 >
-                  Isi saldo
+                  {t('donate.addFunds')}
                 </button>
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">NFT Metadata URI</label>
-              <input
-                type="text"
-                className="w-full font-data text-sm"
-                value={nftUri}
-                onChange={(e) => setNftUri(e.target.value)}
-                placeholder="ipfs://Qm..."
-              />
-              <p className="text-xs text-gray-500 mt-1">IPFS URI for your Donor NFT metadata</p>
-            </div>
+            <details className="text-xs">
+              <summary className="cursor-pointer font-bold">{t('common.advanced')}</summary>
+              <div className="mt-2">
+                <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
+                  {t('donate.badgeLabel')}
+                </label>
+                <input
+                  type="text"
+                  className="w-full font-data text-sm"
+                  value={nftUri}
+                  onChange={(e) => setNftUri(e.target.value)}
+                  placeholder="ipfs://Qm..."
+                />
+                <p className="text-xs text-gray-500 mt-1">{t('donate.badgeHint')}</p>
+              </div>
+            </details>
           </>
         )}
 
         {step === 'approve' && (
           <div className="text-center py-10 space-y-3">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
-            <p className="font-bold text-lg">Approving {tokenMeta.symbol}</p>
+            <p className="font-bold text-lg">{t('donate.preparing', { symbol: tokenMeta.symbol })}</p>
             <p className="text-sm text-gray-600">
-              Approving <strong>{amount} {tokenMeta.symbol}</strong> for transfer. Please confirm in your wallet.
+              {tr('donate.preparingBody', { amount, symbol: tokenMeta.symbol })}
             </p>
           </div>
         )}
@@ -155,16 +177,16 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
         {step === 'donate' && (
           <div className="text-center py-10 space-y-3">
             <div className="w-10 h-10 border-2 border-black bg-skgreen mx-auto animate-pulse mb-2" />
-            <p className="font-bold text-lg">Confirm Donation</p>
+            <p className="font-bold text-lg">{t('donate.confirmTitle')}</p>
             <p className="text-sm text-gray-600">
-              Sign the transaction to donate <strong>{amount} {tokenMeta.symbol}</strong> and receive your Donor NFT.
+              {tr('donate.confirmBody', { amount, symbol: tokenMeta.symbol })}
             </p>
           </div>
         )}
 
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
           <NeoButton
-            label="Cancel"
+            label={t('common.cancel')}
             variant="ghost"
             onClick={handleClose}
             disabled={isApproving || isDonating}
@@ -172,7 +194,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
           />
           {step === 'form' && (
             <NeoButton
-              label="Continue"
+              label={t('common.continue')}
               variant="success"
               onClick={handleAction}
               disabled={!amount || Number(amount) < Number(tokenMeta.minDonationHint) || !hasEnough}
@@ -181,7 +203,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token }: 
           )}
           {step === 'donate' && (
             <NeoButton
-              label={isDonating ? 'Donating…' : 'Donate Now'}
+              label={isDonating ? t('donate.donating') : t('donate.now')}
               variant="success"
               onClick={handleAction}
               loading={isDonating}

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { NeoButton } from "./ui/NeoButton";
-import { ChainSwitcher } from "./ChainSwitcher";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
@@ -122,14 +122,14 @@ export function Header() {
         </ul>
         {breakpoint.isLessThan("lg") && (
           <div className="mt-5 flex flex-col gap-3">
-            <ChainSwitcher />
+            <LanguageSwitcher />
             <NeoButton label="Connect Wallet" variant="connect" size="md" />
           </div>
         )}
       </nav>
       {breakpoint.isAtLeast("lg") && (
         <div className="flex items-center gap-3">
-          <ChainSwitcher />
+          <LanguageSwitcher />
           <NeoButton label="Connect Wallet" variant="connect" size="sm" />
         </div>
       )}
