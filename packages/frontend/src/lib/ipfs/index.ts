@@ -12,10 +12,15 @@ export function ipfsUrl(cid: string): string {
 
 /** Fetch JSON from IPFS via CID */
 export async function fetchIPFS<T = unknown>(cid: string): Promise<T | null> {
-  if (!cid) return null;
+  // The create form falls back to a placeholder CID when the upload fails; it
+  // points at nothing, so don't spend a gateway request on it.
+  if (!cid || cid.startsWith("QmFallback")) return null;
   try {
     const res = await fetch(ipfsUrl(cid));
-    return res.json();
+    // A rate-limited gateway answers 429 with an HTML challenge page — treat that
+    // as "no metadata" instead of failing inside res.json().
+    if (!res.ok) throw new Error(`gateway responded ${res.status}`);
+    return await res.json();
   } catch {
     console.warn("[IPFS] Failed to fetch CID:", cid);
     return null;
