@@ -200,10 +200,11 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             {/* Education Level */}
             <div>
               <label className="block text-sm font-bold mb-1">{t('create.for')}</label>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-4 gap-2">
                 {eduLevels.map((label, idx) => (
                   <NeoButton
                     key={idx}
+                    fullWidth
                     className={formData.educationLevel === idx ? 'bg-skpurple-hover' : ''}
                     onClick={() => set('educationLevel', idx)}
                     size="sm"
