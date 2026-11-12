@@ -5,6 +5,7 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import { useClaimStudentNFT } from "@/lib/contracts/v4/hooks/core";
 import { uploadToIPFS } from "@/lib/ipfs";
 import type { DashboardData } from "@/lib/api/types";
+import { useT } from "@/lib/i18n";
 
 interface DashboardNftCollectionsProps {
   address?: `0x${string}`;
@@ -17,6 +18,7 @@ export function DashboardNftCollections({
   dashboard,
   variant = "student",
 }: DashboardNftCollectionsProps) {
+  const { t } = useT();
   const [claiming, setClaiming] = useState(false);
   const { claim, isPending } = useClaimStudentNFT();
 
@@ -53,7 +55,7 @@ export function DashboardNftCollections({
   return (
     <section>
       <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpurple pl-4 leading-none">
-        NFT Collections
+        {t("badges.title")}
       </h2>
       {variant === "student" ? (
         <DashboardCard className="flex flex-col overflow-hidden border-skcyan">
@@ -63,26 +65,26 @@ export function DashboardNftCollections({
             </span>
             <img
               src={`https://api.dicebear.com/9.x/notionists/svg?seed=${seed}-student&backgroundColor=c0aede`}
-              alt="Student NFT"
+              alt={t("badges.scholarBadge")}
               className="size-40 drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
             />
           </div>
           <div className="pt-5 space-y-3 grow flex flex-col">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-paytone text-xl">Student NFT</h3>
-                <p className="text-sm text-gray-600">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Scholar"}</p>
+                <h3 className="font-paytone text-xl">{t("badges.scholarBadge")}</h3>
+                <p className="text-sm text-gray-600">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : t("badges.scholar")}</p>
               </div>
               <span className="bg-skgreen text-black text-[10px] font-extrabold uppercase px-2 py-1 border border-black rounded">
-                StudentNFT
+                {t("badges.scholarTag")}
               </span>
             </div>
             <p className="text-sm text-gray-600 grow">
-              Soulbound credential for graduating a scholarship program. Claimable once all mandatory milestones are completed.
+              {t("badges.scholarBody")}
             </p>
             {canClaimStudentNFT ? (
               <NeoButton
-                label={claiming || isPending ? "Claiming..." : "Claim StudentNFT"}
+                label={claiming || isPending ? t("badges.claiming") : t("badges.claim")}
                 variant="primary"
                 size="sm"
                 fullWidth
@@ -91,10 +93,10 @@ export function DashboardNftCollections({
                 disabled={claiming || isPending}
               />
             ) : completedScholarship ? (
-              <NeoButton label="Eligible" variant="secondary" size="sm" disabled fullWidth />
+              <NeoButton label={t("badges.eligible")} variant="secondary" size="sm" disabled fullWidth />
             ) : (
               <Link to="/programs" className="contents">
-                <NeoButton label="Apply to Become Eligible" variant="primary" size="sm" fullWidth />
+                <NeoButton label={t("badges.apply")} variant="primary" size="sm" fullWidth />
               </Link>
             )}
           </div>
@@ -107,25 +109,25 @@ export function DashboardNftCollections({
             </span>
             <img
               src={`https://api.dicebear.com/9.x/bottts/svg?seed=${seed}-hero&backgroundColor=b6e3f4`}
-              alt="Changemaker NFT"
+              alt={t("badges.changemakerBadge")}
               className="size-40 drop-shadow-[4px_4px_0_rgba(0,0,0,1)]"
             />
           </div>
           <div className="pt-5 space-y-3 grow flex flex-col">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-paytone text-xl">Changemaker NFT Hero</h3>
-                <p className="text-sm text-gray-600">Impact Creator</p>
+                <h3 className="font-paytone text-xl">{t("badges.changemakerBadge")}</h3>
+                <p className="text-sm text-gray-600">{t("badges.impactCreator")}</p>
               </div>
               <span className="bg-skyellow text-black text-[10px] font-extrabold uppercase px-2 py-1 border border-black rounded">
-                Provider
+                {t("badges.providerTag")}
               </span>
             </div>
             <p className="text-sm text-gray-600 grow">
-              Soulbound credential for program creators who fund and launch a scholarship round.
+              {t("badges.providerBody")}
             </p>
             <Link to="/programs" className="contents">
-              <NeoButton label="Create Program to Earn" variant="primary" size="sm" fullWidth />
+              <NeoButton label={t("badges.create")} variant="primary" size="sm" fullWidth />
             </Link>
           </div>
         </DashboardCard>

@@ -6,6 +6,7 @@ import { NeoBadge } from '@/components/ui/NeoBadge';
 import { useResolveShortlistBatch } from '@/lib/contracts/v4/hooks/core';
 import type { Applicant } from '@/lib/api/types';
 import { useProgram } from '@/lib/api/hooks';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }: Props) {
+  const { t, tr } = useT();
   // Auto-sort by screeningScore descending, allow manual reorder via drag
   const [ranked, setRanked] = useState<Applicant[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -65,19 +67,16 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
   const progressPercent = Math.min(100, Math.round((blockchainProgress / ranked.length) * 100)) || 0;
 
   return (
-    <NeoModal isOpen={isOpen} onClose={onClose} title={`Resolve Shortlist — Program #${programId}`}>
+    <NeoModal isOpen={isOpen} onClose={onClose} title={t('shortlist.title', { id: programId })}>
       <div className="space-y-4">
         <div className="bg-skyellow-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
-          <p className="font-bold">Instructions</p>
-          <p className="text-gray-700 mt-1">
-            Applicants are auto-sorted by score.
-            <strong> Batching:</strong> Resolution is processed in groups of {BATCH_SIZE} to save gas.
-          </p>
+          <p className="font-bold">{t('shortlist.instructions')}</p>
+          <p className="text-gray-700 mt-1">{tr('shortlist.body', { size: BATCH_SIZE })}</p>
           
           {/* Progress bar */}
           <div className="mt-3">
             <div className="flex justify-between text-xs font-bold mb-1">
-              <span>Resolution Progress</span>
+              <span>{t('shortlist.progress')}</span>
               <span>{blockchainProgress} / {ranked.length}</span>
             </div>
             <div className="w-full bg-white border-2 border-black h-4 overflow-hidden">
@@ -114,8 +113,8 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm truncate">{shortenAddress(a.wallet)}</p>
                 <p className="text-xs text-gray-500">
-                  Score: <span className="font-bold">{a.screeningScore}</span>
-                  {' '}• Retries: {a.retryCount}
+                  {t('shortlist.score')} <span className="font-bold">{a.screeningScore}</span>
+                  {' '}• {t('shortlist.retries')} {a.retryCount}
                 </p>
               </div>
 
@@ -124,16 +123,16 @@ export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }
           ))}
 
           {ranked.length === 0 && (
-            <p className="text-center py-8 text-gray-500">No applicants to rank.</p>
+            <p className="text-center py-8 text-gray-500">{t('shortlist.empty')}</p>
           )}
         </div>
 
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
-          <NeoButton label="Cancel" variant="ghost" onClick={onClose} disabled={isPending} fullWidth />
+          <NeoButton label={t('common.cancel')} variant="ghost" onClick={onClose} disabled={isPending} fullWidth />
           <NeoButton
-            label={isPending ? 'Signing Batch...' : 
-                   blockchainProgress === 0 ? `Confirm Shortlist (${ranked.length})` :
-                   `Continue Resolution (${blockchainProgress} done)`}
+            label={isPending ? t('shortlist.processing') :
+                   blockchainProgress === 0 ? t('shortlist.confirm', { count: ranked.length }) :
+                   t('shortlist.continue', { done: blockchainProgress })}
             variant="primary"
             onClick={handleConfirm}
             loading={isPending}
