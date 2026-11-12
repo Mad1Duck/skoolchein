@@ -7,6 +7,11 @@ import type { ProgramMetadata } from '@/lib/api/types';
 import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
 import { NATIVE_TOKEN, getSupportedTokens, getTokenMeta } from '@/lib/contracts/v4/token';
 import { needsApproval } from '@/lib/contracts/write-hooks';
+import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
+import { useTokenRate } from '@/context/token-rate-context';
+import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
+import { TopUpModal } from '@/components/ramp/TopUpModal';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -18,10 +23,13 @@ type Step = 'form' | 'upload' | 'approve' | 'create' | 'done';
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
 
 export function CreateProgramModal({ isOpen, onClose }: Props) {
+  const { t } = useT();
   const v4Addresses = useV4Addresses();
   const { chainId } = useActiveChain();
+  const { rate } = useTokenRate();
   const [step, setStep] = useState<Step>('form');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -52,9 +60,19 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
   const { create, isPending: isCreating, isSuccess: created } = useCreateProgram();
   const [metaCID, setMetaCID] = useState('');
 
+  const tokenMeta = getTokenMeta(formData.token);
+  // The creator funds the program from their own wallet, so check it can cover the fund first.
+  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(formData.token, formData.totalFund);
+  const fundIdr =
+    !tokenMeta.isNative && rate && Number(formData.totalFund) > 0
+      ? formatToIDR(usdcToIdr(Number(formData.totalFund), rate))
+      : null;
+
   // Derived weight sum validation
   const weightSum = formData.academicWeight + formData.incomeWeight + formData.essayWeight + formData.recommendWeight + formData.extracurricWeight;
   const slashSum = formData.bountyHunterPercent + formData.treasuryPercent + formData.protocolPercent;
+
+  const needsCommittee = formData.screeningMode === 0 || formData.maxOptionalMilestones > 0;
 
   const handleNext = async () => {
     if (step === 'form') {
@@ -80,10 +98,14 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
       const voteEnd = voteStart + 7n * 86400n;
       const disputeWindowSec = BigInt(formData.milestoneDisputeWindowDays) * 86400n;
 
+      // A custom committee wins; otherwise a program that needs one uses the deployed default,
+      // so creators never have to paste a contract address.
       const committeeAddr: `0x${string}` =
         formData.committeeContract && formData.committeeContract.length === 42
           ? (formData.committeeContract as `0x${string}`)
-          : ZERO_ADDRESS;
+          : needsCommittee
+            ? v4Addresses.CommitteeGovernance
+            : ZERO_ADDRESS;
 
       create({
         metadataCID: metaCID,
@@ -139,29 +161,34 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
   const set = (field: string, val: unknown) =>
     setFormData((p) => ({ ...p, [field]: val }));
 
-  const eduLevels = ['Elementary', 'Junior High', 'Senior High', 'University'];
+  const eduLevels = [
+    t('create.edu.elementary'),
+    t('create.edu.junior'),
+    t('create.edu.senior'),
+    t('create.edu.university'),
+  ];
 
   if (step === 'done') {
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Program Created!">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('create.successTitle')}>
         <div className="text-center py-8 space-y-4">
-          <h2 className="text-2xl font-paytone">Program is now on-chain!</h2>
-          <p className="text-gray-600">Your scholarship program has been successfully created.</p>
-          <NeoButton label="Close" variant="primary" onClick={handleClose} fullWidth />
+          <h2 className="text-2xl font-paytone">{t('create.successHeading')}</h2>
+          <p className="text-gray-600">{t('create.successBody')}</p>
+          <NeoButton label={t('common.close')} variant="primary" onClick={handleClose} fullWidth />
         </div>
       </NeoModal>
     );
   }
 
   return (
-    <NeoModal isOpen={isOpen} onClose={handleClose} title="Create Scholarship Program">
+    <NeoModal isOpen={isOpen} onClose={handleClose} title={t('create.title')}>
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
 
         {step === 'form' && (
           <>
             {/* Basic Info */}
             <div>
-              <label className="block text-sm font-bold mb-1">Program Name <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold mb-1">{t('create.name')} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 className="w-full"
@@ -172,11 +199,12 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
 
             {/* Education Level */}
             <div>
-              <label className="block text-sm font-bold mb-1">Program For</label>
-              <div className="grid grid-cols-4 gap-1">
+              <label className="block text-sm font-bold mb-1">{t('create.for')}</label>
+              <div className="grid grid-cols-4 gap-2">
                 {eduLevels.map((label, idx) => (
                   <NeoButton
                     key={idx}
+                    fullWidth
                     className={formData.educationLevel === idx ? 'bg-skpurple-hover' : ''}
                     onClick={() => set('educationLevel', idx)}
                     size="sm"
@@ -188,7 +216,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">Description</label>
+              <label className="block text-sm font-bold mb-1">{t('create.description')}</label>
               <textarea
                 className="w-full"
                 rows={2}
@@ -197,39 +225,34 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               />
             </div>
 
-            {/* Payment token — determines decimals and whether funding is sent
+            {/* Currency — determines decimals and whether funding is sent
                 as msg.value (native) or needs an ERC20 approve first. */}
             <div>
-              <label className="block text-xs font-bold mb-1">Payment Token</label>
+              <label className="block text-xs font-bold mb-1">{t('create.currency')}</label>
               <div className="flex gap-2">
-                {getSupportedTokens(chainId).map((t) => (
+                {getSupportedTokens(chainId).map((tok) => (
                   <button
-                    key={t.address}
+                    key={tok.address}
                     type="button"
-                    onClick={() => set('token', t.address)}
+                    onClick={() => set('token', tok.address)}
                     className={`flex-1 border-2 border-black p-2 text-sm font-bold shadow-[2px_2px_0_0_#000] transition-colors ${
-                      formData.token.toLowerCase() === t.address.toLowerCase()
+                      formData.token.toLowerCase() === tok.address.toLowerCase()
                         ? 'bg-skgreen'
                         : 'bg-white hover:bg-gray-50'
                     }`}
                   >
-                    {t.symbol}
-                    <span className="block text-[10px] font-normal text-gray-600">
-                      {t.isNative ? 'native currency' : 'ERC20'}
-                    </span>
+                    {tok.symbol}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                All program amounts (fund, donations, milestones) are denominated in this token.
-              </p>
+              <p className="text-xs text-gray-500 mt-1">{t('create.currencyHint')}</p>
             </div>
 
             {/* Fund + Winners */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold mb-1">
-                  Total Fund ({getTokenMeta(formData.token).symbol})
+                  {t('create.totalFund', { symbol: tokenMeta.symbol })}
                 </label>
                 <input
                   type="number"
@@ -238,9 +261,12 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                   value={formData.totalFund}
                   onChange={(e) => set('totalFund', e.target.value)}
                 />
+                {fundIdr && (
+                  <p className="text-xs font-bold mt-1">{t('create.fundApprox', { amount: fundIdr })}</p>
+                )}
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Target Winners</label>
+                <label className="block text-xs font-bold mb-1">{t('create.targetWinners')}</label>
                 <input
                   type="number"
                   min={1}
@@ -250,7 +276,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Max Candidates</label>
+                <label className="block text-xs font-bold mb-1">{t('create.maxCandidates')}</label>
                 <input
                   type="number"
                   min={1}
@@ -261,13 +287,26 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               </div>
             </div>
 
-            {/* Screening Mode */}
+            {!hasEnough && (
+              <p className="text-xs font-bold text-skred">
+                {t('create.shortfall', {
+                  amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${formData.totalFund} ${tokenMeta.symbol}`,
+                })}{' '}
+                {!tokenMeta.isNative && (
+                  <button type="button" className="underline" onClick={() => setTopUpOpen(true)}>
+                    {t('donate.addFunds')}
+                  </button>
+                )}
+              </p>
+            )}
+
+            {/* Scoring method */}
             <div>
-              <label className="block text-sm font-bold mb-1">Screening Mode</label>
+              <label className="block text-sm font-bold mb-1">{t('create.scoring')}</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { value: 1, label: 'By Student', desc: 'Students self-declare scores' },
-                  { value: 0, label: 'By Committee', desc: 'Committee members score applicants' },
+                  { value: 1, label: t('create.byStudent'), desc: t('create.byStudentDesc') },
+                  { value: 0, label: t('create.byCommittee'), desc: t('create.byCommitteeDesc') },
                 ].map(({ value, label, desc }) => (
                   <button
                     key={value}
@@ -289,7 +328,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             {/* Optional Milestones */}
             <div>
               <label className="flex justify-between text-sm font-bold mb-1">
-                <span>Max Optional Milestones (per scholar)</span>
+                <span>{t('create.optionalMilestones')}</span>
                 <span className="font-paytone text-skpurple">{formData.maxOptionalMilestones}</span>
               </label>
               <input
@@ -301,30 +340,10 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 className="w-full accent-skpurple"
               />
               <div className="flex justify-between text-xs text-gray-400">
-                <span>0 (disabled)</span>
-                <span>5 (max)</span>
+                <span>{t('create.disabled')}</span>
+                <span>{t('create.max')}</span>
               </div>
             </div>
-
-            {/* Committee Contract (shown when BY_COMMITTEE or optional milestones enabled) */}
-            {(formData.screeningMode === 0 || formData.maxOptionalMilestones > 0) && (
-              <div>
-                <label className="block text-sm font-bold mb-1">
-                  Committee Contract Address{' '}
-                  {formData.screeningMode === 0 && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="0x... CommitteeGovernance proxy address"
-                  className="w-full font-data text-sm"
-                  value={formData.committeeContract}
-                  onChange={(e) => set('committeeContract', e.target.value)}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Use <code className="bg-gray-100 px-1 rounded">{v4Addresses.CommitteeGovernance}</code> for the deployed contract.
-                </p>
-              </div>
-            )}
 
             {/* Advanced Settings Toggle */}
             <button
@@ -332,17 +351,34 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               onClick={() => setShowAdvanced((v) => !v)}
               className="w-full text-sm font-bold text-skpurple flex items-center justify-between py-2 border-t-2 border-gray-100"
             >
-              <span>Advanced Settings</span>
+              <span>{t('create.advanced')}</span>
               <span>{showAdvanced ? '▲' : '▼'}</span>
             </button>
 
             {showAdvanced && (
               <div className="space-y-4 bg-white border-2 border-black p-4 shadow-[3px_3px_0_0_#000]">
-                {/* Milestone Dispute Window */}
+                {/* Committee override (only relevant when a committee is needed) */}
+                {needsCommittee && (
+                  <div>
+                    <label className="block text-xs font-bold mb-1">{t('create.committeeAddress')}</label>
+                    <input
+                      type="text"
+                      placeholder={t('create.committeePlaceholder')}
+                      className="w-full font-data text-sm"
+                      value={formData.committeeContract}
+                      onChange={(e) => set('committeeContract', e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('create.committeeHint', { address: v4Addresses.CommitteeGovernance })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Milestone review window */}
                 <div>
                   <label className="flex justify-between text-xs font-bold mb-1">
-                    <span>Milestone Dispute Window</span>
-                    <span>{formData.milestoneDisputeWindowDays} days</span>
+                    <span>{t('create.disputeWindow')}</span>
+                    <span>{t('create.days', { n: formData.milestoneDisputeWindowDays })}</span>
                   </label>
                   <input
                     type="range"
@@ -353,26 +389,26 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                     className="w-full accent-skpurple"
                   />
                   <div className="flex justify-between text-xs text-gray-400">
-                    <span>7 days</span>
-                    <span>14 days</span>
+                    <span>{t('create.days', { n: 7 })}</span>
+                    <span>{t('create.days', { n: 14 })}</span>
                   </div>
                 </div>
 
                 {/* Score Weights */}
                 <div>
                   <p className="text-xs font-bold uppercase text-gray-500 mb-2">
-                    Score Weights{' '}
+                    {t('create.scoreWeights')}{' '}
                     <span className={weightSum === 100 ? 'text-skgreen' : 'text-skred'}>
-                      (Sum: {weightSum}/100)
+                      {t('create.sum', { sum: weightSum })}
                     </span>
                   </p>
                   {(
                     [
-                      ['academicWeight', 'Academic'],
-                      ['incomeWeight', 'Income'],
-                      ['essayWeight', 'Essay'],
-                      ['recommendWeight', 'Recommendation'],
-                      ['extracurricWeight', 'Extracurricular'],
+                      ['academicWeight', t('create.w.academic')],
+                      ['incomeWeight', t('create.w.income')],
+                      ['essayWeight', t('create.w.essay')],
+                      ['recommendWeight', t('create.w.recommend')],
+                      ['extracurricWeight', t('create.w.extracurric')],
                     ] as const
                   ).map(([field, label]) => (
                     <div key={field} className="flex items-center gap-2 mb-1">
@@ -389,19 +425,19 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                   ))}
                 </div>
 
-                {/* Slash Distribution */}
+                {/* Penalty split */}
                 <div>
                   <p className="text-xs font-bold uppercase text-gray-500 mb-2">
-                    Slash Distribution{' '}
+                    {t('create.penaltySplit')}{' '}
                     <span className={slashSum === 100 ? 'text-skgreen' : 'text-skred'}>
-                      (Sum: {slashSum}/100)
+                      {t('create.sum', { sum: slashSum })}
                     </span>
                   </p>
                   {(
                     [
-                      ['bountyHunterPercent', 'Bounty Hunter Reward'],
-                      ['treasuryPercent', 'Treasury'],
-                      ['protocolPercent', 'Protocol'],
+                      ['bountyHunterPercent', t('create.p.reporter')],
+                      ['treasuryPercent', t('create.p.reserve')],
+                      ['protocolPercent', t('create.p.platform')],
                     ] as const
                   ).map(([field, label]) => (
                     <div key={field} className="flex items-center gap-2 mb-1">
@@ -425,16 +461,16 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
         {step === 'upload' && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
-            <p className="font-bold">Uploading Metadata to IPFS</p>
+            <p className="font-bold">{t('create.uploading')}</p>
           </div>
         )}
 
         {step === 'approve' && (
           <div className="text-center py-12 space-y-3">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
-            <p className="font-bold">Approve USDC</p>
+            <p className="font-bold">{t('create.approving')}</p>
             <p className="text-sm text-gray-600">
-              Approve <strong>{formData.totalFund} {getTokenMeta(formData.token).symbol}</strong> transfer to Treasury.
+              {t('create.approvingBody', { amount: formData.totalFund, symbol: tokenMeta.symbol })}
             </p>
           </div>
         )}
@@ -442,35 +478,36 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
         {step === 'create' && (
           <div className="text-center py-12 space-y-3">
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
-            <p className="font-bold">Sign Contract Transaction</p>
-            <p className="text-sm text-gray-600">Confirm in your wallet to create the program.</p>
+            <p className="font-bold">{t('create.confirming')}</p>
+            <p className="text-sm text-gray-600">{t('create.confirmingBody')}</p>
           </div>
         )}
 
         {/* Footer */}
         <div className="pt-4 border-t-2 border-gray-100 flex justify-end gap-2 sticky bottom-0 bg-white pb-1">
           <NeoButton
-            label="Cancel"
+            label={t('common.cancel')}
             variant="ghost"
             onClick={handleClose}
             disabled={isApproving || isCreating}
           />
           {step === 'form' && (
             <NeoButton
-              label="Continue"
+              label={t('common.continue')}
               variant="primary"
               onClick={handleNext}
               disabled={
                 !formData.name ||
                 !formData.totalFund ||
                 weightSum !== 100 ||
-                slashSum !== 100
+                slashSum !== 100 ||
+                !hasEnough
               }
             />
           )}
           {step === 'approve' && (
             <NeoButton
-              label={isApproving ? 'Approving…' : 'Approve USDC'}
+              label={isApproving ? t('create.approvingBtn') : t('create.approveBtn')}
               variant="primary"
               onClick={handleNext}
               disabled={isApproving}
@@ -479,7 +516,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
           )}
           {step === 'create' && (
             <NeoButton
-              label={isCreating ? 'Creating…' : 'Create Program'}
+              label={isCreating ? t('create.creatingBtn') : t('create.createBtn')}
               variant="success"
               onClick={handleNext}
               disabled={isCreating}
@@ -488,6 +525,12 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
           )}
         </div>
       </div>
+      <TopUpModal
+        isOpen={topUpOpen}
+        onClose={() => setTopUpOpen(false)}
+        suggestedIdr={shortfallIdr}
+        onSuccess={() => refetchBalance()}
+      />
     </NeoModal>
   );
 }

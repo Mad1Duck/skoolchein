@@ -2,7 +2,7 @@ import { db } from "ponder:api";
 import * as schemaModule from "ponder:schema";
 import { Hono } from "hono";
 import { client, graphql } from "ponder";
-import { cors } from "hono/cors";
+import { corsMiddleware } from "./cors";
 
 // The "ponder:schema" virtual module (via vite-node SSR interop) carries a
 // synthetic `default` key pointing at a null-prototype object that isn't
@@ -15,8 +15,7 @@ const { default: _moduleDefault, ...schema } = schemaModule as Record<string, un
 
 const app = new Hono();
 
-app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization"], credentials: false }));
-app.options("*", cors());
+app.use("*", corsMiddleware);
 
 app.use("/sql/*", client({ db, schema }));
 app.use("/", graphql({ db, schema }));

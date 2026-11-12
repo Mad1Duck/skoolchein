@@ -4,6 +4,7 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSubmitMilestone } from '@/lib/contracts/write-hooks';
 import type { Milestone } from '@/lib/api/types';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
+  const { t } = useT();
   const [proofDescription, setProofDescription] = useState('');
   const [step, setStep] = useState<'form' | 'uploading' | 'tx'>('form');
 
@@ -61,8 +63,8 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
         {step === 'tx' && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-            <p className="font-bold">Confirm Transaction in Wallet</p>
-            <p className="text-sm text-gray-600 mt-1">Sign to submit your milestone proof.</p>
+            <p className="font-bold">{t('milestone.proofConfirmTitle')}</p>
+            <p className="text-sm text-gray-600 mt-1">{t('milestone.proofConfirmBody')}</p>
           </div>
         )}
 

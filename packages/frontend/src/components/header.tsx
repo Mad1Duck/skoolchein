@@ -1,21 +1,23 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { NeoButton } from "./ui/NeoButton";
-import { ChainSwitcher } from "./ChainSwitcher";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import gsap from "gsap";
 import { scholarshipCoreAbi } from "@/constants/contractsV4";
 import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
+import { useT } from '@/lib/i18n';
 
 const navItems = [
-  { href: "/",          label: "Home" },
-  { href: "/programs",  label: "Scholarships" },
-  { href: "/vote",      label: "Vote" },
-  { href: "/dashboard", label: "My Dashboard" },
-];
+  { href: "/",          labelKey: "nav.home" },
+  { href: "/programs",  labelKey: "nav.programs" },
+  { href: "/vote",      labelKey: "nav.vote" },
+  { href: "/dashboard", labelKey: "nav.dashboard" },
+] as const;
 
 export function Header() {
+  const { t } = useT();
   const v4Addresses = useV4Addresses();
   const { chainId } = useActiveChain();
   const [open, setOpen] = useState(false);
@@ -88,7 +90,7 @@ export function Header() {
         className={`max-lg:self-stretch ${open ? "max-lg:block" : "max-lg:hidden"}`}
       >
         <ul className="flex gap-6 text-gray-800 items-center max-lg:flex-col max-lg:items-start max-lg:mt-5">
-          {navItems.map(({ href, label }) => {
+          {navItems.map(({ href, labelKey }) => {
             const isActive = currentPath === href || currentPath.startsWith(href + "/");
             return (
               <li key={href}>
@@ -100,7 +102,7 @@ export function Header() {
                       : "hover:text-skpurple"
                   }`}
                 >
-                  {label}
+                  {t(labelKey)}
                 </Link>
               </li>
             );
@@ -115,21 +117,21 @@ export function Header() {
                     : "hover:text-skred"
                 }`}
               >
-                Admin
+                {t('nav.admin')}
               </Link>
             </li>
           )}
         </ul>
         {breakpoint.isLessThan("lg") && (
           <div className="mt-5 flex flex-col gap-3">
-            <ChainSwitcher />
+            <LanguageSwitcher />
             <NeoButton label="Connect Wallet" variant="connect" size="md" />
           </div>
         )}
       </nav>
       {breakpoint.isAtLeast("lg") && (
         <div className="flex items-center gap-3">
-          <ChainSwitcher />
+          <LanguageSwitcher />
           <NeoButton label="Connect Wallet" variant="connect" size="sm" />
         </div>
       )}

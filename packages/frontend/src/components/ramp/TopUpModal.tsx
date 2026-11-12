@@ -6,9 +6,10 @@ import { useMintUSDC } from '@/lib/contracts/v4/hooks/treasury';
 import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, idrToUsdc, parseIDR } from '@/util/localCurrency';
 import { getRampNetwork } from '@/lib/ramp/networks';
+import { useT } from '@/lib/i18n';
 
 /**
- * Which ramp backs the "Isi saldo" flow.
+ * Which ramp backs the "Add funds" flow.
  *  - "mock":   dev only. Mints MockUSDC to the connected wallet (no real money).
  *  - "guide":  step-by-step "buy USDC at an Indonesian exchange, send it to your wallet".
  *              No integration or KYB needed; the default for production until a
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) {
+  const { t, tr } = useT();
   const { address, chain } = useAccount();
   const network = getRampNetwork(chain?.id, chain?.name);
   const { rate } = useTokenRate();
@@ -70,10 +72,10 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
 
   if (RAMP_PROVIDER === 'transak') {
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Isi Saldo">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('topup.title')}>
         <div className="space-y-4 py-4 text-center">
-          <p className="text-sm text-gray-600">Fitur isi saldo otomatis belum tersedia. Segera hadir.</p>
-          <NeoButton label="Tutup" variant="ghost" onClick={handleClose} fullWidth />
+          <p className="text-sm text-gray-600">{t('topup.unavailable')}</p>
+          <NeoButton label={t('common.close')} variant="ghost" onClick={handleClose} fullWidth />
         </div>
       </NeoModal>
     );
@@ -81,13 +83,10 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
 
   if (RAMP_PROVIDER === 'guide' && !network.buyable) {
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Isi Saldo">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('topup.title')}>
         <div className="space-y-4 py-4 text-center">
-          <p className="text-sm text-gray-600">
-            Anda sedang di jaringan <strong>{network.exchangeLabel}</strong>, yang tidak bisa diisi
-            dengan uang sungguhan. Pindah ke jaringan utama di wallet Anda untuk mengisi saldo.
-          </p>
-          <NeoButton label="Tutup" variant="ghost" onClick={handleClose} fullWidth />
+          <p className="text-sm text-gray-600">{tr('topup.wrongNetwork', { network: network.exchangeLabel })}</p>
+          <NeoButton label={t('common.close')} variant="ghost" onClick={handleClose} fullWidth />
         </div>
       </NeoModal>
     );
@@ -103,37 +102,30 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
     };
 
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Isi Saldo">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('topup.title')}>
         <div className="space-y-5">
           {suggestedIdr ? (
-            <p className="text-sm">
-              Anda perlu menambah sekitar <span className="font-black">{formatToIDR(suggestedIdr)}</span>{' '}
-              dalam USDC.
-            </p>
+            <p className="text-sm font-bold">{t('topup.need', { amount: formatToIDR(suggestedIdr) })}</p>
           ) : null}
 
           <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-            <li>Buka salah satu aplikasi di bawah dan beli <strong>USDC</strong> dengan Rupiah.</li>
-            <li>
-              Kirim (withdraw) USDC itu ke alamat wallet Anda di bawah, lewat jaringan{' '}
-              <strong>{network.exchangeLabel}</strong>.
-            </li>
-            <li>Tunggu beberapa menit, lalu kembali ke sini. Saldo Anda akan terbarui.</li>
+            <li>{tr('topup.step1')}</li>
+            <li>{tr('topup.step2', { network: network.exchangeLabel })}</li>
+            <li>{tr('topup.step3')}</li>
           </ol>
 
           <div className="bg-skyellow border-2 border-black p-3 text-xs shadow-[3px_3px_0_0_#000]">
-            Pilih jaringan <strong>{network.exchangeLabel}</strong> saat menarik. Jika salah jaringan,
-            dana bisa hilang dan tidak dapat dikembalikan.
+            {tr('topup.networkWarning', { network: network.exchangeLabel })}
           </div>
 
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-widest mb-1.5">Alamat wallet Anda</p>
+            <p className="text-xs font-extrabold uppercase tracking-widest mb-1.5">{t('topup.yourAddress')}</p>
             <div className="flex gap-2 items-center">
               <code className="flex-1 break-all border-2 border-black p-2 text-xs bg-white">
-                {address ?? 'Hubungkan wallet terlebih dulu'}
+                {address ?? t('topup.connectFirst')}
               </code>
               <NeoButton
-                label={copied ? 'Tersalin' : 'Salin'}
+                label={copied ? t('topup.copied') : t('topup.copy')}
                 variant="primary"
                 onClick={copyAddress}
                 disabled={!address}
@@ -156,9 +148,9 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
           </div>
 
           <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
-            <NeoButton label="Tutup" variant="ghost" onClick={handleClose} fullWidth />
+            <NeoButton label={t('common.close')} variant="ghost" onClick={handleClose} fullWidth />
             <NeoButton
-              label="Saya sudah kirim, cek saldo"
+              label={t('topup.sentCheck')}
               variant="success"
               onClick={() => onSuccess?.()}
               fullWidth
@@ -171,29 +163,27 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
 
   if (isSuccess) {
     return (
-      <NeoModal isOpen={isOpen} onClose={handleClose} title="Saldo Bertambah">
+      <NeoModal isOpen={isOpen} onClose={handleClose} title={t('topup.successTitle')}>
         <div className="text-center py-8 space-y-4">
-          <h2 className="font-paytone text-2xl">Isi saldo berhasil</h2>
-          <p className="text-gray-600">
-            Saldo Anda bertambah <span className="font-bold">{formatToIDR(idr)}</span>.
-          </p>
-          <NeoButton label="Lanjutkan" variant="primary" onClick={handleClose} fullWidth />
+          <h2 className="font-paytone text-2xl">{t('topup.successHeading')}</h2>
+          <p className="text-gray-600">{t('topup.successBody', { amount: formatToIDR(idr) })}</p>
+          <NeoButton label={t('common.continue')} variant="primary" onClick={handleClose} fullWidth />
         </div>
       </NeoModal>
     );
   }
 
   return (
-    <NeoModal isOpen={isOpen} onClose={handleClose} title="Isi Saldo">
+    <NeoModal isOpen={isOpen} onClose={handleClose} title={t('topup.title')}>
       <div className="space-y-5">
         <div className="bg-skyellow border-2 border-black p-3 text-xs shadow-[3px_3px_0_0_#000]">
-          <p className="font-extrabold uppercase tracking-wider text-[10px] mb-1">Mode Simulasi</p>
-          <p>Tidak ada uang sungguhan yang dipakai. Saldo uji coba ditambahkan ke wallet Anda.</p>
+          <p className="font-extrabold uppercase tracking-wider text-[10px] mb-1">{t('topup.mockBanner')}</p>
+          <p>{t('topup.mockBody')}</p>
         </div>
 
         <div>
           <label className="block text-xs font-extrabold uppercase tracking-widest mb-1.5">
-            Jumlah (Rupiah)
+            {t('topup.amountLabel')}
           </label>
           <input
             type="text"
@@ -204,20 +194,16 @@ export function TopUpModal({ isOpen, onClose, suggestedIdr, onSuccess }: Props) 
             placeholder="Rp 100.000"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Setara sekitar {usdc.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
+            {t('topup.equivalent', { amount: usdc.toLocaleString('en-US', { maximumFractionDigits: 2 }) })}
           </p>
         </div>
 
-        {error && (
-          <p className="text-xs font-bold text-skred">
-            Gagal menambah saldo. Coba lagi, atau tutup dan ulangi.
-          </p>
-        )}
+        {error && <p className="text-xs font-bold text-skred">{t('topup.failed')}</p>}
 
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
-          <NeoButton label="Batal" variant="ghost" onClick={handleClose} disabled={isPending} fullWidth />
+          <NeoButton label={t('common.cancel')} variant="ghost" onClick={handleClose} disabled={isPending} fullWidth />
           <NeoButton
-            label={isPending ? 'Memproses…' : 'Bayar (simulasi)'}
+            label={isPending ? t('common.processing') : t('topup.pay')}
             variant="success"
             onClick={handlePay}
             loading={isPending}

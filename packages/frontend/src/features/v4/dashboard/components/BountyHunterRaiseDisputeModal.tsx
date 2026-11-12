@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
+import { formatUnits, isAddress } from 'viem';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { useRaiseDispute } from '@/lib/contracts/write-hooks';
+import { useRaiseDisputeWithStake, useBountyStake } from '@/lib/contracts/v4';
+import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
+import { useActiveChain } from '@/lib/chain/useActiveChain';
+import { usdcAddress } from '@/lib/chain/chains';
+import { useTokenRate } from '@/context/token-rate-context';
+import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
+import { TopUpModal } from '@/components/ramp/TopUpModal';
+import { useT } from '@/lib/i18n';
+import { friendlyErrorKey } from '@/lib/errors';
 
 interface Props {
   isOpen: boolean;
@@ -10,26 +19,52 @@ interface Props {
 }
 
 export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
+  const { t } = useT();
+  const { chainId } = useActiveChain();
+  const { rate } = useTokenRate();
+
   const [programId, setProgramId] = useState('');
   const [scholarAddress, setScholarAddress] = useState('');
   const [milestoneId, setMilestoneId] = useState('');
   const [disputeType, setDisputeType] = useState<number>(0);
   const [evidenceText, setEvidenceText] = useState('');
   const [step, setStep] = useState<'form' | 'uploading' | 'tx'>('form');
+  const [topUpOpen, setTopUpOpen] = useState(false);
 
-  const { raiseDispute, isPending, isSuccess } = useRaiseDispute();
+  const { start, phase, isPending, isSuccess, error, reset } = useRaiseDisputeWithStake();
+
+  const scholarValid = isAddress(scholarAddress);
+  const pidValid = programId !== '' && Number.isInteger(Number(programId)) && Number(programId) >= 0;
+  const { stakeRequired, potentialReward, isError: stakeUnknown } = useBountyStake(
+    scholarValid ? (scholarAddress as `0x${string}`) : undefined,
+    pidValid ? BigInt(programId) : undefined,
+  );
+
+  // The deposit is always USDC. Check the wallet can cover it before starting.
+  const usdcToken = usdcAddress(chainId);
+  const stakeUsdc = formatUnits(stakeRequired, 6);
+  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(usdcToken, stakeUsdc);
+
+  const toIdr = (units: bigint) => (rate ? formatToIDR(usdcToIdr(Number(formatUnits(units, 6)), rate)) : `${formatUnits(units, 6)} USDC`);
+  const stakeKnown = stakeRequired > 0n && !stakeUnknown;
 
   useEffect(() => {
     if (isSuccess) {
-      onClose();
-      setStep('form');
-      setEvidenceText('');
+      handleClose();
     }
-  }, [isSuccess, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess]);
+
+  const handleClose = () => {
+    setStep('form');
+    setEvidenceText('');
+    reset();
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!programId || !scholarAddress || !evidenceText) return;
+    if (!pidValid || !scholarValid || !evidenceText || !hasEnough) return;
     setStep('uploading');
 
     try {
@@ -39,12 +74,15 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
       const evidenceCID = res?.metaCID || `QmEvidence-${Date.now()}`;
 
       setStep('tx');
-      raiseDispute(
-        BigInt(programId),
-        scholarAddress as `0x${string}`,
-        BigInt(milestoneId || '0'),
-        disputeType,
-        evidenceCID
+      start(
+        [
+          BigInt(programId),
+          scholarAddress as `0x${string}`,
+          BigInt(milestoneId || '0'),
+          disputeType,
+          evidenceCID,
+        ],
+        stakeRequired,
       );
     } catch (err) {
       console.error(err);
@@ -52,54 +90,65 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
     }
   };
 
-  const handleClose = () => {
-    setStep('form');
-    onClose();
-  };
-
   return (
-    <NeoModal isOpen={isOpen} onClose={handleClose} title="Raise Dispute">
+    <NeoModal isOpen={isOpen} onClose={handleClose} title={t('dispute.title')}>
       <div className="space-y-4">
         {step === 'uploading' && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
-            <p className="font-bold">Uploading evidence to IPFS</p>
+            <p className="font-bold">{t('dispute.uploading')}</p>
           </div>
         )}
 
         {step === 'tx' && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-            <p className="font-bold">Confirm Transaction in Wallet</p>
-            <p className="text-sm text-gray-600 mt-1">Sign to raise your dispute and stake USDC.</p>
+            <p className="font-bold">
+              {phase === 'approving' ? t('dispute.approving') : t('dispute.confirming')}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              {phase === 'approving' ? t('dispute.approvingBody') : t('dispute.confirmingBody')}
+            </p>
+            {error && (
+              <div className="bg-skred-light p-3 mt-4 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
+                {t(friendlyErrorKey(error))}
+              </div>
+            )}
           </div>
         )}
 
         {step === 'form' && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-skyellow-light border-2 border-black rounded p-3 text-sm">
-              <p className="font-bold">Bounty Hunting Rules</p>
+              <p className="font-bold">{t('dispute.rulesTitle')}</p>
               <ul className="list-disc ml-5 mt-1 text-gray-700 text-xs text-left">
-                <li>You must stake 10% of the program's total target fund.</li>
-                <li>If your dispute is valid, the student is slashed and you earn a portion of the penalty plus your stake back.</li>
-                <li>If rejected, you lose your stake.</li>
+                <li>
+                  {stakeKnown
+                    ? t('dispute.ruleDeposit', { amount: toIdr(stakeRequired) })
+                    : t('dispute.ruleDepositPending')}
+                </li>
+                <li>
+                  {t('dispute.ruleReward', { amount: stakeKnown ? toIdr(potentialReward) : '—' })}
+                </li>
+                <li>{t('dispute.ruleLost')}</li>
+                <li>{t('dispute.ruleDouble')}</li>
               </ul>
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">Target Program ID <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold mb-1">{t('dispute.programId')} <span className="text-red-500">*</span></label>
               <input
                 type="number"
                 required
                 value={programId}
                 onChange={(e) => setProgramId(e.target.value)}
                 className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple"
-                placeholder="e.g. 1"
+                placeholder="1"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-bold mb-1">Target Scholar Wallet <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold mb-1">{t('dispute.scholar')} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
@@ -111,53 +160,75 @@ export function BountyHunterRaiseDisputeModal({ isOpen, onClose }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">Dispute Severity & Type <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold mb-1">{t('dispute.type')} <span className="text-red-500">*</span></label>
               <select
                 value={disputeType}
                 onChange={(e) => setDisputeType(Number(e.target.value))}
                 className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple bg-white"
               >
-                <option value={0}>Light Infraction (e.g., missed deadlines)</option>
-                <option value={1}>Milestone Fraud (fake proof)</option>
-                <option value={2}>Heavy Fraud (stolen funds/identity)</option>
+                <option value={0}>{t('dispute.typeLight')}</option>
+                <option value={1}>{t('dispute.typeFraud')}</option>
+                <option value={2}>{t('dispute.typeHeavy')}</option>
               </select>
             </div>
 
             {disputeType === 1 && (
               <div>
-                <label className="block text-sm font-bold mb-1">Milestone ID to Dispute <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-bold mb-1">{t('dispute.milestoneId')} <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   required
                   value={milestoneId}
                   onChange={(e) => setMilestoneId(e.target.value)}
                   className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple"
-                  placeholder="e.g. 5"
+                  placeholder="5"
                 />
               </div>
             )}
 
             <div>
               <label className="block text-sm font-bold mb-1">
-                Evidence Links / Explanation <span className="text-red-500">*</span>
+                {t('dispute.evidence')} <span className="text-red-500">*</span>
               </label>
               <textarea
                 required
                 rows={4}
                 className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple resize-none"
-                placeholder="Provide clear evidence against the target scholar..."
+                placeholder={t('dispute.evidencePlaceholder')}
                 value={evidenceText}
                 onChange={(e) => setEvidenceText(e.target.value)}
               />
             </div>
 
+            {stakeKnown && !hasEnough && (
+              <div className="text-xs font-bold text-skred">
+                {t('dispute.shortfall', { amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${stakeUsdc} USDC` })}{' '}
+                <button type="button" className="underline" onClick={() => setTopUpOpen(true)}>
+                  {t('donate.addFunds')}
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2 border-t border-gray-200">
-              <NeoButton label="Cancel" variant="ghost" fullWidth onClick={handleClose} disabled={isPending} type="button" />
-              <NeoButton label={isPending ? 'Raising…' : 'Stake & Dispute'} variant="danger" fullWidth loading={isPending} disabled={isPending || !programId || !scholarAddress || !evidenceText} type="submit" />
+              <NeoButton label={t('common.cancel')} variant="ghost" fullWidth onClick={handleClose} disabled={isPending} type="button" />
+              <NeoButton
+                label={isPending ? t('dispute.reporting') : t('dispute.submit')}
+                variant="danger"
+                fullWidth
+                loading={isPending}
+                disabled={isPending || !pidValid || !scholarValid || !evidenceText || !hasEnough}
+                type="submit"
+              />
             </div>
           </form>
         )}
       </div>
+      <TopUpModal
+        isOpen={topUpOpen}
+        onClose={() => setTopUpOpen(false)}
+        suggestedIdr={shortfallIdr}
+        onSuccess={() => refetchBalance()}
+      />
     </NeoModal>
   );
 }

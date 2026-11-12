@@ -6,6 +6,7 @@ import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { useAddCommitteeMember, useRemoveCommitteeMember } from '@/lib/contracts/write-hooks';
 import { committeeGovernanceAbi } from '@/constants/contractsV4';
 import { useV4Addresses } from '@/lib/chain/useActiveChain';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) {
+  const { t } = useT();
   const v4Addresses = useV4Addresses();
   const [newMember, setNewMember] = useState('');
 
@@ -43,16 +45,16 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
   if (added) refetch();
 
   return (
-    <NeoModal isOpen={isOpen} onClose={onClose} title={`Manage Committee — Program #${programId}`}>
+    <NeoModal isOpen={isOpen} onClose={onClose} title={t('committee.title', { id: programId })}>
       <div className="space-y-5">
         {/* Current Members */}
         <div>
           <h3 className="font-bold text-sm mb-3 uppercase tracking-wide text-gray-500">
-            Current Members ({members.length})
+            {t('committee.members', { n: members.length })}
           </h3>
           {members.length === 0 ? (
             <div className="border-2 border-dashed border-gray-400 p-6 text-center text-gray-500 text-sm">
-              No committee members yet. Add the first member below.
+              {t('committee.empty')}
             </div>
           ) : (
             <ul className="space-y-2">
@@ -66,7 +68,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
                     <span className="font-mono text-sm">{shortenAddress(m)}</span>
                   </div>
                   <NeoButton
-                    label="Remove"
+                    label={t('committee.remove')}
                     variant="danger"
                     size="sm"
                     loading={isRemoving}
@@ -81,20 +83,20 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
 
         {/* Add Member */}
         <div className="bg-skpurple-light border-2 border-black p-4 space-y-3 shadow-[3px_3px_0_0_#000]">
-          <h3 className="font-bold text-sm">Add Committee Member</h3>
+          <h3 className="font-bold text-sm">{t('committee.add')}</h3>
           <p className="text-xs text-gray-600">
-            Maximum 15 members allowed. Members cannot be the program initiator.
+            {t('committee.addHint')}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="0x... wallet address"
+              placeholder={t('committee.placeholder')}
               className="flex-1 font-data text-sm"
               value={newMember}
               onChange={(e) => setNewMember(e.target.value)}
             />
             <NeoButton
-              label={isAdding ? 'Adding…' : 'Add'}
+              label={isAdding ? t('committee.adding') : t('committee.addBtn')}
               variant="primary"
               loading={isAdding}
               disabled={isAdding || !newMember || newMember.length !== 42}
@@ -104,7 +106,7 @@ export function CommitteeManagementModal({ isOpen, onClose, programId }: Props) 
         </div>
 
         <div className="pt-2 border-t-2 border-gray-100">
-          <NeoButton label="Done" variant="ghost" onClick={onClose} fullWidth />
+          <NeoButton label={t('committee.done')} variant="ghost" onClick={onClose} fullWidth />
         </div>
       </div>
     </NeoModal>

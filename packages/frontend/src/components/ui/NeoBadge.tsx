@@ -1,4 +1,6 @@
 import type { ProgramStatus, ApplicationStatus, ScholarStatus, MilestoneStatus, DisputeStatus } from "@/lib/api/types";
+import { useT } from "@/lib/i18n";
+import { statusLabel } from "@/lib/i18n/status";
 
 type StatusType = ProgramStatus | ApplicationStatus | ScholarStatus | MilestoneStatus | DisputeStatus;
 
@@ -38,7 +40,8 @@ export function NeoBadge({
   className?: string;
 }) {
   const config = configMap[status] ?? { bg: "bg-gray-200", text: "text-gray-800" };
-  const label = config.label ?? status.replace(/_/g, " ");
+  const { t } = useT();
+  const label = statusLabel(t, status);
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 border-2 border-black text-[10px] font-extrabold uppercase tracking-widest leading-none ${config.bg} ${config.text} ${className}`}>

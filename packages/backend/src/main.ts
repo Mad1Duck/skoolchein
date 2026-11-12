@@ -1,11 +1,11 @@
 import "reflect-metadata";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
 import { HonoRouteBuilder, OpenAPIGenerator, HttpException } from "hono-forge";
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 import { chainMiddleware } from "@/config/chain-context";
+import { corsMiddleware } from "@/config/cors";
 import {
   HealthController,
   IpfsController,
@@ -38,8 +38,7 @@ HonoRouteBuilder.configure({
 
 const app = new Hono();
 app.use(honoLogger());
-app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization"], credentials: false }));
-app.options("*", cors());
+app.use("*", corsMiddleware);
 
 // Chain-scope every Ponder-backed route. /v4/learning is backend-owned data
 // (HackQuest/Udemy progress) and is not per-chain.

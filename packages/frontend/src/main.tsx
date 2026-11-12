@@ -13,6 +13,7 @@ import { queryClientConfig } from './constants/queryclient.config';
 import { darkTheme, XellarKitProvider } from '@xellar/kit';
 import { TokenRateProvider } from './components/providers/TokenProvider';
 import { ChainSync } from './components/ChainSync';
+import { I18nProvider } from './lib/i18n';
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -30,6 +31,7 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
+      <I18nProvider>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClientConfig}>
           <XellarKitProvider theme={darkTheme}>
@@ -41,6 +43,7 @@ if (!rootElement.innerHTML) {
           </XellarKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
+    </I18nProvider>
     </StrictMode>,
   );
 }

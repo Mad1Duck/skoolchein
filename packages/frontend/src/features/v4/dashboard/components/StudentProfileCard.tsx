@@ -4,6 +4,7 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program, Scholar } from "@/lib/api/types";
 import { formatTokenCompact } from "@/lib/contracts/v4/token";
 import { fetchProgramMeta } from "@/lib/ipfs";
+import { useT } from '@/lib/i18n';
 
 interface StudentProfileCardProps {
   scholar: Scholar | undefined;
@@ -13,6 +14,7 @@ interface StudentProfileCardProps {
 }
 
 export function StudentProfileCard({ scholar, program, isLoading, onNext }: StudentProfileCardProps) {
+  const { t } = useT();
   const { data: meta } = useQuery({
     queryKey: ["ipfs-meta", program?.metadataCID],
     queryFn: () => fetchProgramMeta(program!.metadataCID!),
@@ -37,23 +39,23 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
         <div className="flex justify-between items-start">
           <div className="space-y-2">
             <div className="bg-skpink border border-black w-max px-2 py-0.5 text-black rounded-full text-xs font-bold">
-              Student
+              {t('dash.student')}
             </div>
-            <h1 className="font-paytone text-2xl capitalize">Hi, {name}!</h1>
+            <h1 className="font-paytone text-2xl capitalize">{t('dash.hi', { name })}</h1>
           </div>
           <NeoButton
             onClick={onNext}
             variant="secondary"
             size="sm"
             className="!p-2 !rounded-2xl !w-10 !h-10"
-            aria-label="Next scholarship"
+            aria-label={t('dash.nextScholarship')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </NeoButton>
         </div>
-        <p className="text-sm font-medium">Let’s get you one step closer to your dreams.</p>
+        <p className="text-sm font-medium">{t('dash.dreams')}</p>
 
         <img
           src={profileImage}
@@ -62,7 +64,7 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
         />
 
         <div className="space-y-3">
-          <p className="text-sm font-medium">Active Scholarship:</p>
+          <p className="text-sm font-medium">{t('dash.activeScholarship')}</p>
           <div>
             <h2 className="text-xl font-bold">{programTitle}</h2>
           </div>
@@ -72,7 +74,7 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
               {program?.initiator ? `${program.initiator.slice(0, 7)}...${program.initiator.slice(-4)}` : "0x0"}
             </h3>
           </div>
-          <p className="text-sm font-medium">Total Fund Received:</p>
+          <p className="text-sm font-medium">{t('dash.totalReceived')}</p>
           <div className="flex items-center gap-2">
             <img
               className="size-4"
