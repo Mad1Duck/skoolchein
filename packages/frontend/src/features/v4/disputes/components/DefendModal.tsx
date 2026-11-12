@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { uploadToIPFS } from "@/lib/ipfs";
 import { useDefendDispute } from "@/lib/contracts/write-hooks";
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { useT } from "@/lib/i18n";
-import { friendlyErrorKey } from "@/lib/errors";
 import type { Dispute } from "@/lib/api/types";
 
 export function DefendModal({
@@ -85,11 +85,7 @@ export function DefendModal({
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
             <p className="font-bold">{t("defend.confirming")}</p>
             <p className="text-sm text-gray-600">{t("defend.confirmingBody")}</p>
-            {error && (
-              <div className="bg-skred-light p-3 mt-4 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
-                {t(friendlyErrorKey(error))}
-              </div>
-            )}
+            {error && <ErrorNotice error={error} className="mt-4" />}
           </div>
         )}
 

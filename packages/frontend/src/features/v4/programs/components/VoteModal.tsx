@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useVoteForCandidate } from '@/lib/contracts/v4';
 import { useReputation } from '@/lib/api/hooks';
 import { useAccount } from 'wagmi';
 import { useT } from '@/lib/i18n';
-import { friendlyErrorKey } from '@/lib/errors';
 
 interface Props {
   isOpen: boolean;
@@ -142,11 +142,7 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
             <div className="w-10 h-10 border-2 border-black bg-skblue mx-auto animate-pulse mb-2" />
             <p className="font-bold text-lg">{t('vote.submitting')}</p>
             <p className="text-sm text-gray-600">{t('vote.submittingBody', { name })}</p>
-            {error && (
-              <div className="bg-skred-light p-3 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
-                {t(friendlyErrorKey(error))}
-              </div>
-            )}
+            {error && <ErrorNotice error={error} />}
           </div>
         )}
 

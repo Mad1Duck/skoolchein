@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useConfidenceStakeFlow } from '@/lib/contracts/v4';
@@ -9,7 +10,6 @@ import { getTokenMeta, formatTokenAmount } from '@/lib/contracts/v4/token';
 import { formatToIDR } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
-import { friendlyErrorKey } from '@/lib/errors';
 
 interface Props {
   isOpen: boolean;
@@ -126,11 +126,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
                 : t('stake.confirmingBody')}
             </p>
             <p className="text-xs text-gray-500">{t('stake.scholar', { name })}</p>
-            {error && (
-              <div className="bg-skred-light p-3 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
-                {t(friendlyErrorKey(error))}
-              </div>
-            )}
+            {error && <ErrorNotice error={error} />}
           </div>
         )}
 

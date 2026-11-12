@@ -42,6 +42,10 @@ export const id: Record<TranslationKey, string> = {
   // errors
   'error.rejected': 'Tidak apa-apa — tidak ada yang ditagih.',
   'error.insufficient': 'Saldo Anda kurang untuk ini. Isi saldo lalu coba lagi.',
+  'error.title': 'Belum bisa diselesaikan',
+  'error.rejectedTitle': 'Dibatalkan',
+  'error.howToFix': 'Cara memperbaiki:',
+  'error.technical': 'Detail teknis',
   'error.generic': 'Terjadi kesalahan. Coba lagi sebentar lagi.',
   'error.allowance': 'Izin transfer dana Anda belum cukup. Konfirmasi izin dulu, lalu coba lagi.',
   'error.tokenNotSupported': 'Mata uang ini belum diaktifkan untuk program. Pilih mata uang lain.',

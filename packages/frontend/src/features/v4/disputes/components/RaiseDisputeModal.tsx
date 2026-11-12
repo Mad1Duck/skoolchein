@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { formatUnits } from "viem";
 import { uploadToIPFS } from "@/lib/ipfs";
 import { useRaiseDisputeWithStake, useBountyStake } from "@/lib/contracts/v4";
@@ -11,7 +12,6 @@ import { TopUpModal } from "@/components/ramp/TopUpModal";
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { useT } from "@/lib/i18n";
-import { friendlyErrorKey } from "@/lib/errors";
 import type { Milestone } from "@/lib/api/types";
 
 export function RaiseDisputeModal({
@@ -130,11 +130,7 @@ export function RaiseDisputeModal({
             <p className="text-sm text-gray-600">
               {phase === "approving" ? t("dispute.approvingBody") : t("dispute.confirmingBody")}
             </p>
-            {error && (
-              <div className="bg-skred-light p-3 mt-4 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
-                {t(friendlyErrorKey(error))}
-              </div>
-            )}
+            {error && <ErrorNotice error={error} className="mt-4" />}
           </div>
         )}
 

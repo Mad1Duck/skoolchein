@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { uploadToIPFS } from '@/lib/ipfs';
 import { useCreateProgram, useApproveUSDC } from '@/lib/contracts/write-hooks';
 import { NeoModal } from '@/components/ui/NeoModal';
@@ -12,7 +13,6 @@ import { useTokenRate } from '@/context/token-rate-context';
 import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
-import { friendlyErrorKey } from '@/lib/errors';
 import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 
 interface Props {
@@ -498,9 +498,10 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
 
         {/* Wallet/contract failures (e.g. missing USDC allowance or balance) used to be silent. */}
         {(step === 'approve' || step === 'create') && (step === 'approve' ? approveError : createError) && (
-          <div className="bg-skred-light border-2 border-black p-3 text-xs text-skred shadow-[2px_2px_0_0_#000]">
-            {t(friendlyErrorKey(step === 'approve' ? approveError : createError))}
-          </div>
+          <ErrorNotice
+            error={step === 'approve' ? approveError : createError}
+            ctx={{ min: limits.minCandidates, max: limits.maxCandidates, maxOptional: limits.maxOptional, maxCandidates: formData.maxCandidates }}
+          />
         )}
 
         {/* Footer */}

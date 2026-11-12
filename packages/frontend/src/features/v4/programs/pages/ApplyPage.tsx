@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
@@ -11,7 +12,6 @@ import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
 import { statusLabel } from '@/lib/i18n/status';
-import { friendlyErrorKey } from '@/lib/errors';
 import { ApplyStepper } from '../components/apply/ApplyStepper';
 import { ProgramSummary } from '../components/apply/ProgramSummary';
 
@@ -553,7 +553,7 @@ export function ApplyPage() {
                     {(applyError || uploadFailed) && (
                       <div className="bg-skred-light border-2 border-black p-3 text-sm shadow-[2px_2px_0_0_#000]">
                         <p className="font-bold">{t('apply.err.title')}</p>
-                        <p className="text-xs mt-1">{applyError ? t(friendlyErrorKey(applyError)) : t('error.generic')}</p>
+                        {applyError ? <ErrorNotice error={applyError} className="mt-2" /> : <p className="text-xs mt-1">{t('error.generic')}</p>}
                       </div>
                     )}
 
