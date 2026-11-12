@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { Navigate } from "@tanstack/react-router";
 import { useAdminOverview, usePrograms, useApplicants, useScholars, type Program } from "@/lib/api";
-import { v4Addresses, scholarshipCoreAbi } from "@/constants/contractsV4";
+import { scholarshipCoreAbi } from "@/constants/contractsV4";
+import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
 import { parseAbi } from "viem";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
@@ -13,8 +14,11 @@ import { formatUnits } from "viem";
 import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 
 export function AdminDashboardPage() {
+  const v4Addresses = useV4Addresses();
+  const { chainId } = useActiveChain();
   const { address } = useAccount();
   const { data: adminAddress, isLoading: isContractLoading } = useReadContract({
+    chainId,
     address: v4Addresses.ScholarshipCore,
     abi: scholarshipCoreAbi,
     functionName: "admin",
@@ -31,6 +35,7 @@ export function AdminDashboardPage() {
   // sit as the contract's ETH balance. Add a separate native balance read if
   // an all-token total is needed.
   const { data: treasuryBalance } = useReadContract({
+    chainId,
     address: v4Addresses.MockUSDC,
     abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
     functionName: "balanceOf",
@@ -44,6 +49,7 @@ export function AdminDashboardPage() {
   // because that's what it was pre-multi-token. Needs a per-token mapping
   // in the contract to be correct.
   const { data: protocolFee } = useReadContract({
+    chainId,
     address: v4Addresses.ScholarshipTreasury,
     abi: parseAbi(["function protocolFeeAccumulated() view returns (uint256)"]),
     functionName: "protocolFeeAccumulated",

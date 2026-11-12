@@ -4,8 +4,8 @@ import { useCreateProgram, useApproveUSDC } from '@/lib/contracts/write-hooks';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import type { ProgramMetadata } from '@/lib/api/types';
-import { v4Addresses } from '@/constants/contractsV4';
-import { NATIVE_TOKEN, SUPPORTED_TOKENS, getTokenMeta } from '@/lib/contracts/v4/token';
+import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
+import { NATIVE_TOKEN, getSupportedTokens, getTokenMeta } from '@/lib/contracts/v4/token';
 import { needsApproval } from '@/lib/contracts/write-hooks';
 
 interface Props {
@@ -18,6 +18,8 @@ type Step = 'form' | 'upload' | 'approve' | 'create' | 'done';
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
 
 export function CreateProgramModal({ isOpen, onClose }: Props) {
+  const v4Addresses = useV4Addresses();
+  const { chainId } = useActiveChain();
   const [step, setStep] = useState<Step>('form');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -200,7 +202,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             <div>
               <label className="block text-xs font-bold mb-1">Payment Token</label>
               <div className="flex gap-2">
-                {SUPPORTED_TOKENS.map((t) => (
+                {getSupportedTokens(chainId).map((t) => (
                   <button
                     key={t.address}
                     type="button"

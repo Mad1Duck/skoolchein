@@ -12,6 +12,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientConfig } from './constants/queryclient.config';
 import { darkTheme, XellarKitProvider } from '@xellar/kit';
 import { TokenRateProvider } from './components/providers/TokenProvider';
+import { ChainSync } from './components/ChainSync';
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -32,6 +33,7 @@ if (!rootElement.innerHTML) {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClientConfig}>
           <XellarKitProvider theme={darkTheme}>
+            <ChainSync />
             <TokenRateProvider>
               <RouterProvider router={router} />
             </TokenRateProvider>

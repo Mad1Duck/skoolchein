@@ -1,4 +1,5 @@
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { getActiveChainId } from "@/lib/chain/chains";
 
 /**
  * Shared helper for contract write transactions with loading and success states.
@@ -14,9 +15,14 @@ export function useTxHook() {
     pollingInterval: 1_000,
   });
 
+  // Pin every write to the active chain: wagmi asks the wallet to switch if it is
+  // on another one, instead of sending the tx to whatever chain the wallet is on.
+  const writeOnActiveChain = ((variables: any, options?: any) =>
+    writeContract({ chainId: getActiveChainId(), ...variables }, options)) as typeof writeContract;
+
   return { 
     hash, 
-    writeContract, 
+    writeContract: writeOnActiveChain, 
     isPending: isPending || isWaiting, 
     isSuccess, 
     error, 

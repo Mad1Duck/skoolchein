@@ -7,6 +7,9 @@
  * a chain event handler (see `v4_external_learning`, which lives in
  * packages/backend's own Drizzle schema instead).
  *
+ * MULTICHAIN: every table carries `chainId` and it is part of every primary key,
+ * because on-chain ids (pid, blockchainId, ...) are only unique within one chain.
+ *
  * Primary keys use natural on-chain identifiers instead of random UUIDs
  * (Ponder's onchainTable doesn't auto-generate server-side UUIDs, and the
  * previous Drizzle schema was reusing a program's UUID as the PK for
@@ -34,9 +37,12 @@ export const applicationStatusEnum = onchainEnum("application_status", ["PENDING
 
 /** Tracks the last indexed block per event for reorg safety and resume. */
 export const indexedBlocks = onchainTable("indexed_blocks", (t) => ({
-  blockNumber: t.integer("block_number").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  blockNumber: t.integer("block_number").notNull(),
   eventName: t.text("event_name").default(""),
   timestamp: t.timestamp("timestamp", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.blockNumber] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -45,7 +51,8 @@ export const indexedBlocks = onchainTable("indexed_blocks", (t) => ({
 
 /** Full v4 program record — created on ProgramCreated, updated on ProgramStatusChanged */
 export const v4Programs = onchainTable("v4_programs", (t) => ({
-  pid: t.integer("pid").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  pid: t.integer("pid").notNull(),
   initiator: t.text("initiator").notNull(),
   metadataCID: t.text("metadata_cid").default(""),
   // Payment token backing this program. The zero address is the chain's
@@ -74,6 +81,8 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
   resolveProgress: t.integer("resolve_progress").default(0),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.pid] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -82,6 +91,7 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
 
 /** Applicant row — PK (pid, wallet). Updated on ScoreSubmitted, StudentShortlisted, StudentScreenedOut */
 export const v4Applicants = onchainTable("v4_applicants", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   pid: t.integer("pid").notNull(),
   wallet: t.text("wallet").notNull(),
   status: applicationStatusEnum("status").default("PENDING_REVIEW"),
@@ -94,11 +104,12 @@ export const v4Applicants = onchainTable("v4_applicants", (t) => ({
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.pid, table.wallet] }),
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.wallet] }),
 }));
 
 /** Active scholar — PK (pid, wallet). Created on ScholarSelected, updated on milestones + fraud */
 export const v4Scholars = onchainTable("v4_scholars", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   pid: t.integer("pid").notNull(),
   wallet: t.text("wallet").notNull(),
   status: studentStatusEnum("status").default("ACTIVE"),
@@ -110,7 +121,7 @@ export const v4Scholars = onchainTable("v4_scholars", (t) => ({
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.pid, table.wallet] }),
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.wallet] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -119,7 +130,8 @@ export const v4Scholars = onchainTable("v4_scholars", (t) => ({
 
 /** Milestone row — PK blockchainId (globally unique on-chain milestone id) */
 export const v4Milestones = onchainTable("v4_milestones", (t) => ({
-  blockchainId: t.integer("blockchain_id").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  blockchainId: t.integer("blockchain_id").notNull(),
   pid: t.integer("pid"),
   // Denormalized from the parent program so an amount always travels with
   // its denomination (native 18 decimals vs USDC 6). Zero address = native.
@@ -139,6 +151,8 @@ export const v4Milestones = onchainTable("v4_milestones", (t) => ({
   externalId: t.text("external_id"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.blockchainId] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -147,17 +161,19 @@ export const v4Milestones = onchainTable("v4_milestones", (t) => ({
 
 /** Donor vote — PK (pid, voterAddress). Created on VoteCast */
 export const v4Votes = onchainTable("v4_votes", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   pid: t.integer("pid").notNull(),
   voterAddress: t.text("voter_address").notNull(),
   candidateAddress: t.text("candidate_address").notNull(),
   votingWeight: t.numeric("voting_weight").default("0"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.pid, table.voterAddress] }),
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.voterAddress] }),
 }));
 
 /** Optional confidence stake — PK (pid, voterAddress). Created on ConfidenceStaked, resolved on ConfidenceStakeResolved */
 export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   pid: t.integer("pid").notNull(),
   // Denormalized from the parent program — see v4Milestones.token.
   token: t.text("token").default(""),
@@ -171,7 +187,7 @@ export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.pid, table.voterAddress] }),
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.voterAddress] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -180,7 +196,8 @@ export const v4ConfidenceStakes = onchainTable("v4_confidence_stakes", (t) => ({
 
 /** Bounty hunter dispute — PK blockchainId. Created on DisputeRaised, updated through resolution */
 export const v4Disputes = onchainTable("v4_disputes", (t) => ({
-  blockchainId: t.integer("blockchain_id").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  blockchainId: t.integer("blockchain_id").notNull(),
   pid: t.integer("pid"),
   // Denormalized from the parent program — see v4Milestones.token.
   token: t.text("token").default(""),
@@ -201,6 +218,8 @@ export const v4Disputes = onchainTable("v4_disputes", (t) => ({
   griefingStakeOriginal: t.numeric("griefing_stake_original").default("0"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.blockchainId] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -209,7 +228,8 @@ export const v4Disputes = onchainTable("v4_disputes", (t) => ({
 
 /** REP balance per address — PK address. Upserted on ReputationMinted / ReputationBurned */
 export const v4Reputation = onchainTable("v4_reputation", (t) => ({
-  address: t.text("address").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  address: t.text("address").notNull(),
   repBalance: t.numeric("rep_balance").default("0"),
   totalMinted: t.numeric("total_minted").default("0"),
   totalBurned: t.numeric("total_burned").default("0"),
@@ -217,26 +237,34 @@ export const v4Reputation = onchainTable("v4_reputation", (t) => ({
   votingLockedUntil: t.timestamp("voting_locked_until", { withTimezone: true }),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.address] }),
 }));
 
 /** Tracks manual withdrawals of slashed funds from Treasury — PK transactionHash */
 export const v4TreasuryWithdrawals = onchainTable("v4_treasury_withdrawals", (t) => ({
-  transactionHash: t.text("tx_hash").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  transactionHash: t.text("tx_hash").notNull(),
   // Which token was withdrawn — zero address = native currency.
   token: t.text("token").default(""),
   recipient: t.text("recipient").notNull(),
   amount: t.numeric("amount").default("0"),
   timestamp: t.timestamp("timestamp", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.transactionHash] }),
 }));
 
 /** Tracks Fraud NFTs (Tainted credentials) issued to blacklisted students — PK transactionHash */
 export const v4FraudNfts = onchainTable("v4_fraud_nfts", (t) => ({
-  transactionHash: t.text("tx_hash").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  transactionHash: t.text("tx_hash").notNull(),
   scholarWallet: t.text("scholar_wallet").notNull(),
   pid: t.integer("pid").notNull(),
   tokenId: t.integer("token_id"),
   metadataUri: t.text("metadata_uri").default(""),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.transactionHash] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -245,7 +273,8 @@ export const v4FraudNfts = onchainTable("v4_fraud_nfts", (t) => ({
 
 /** Individual donation record — PK transactionHash. Created on Treasury:DonationRecorded */
 export const v4Donations = onchainTable("v4_donations", (t) => ({
-  transactionHash: t.text("tx_hash").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  transactionHash: t.text("tx_hash").notNull(),
   pid: t.integer("pid").notNull(),
   // Denormalized from the parent program — see v4Milestones.token.
   token: t.text("token").default(""),
@@ -253,6 +282,8 @@ export const v4Donations = onchainTable("v4_donations", (t) => ({
   grossAmount: t.numeric("gross_amount").default("0"),
   netAmount: t.numeric("net_amount").default("0"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.transactionHash] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -261,33 +292,36 @@ export const v4Donations = onchainTable("v4_donations", (t) => ({
 
 /** Committee member record — PK (pid, memberAddress). Created on CommitteeMemberAdded, soft-deleted on Removed */
 export const v4CommitteeMembers = onchainTable("v4_committee_members", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   pid: t.integer("pid").notNull(),
   memberAddress: t.text("member_address").notNull(),
   isActive: t.boolean("is_active").default(true),
   addedAt: t.timestamp("added_at", { withTimezone: true }).$defaultFn(() => new Date()),
   removedAt: t.timestamp("removed_at", { withTimezone: true }),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.pid, table.memberAddress] }),
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.memberAddress] }),
 }));
 
 /** Committee dispute vote — PK (disputeId, memberAddress) */
 export const v4CommitteeDisputeVotes = onchainTable("v4_committee_dispute_votes", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   disputeId: t.integer("dispute_id").notNull(),
   memberAddress: t.text("member_address").notNull(),
   upholdDispute: t.boolean("uphold_dispute").notNull(),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.disputeId, table.memberAddress] }),
+  pk: primaryKey({ columns: [table.chainId, table.disputeId, table.memberAddress] }),
 }));
 
 /** Committee milestone vote — PK (milestoneId, memberAddress) */
 export const v4CommitteeMilestoneVotes = onchainTable("v4_committee_milestone_votes", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   milestoneId: t.integer("milestone_id").notNull(),
   memberAddress: t.text("member_address").notNull(),
   approve: t.boolean("approve").notNull(),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
-  pk: primaryKey({ columns: [table.milestoneId, table.memberAddress] }),
+  pk: primaryKey({ columns: [table.chainId, table.milestoneId, table.memberAddress] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -296,7 +330,8 @@ export const v4CommitteeMilestoneVotes = onchainTable("v4_committee_milestone_vo
 
 /** BH profile — PK address. Tracks cooldown, wins/losses, flagging */
 export const v4BountyHunters = onchainTable("v4_bounty_hunters", (t) => ({
-  address: t.text("address").primaryKey(),
+  chainId: t.integer("chain_id").notNull(),
+  address: t.text("address").notNull(),
   totalDisputes: t.integer("total_disputes").default(0),
   totalWins: t.integer("total_wins").default(0),
   totalLosses: t.integer("total_losses").default(0),
@@ -305,6 +340,8 @@ export const v4BountyHunters = onchainTable("v4_bounty_hunters", (t) => ({
   cooldownUntil: t.timestamp("cooldown_until", { withTimezone: true }),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.address] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -313,35 +350,35 @@ export const v4BountyHunters = onchainTable("v4_bounty_hunters", (t) => ({
 // ══════════════════════════════════════════════════════════════════════════════
 
 export const v4ApplicantRelations = relations(v4Applicants, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Applicants.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Applicants.chainId, v4Applicants.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4ScholarRelations = relations(v4Scholars, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Scholars.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Scholars.chainId, v4Scholars.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4MilestoneRelations = relations(v4Milestones, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Milestones.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Milestones.chainId, v4Milestones.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4VoteRelations = relations(v4Votes, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Votes.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Votes.chainId, v4Votes.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4DisputeRelations = relations(v4Disputes, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Disputes.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Disputes.chainId, v4Disputes.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4ConfidenceStakeRelations = relations(v4ConfidenceStakes, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4ConfidenceStakes.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4ConfidenceStakes.chainId, v4ConfidenceStakes.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4DonationRelations = relations(v4Donations, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4Donations.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4Donations.chainId, v4Donations.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 export const v4CommitteeMemberRelations = relations(v4CommitteeMembers, ({ one }) => ({
-  program: one(v4Programs, { fields: [v4CommitteeMembers.pid], references: [v4Programs.pid] }),
+  program: one(v4Programs, { fields: [v4CommitteeMembers.chainId, v4CommitteeMembers.pid], references: [v4Programs.chainId, v4Programs.pid] }),
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -360,8 +397,9 @@ export const v4CommitteeMemberRelations = relations(v4CommitteeMembers, ({ one }
  * value to derive a transfer amount.
  */
 export const v4TokenRegistry = onchainTable("v4_token_registry", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
   // Zero address = the chain's native currency.
-  token: t.text("token").primaryKey(),
+  token: t.text("token").notNull(),
   symbol: t.text("symbol").default(""),
   // The token's OWN decimals (native 18, USDC 6) — not the 8-decimal USD scale.
   decimals: t.integer("decimals").default(0),
@@ -373,4 +411,6 @@ export const v4TokenRegistry = onchainTable("v4_token_registry", (t) => ({
   isRegistered: t.boolean("is_registered").default(true),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.token] }),
 }));

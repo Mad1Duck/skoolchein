@@ -1,5 +1,6 @@
 import { defaultConfig } from "@xellar/kit";
-import { lisk, liskSepolia } from "viem/chains";
+import { base, lisk, liskSepolia } from "viem/chains";
+import { DEFAULT_CHAIN_ID } from "@/lib/chain/chains";
 import { defineChain } from "viem";
 
 const ganacheLocal = defineChain({
@@ -61,5 +62,10 @@ export const wagmiConfig = defaultConfig({
   xellarAppId: "cc1ec5df-f51b-4b65-adef-6ce93a1430dc",
   xellarEnv: "sandbox",
   ssr: false,
-  chains: [lisk, liskSepolia, ganacheLocal, nawasena],
+  // Default chain first: wagmi picks the first entry as the initial chain when no
+  // wallet is connected. Which of these the app actually serves is decided by the
+  // deployment registry (see lib/chain/chains.ts), not by this list.
+  chains: [nawasena, base, lisk, liskSepolia, ganacheLocal].sort(
+    (a, b) => Number(b.id === DEFAULT_CHAIN_ID) - Number(a.id === DEFAULT_CHAIN_ID),
+  ) as [typeof nawasena, ...(typeof nawasena | typeof base | typeof lisk | typeof liskSepolia | typeof ganacheLocal)[]],
 });

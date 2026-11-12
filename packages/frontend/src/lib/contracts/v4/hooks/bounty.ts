@@ -1,7 +1,7 @@
-import { scholarshipBountyAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr } from "@/lib/chain/addr";
+import { scholarshipBountyAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
 
-const BOUNTY_ADDRESS = v4Addresses.ScholarshipBounty;
 
 // ── ScholarshipBounty — Security & Dispute Actions ───────────────────────────
 
@@ -16,7 +16,7 @@ export function useRaiseDispute() {
     evidenceCID: string
   ) => {
     writeContract({
-      address: BOUNTY_ADDRESS,
+      address: addr("ScholarshipBounty"),
       abi: scholarshipBountyAbi,
       functionName: "raiseDispute",
       args: [pid, scholar, milestoneId, disputeType, evidenceCID],
@@ -31,7 +31,7 @@ export function useDefendDispute() {
 
   const submitDefense = (disputeId: bigint, evidenceCID: string) => {
     writeContract({
-      address: BOUNTY_ADDRESS,
+      address: addr("ScholarshipBounty"),
       abi: scholarshipBountyAbi,
       functionName: "submitCounterEvidence",
       args: [disputeId, evidenceCID],
@@ -46,7 +46,7 @@ export function useConcedeDispute() {
 
   const concede = (disputeId: bigint) => {
     writeContract({
-      address: BOUNTY_ADDRESS,
+      address: addr("ScholarshipBounty"),
       abi: scholarshipBountyAbi,
       functionName: "concede",
       args: [disputeId],
@@ -61,7 +61,7 @@ export function useTriggerAutoGuilty() {
 
   const triggerAutoGuilty = (disputeId: bigint) => {
     writeContract({
-      address: BOUNTY_ADDRESS,
+      address: addr("ScholarshipBounty"),
       abi: scholarshipBountyAbi,
       functionName: "triggerAutoGuilty",
       args: [disputeId],

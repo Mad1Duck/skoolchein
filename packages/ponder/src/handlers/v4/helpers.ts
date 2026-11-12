@@ -10,22 +10,24 @@ import { v4Reputation, v4BountyHunters, v4Programs } from "ponder:schema";
  * Returns "" when the program isn't indexed yet; consumers treat that as
  * unknown rather than as the native sentinel (which is the zero address).
  */
-export async function programTokenOf(db: Context["db"], pid: number): Promise<string> {
-  const prog = await db.find(v4Programs, { pid });
+export async function programTokenOf(db: Context["db"], chainId: number, pid: number): Promise<string> {
+  const prog = await db.find(v4Programs, { chainId, pid });
   return prog?.token ?? "";
 }
 
 /** Upsert v4_reputation balance for an address */
 export async function upsertReputation(
   db: Context["db"],
+  chainId: number,
   address: string,
   delta: bigint,
   isMint: boolean,
 ) {
-  const existing = await db.find(v4Reputation, { address });
+  const existing = await db.find(v4Reputation, { chainId, address });
 
   if (!existing) {
     await db.insert(v4Reputation).values({
+      chainId,
       address,
       repBalance: String(isMint ? delta : 0n),
       totalMinted: String(isMint ? delta : 0n),
@@ -33,7 +35,7 @@ export async function upsertReputation(
     });
   } else {
     const prev = BigInt(existing.repBalance ?? "0");
-    await db.update(v4Reputation, { address }).set({
+    await db.update(v4Reputation, { chainId, address }).set({
       repBalance: String(isMint ? prev + delta : (prev > delta ? prev - delta : 0n)),
       totalMinted: String(BigInt(existing.totalMinted ?? "0") + (isMint ? delta : 0n)),
       totalBurned: String(BigInt(existing.totalBurned ?? "0") + (isMint ? 0n : delta)),
@@ -43,13 +45,13 @@ export async function upsertReputation(
 }
 
 /** Upsert bounty hunter profile */
-export async function upsertBountyHunter(db: Context["db"], address: string) {
-  const existing = await db.find(v4BountyHunters, { address });
+export async function upsertBountyHunter(db: Context["db"], chainId: number, address: string) {
+  const existing = await db.find(v4BountyHunters, { chainId, address });
 
   if (!existing) {
-    await db.insert(v4BountyHunters).values({ address, totalDisputes: 1 });
+    await db.insert(v4BountyHunters).values({ chainId, address, totalDisputes: 1 });
   } else {
-    await db.update(v4BountyHunters, { address }).set({
+    await db.update(v4BountyHunters, { chainId, address }).set({
       totalDisputes: (existing.totalDisputes ?? 0) + 1,
       updatedAt: new Date(),
     });

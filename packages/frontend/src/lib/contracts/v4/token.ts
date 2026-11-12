@@ -1,5 +1,5 @@
 import { formatUnits, parseUnits } from "viem";
-import { v4Addresses } from "@/constants/contractsV4";
+import { allUsdcAddresses, usdcAddress, DEFAULT_CHAIN_ID } from "@/lib/chain/chains";
 
 /**
  * Payment-token helpers.
@@ -28,7 +28,6 @@ export type TokenMeta = {
   minDonationHint: string;
 };
 
-const USDC_ADDRESS = (v4Addresses.MockUSDC ?? NATIVE_TOKEN) as `0x${string}`;
 
 export const NATIVE_META: TokenMeta = {
   address: NATIVE_TOKEN,
@@ -38,18 +37,23 @@ export const NATIVE_META: TokenMeta = {
   minDonationHint: "0.01",
 };
 
-export const USDC_META: TokenMeta = {
-  address: USDC_ADDRESS,
-  symbol: "USDC",
-  decimals: 6,
-  isNative: false,
-  minDonationHint: "50",
-};
+/** USDC metadata for a chain (its address differs per chain). */
+export function usdcMeta(chainId: number = DEFAULT_CHAIN_ID): TokenMeta {
+  return {
+    address: usdcAddress(chainId) ?? NATIVE_TOKEN,
+    symbol: "USDC",
+    decimals: 6,
+    isNative: false,
+    minDonationHint: "50",
+  };
+}
 
 /** Tokens selectable when creating a program. Must match the on-chain whitelist
  *  (ScholarshipCore.setTokenConfig) — a token missing there reverts with
  *  TokenNotSupported. */
-export const SUPPORTED_TOKENS: TokenMeta[] = [USDC_META, NATIVE_META];
+export function getSupportedTokens(chainId: number = DEFAULT_CHAIN_ID): TokenMeta[] {
+  return [usdcMeta(chainId), NATIVE_META];
+}
 
 export function isNativeToken(token?: string | null): boolean {
   return !token || token.toLowerCase() === NATIVE_TOKEN;
@@ -62,7 +66,8 @@ export function isNativeToken(token?: string | null): boolean {
  */
 export function getTokenMeta(token?: string | null): TokenMeta {
   if (isNativeToken(token)) return NATIVE_META;
-  if (token!.toLowerCase() === USDC_ADDRESS.toLowerCase()) return USDC_META;
+  // USDC lives at a different address on each chain; recognise any of them (all 6 decimals).
+  if (allUsdcAddresses().has(token!.toLowerCase())) return { ...usdcMeta(), address: token as `0x${string}` };
   return { address: token as `0x${string}`, symbol: "TOKEN", decimals: 18, isNative: false , minDonationHint: "0" };
 }
 

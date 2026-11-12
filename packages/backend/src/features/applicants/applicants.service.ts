@@ -1,6 +1,7 @@
 import { Injectable, Singleton } from "hono-forge";
 import { eq, and, desc } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
+import { onChain } from "@/config/chain-context";
 
 const { v4Applicants, v4Programs } = ponderSchema;
 
@@ -11,7 +12,7 @@ export class ApplicantsService {
     const conditions = [];
     if (opts.wallet) conditions.push(eq(v4Applicants.wallet, opts.wallet));
     if (opts.status) conditions.push(eq(v4Applicants.status, opts.status as any));
-    const where = conditions.length ? and(...conditions) : undefined;
+    const where = onChain(v4Applicants, ...conditions);
 
     return ponderClient.db.select({
       applicant: v4Applicants,
@@ -25,7 +26,7 @@ export class ApplicantsService {
       },
     })
       .from(v4Applicants)
-      .leftJoin(v4Programs, eq(v4Applicants.pid, v4Programs.pid))
+      .leftJoin(v4Programs, and(eq(v4Applicants.chainId, v4Programs.chainId), eq(v4Applicants.pid, v4Programs.pid)))
       .where(where)
       .orderBy(desc(v4Applicants.createdAt))
       .limit(opts.limit)
@@ -43,8 +44,8 @@ export class ApplicantsService {
       },
     })
       .from(v4Applicants)
-      .leftJoin(v4Programs, eq(v4Applicants.pid, v4Programs.pid))
-      .where(and(eq(v4Applicants.pid, pid), eq(v4Applicants.wallet, wallet)))
+      .leftJoin(v4Programs, and(eq(v4Applicants.chainId, v4Programs.chainId), eq(v4Applicants.pid, v4Programs.pid)))
+      .where(onChain(v4Applicants, eq(v4Applicants.pid, pid), eq(v4Applicants.wallet, wallet)))
       .limit(1);
 
     return applicant ?? null;

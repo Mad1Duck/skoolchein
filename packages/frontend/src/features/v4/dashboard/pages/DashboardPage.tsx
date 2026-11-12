@@ -1,6 +1,7 @@
 import { useAccount, useBalance } from 'wagmi';
 import { useDashboard } from '@/lib/api/hooks';
-import { v4Addresses } from '@/constants/contractsV4';
+import { useActiveChain } from '@/lib/chain/useActiveChain';
+import { usdcAddress } from '@/lib/chain/chains';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { formatUnits } from 'viem';
@@ -113,11 +114,13 @@ function PublicView() {
 }
 
 export function DashboardPage() {
+  const { chainId } = useActiveChain();
   const { address } = useAccount();
   const { data: dashboard, isLoading } = useDashboard(address || '');
   const { data: usdcBalance } = useBalance({
+    chainId,
     address,
-    token: v4Addresses.MockUSDC,
+    token: usdcAddress(chainId),
   });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeView, setActiveView] = useState<'provider' | 'student'>('provider');

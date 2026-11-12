@@ -13,6 +13,7 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ProgramCreated", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, initiator, metadataCID, token } = event.args;
 
@@ -23,7 +24,7 @@ export const scholarshipCoreHandlers = () => {
         args: [pid],
       });
 
-      await db.insert(v4Programs).values({
+      await db.insert(v4Programs).values({ chainId,
         pid: Number(pid),
         initiator: String(initiator),
         metadataCID: String(metadataCID),
@@ -54,8 +55,8 @@ export const scholarshipCoreHandlers = () => {
         updatedAt: new Date(),
       });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ProgramCreated" });
-      await sendSseToAll("main", { step: "ProgramCreated", data: { pid: Number(pid), initiator }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ProgramCreated" });
+      await sendSseToAll("main", { chainId, step: "ProgramCreated", data: { pid: Number(pid), initiator }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ProgramCreated handler error");
     }
@@ -65,6 +66,7 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ProgramStatusChanged", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, newStatus } = event.args;
       const statusMap: Record<number, NonNullable<typeof v4Programs.$inferInsert["status"]>> = {
@@ -73,11 +75,11 @@ export const scholarshipCoreHandlers = () => {
       };
       const status = statusMap[Number(newStatus)] ?? "CREATED";
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ status, updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ProgramStatusChanged" });
-      await sendSseToAll("main", { step: "ProgramStatusChanged", data: { pid: Number(pid), status }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ProgramStatusChanged" });
+      await sendSseToAll("main", { chainId, step: "ProgramStatusChanged", data: { pid: Number(pid), status }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ProgramStatusChanged handler error");
     }
@@ -85,12 +87,13 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:OpenDonationToggled", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, open } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ openDonation: open, updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "OpenDonationToggled", data: { pid: Number(pid), open }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "OpenDonationToggled", data: { pid: Number(pid), open }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "OpenDonationToggled handler error");
     }
@@ -100,10 +103,11 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:CommitteeAssigned", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, committeeContract } = event.args;
       await db.insert(v4Programs)
-        .values({
+        .values({ chainId,
           pid: Number(pid),
           initiator: "",
           committeeContract: String(committeeContract),
@@ -118,19 +122,20 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:DonationReceived", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, donor, grossAmount, netAmount } = event.args;
       logger.info({ pid, donor }, "DonationReceived");
 
-      const prog = await db.find(v4Programs, { pid: Number(pid) });
+      const prog = await db.find(v4Programs, { chainId, pid: Number(pid) });
 
       if (prog) {
         const prevFund = BigInt(prog.totalFund ?? "0");
-        await db.update(v4Programs, { pid: Number(pid) })
+        await db.update(v4Programs, { chainId, pid: Number(pid) })
           .set({ totalFund: String(prevFund + BigInt(netAmount)), updatedAt: new Date() });
       }
 
-      await db.insert(v4Reputation).values({
+      await db.insert(v4Reputation).values({ chainId,
         address: String(donor).toLowerCase(),
         remainingVotingPower: String(netAmount),
       }).onConflictDoUpdate((row) => ({
@@ -138,8 +143,8 @@ export const scholarshipCoreHandlers = () => {
         updatedAt: new Date(),
       }));
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:DonationReceived" });
-      await sendSseToAll("main", { step: "DonationReceived", data: { pid: Number(pid), donor, grossAmount: String(grossAmount), netAmount: String(netAmount) }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:DonationReceived" });
+      await sendSseToAll("main", { chainId, step: "DonationReceived", data: { pid: Number(pid), donor, grossAmount: String(grossAmount), netAmount: String(netAmount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DonationReceived handler error");
     }
@@ -147,20 +152,21 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ProtocolFeeCollected", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, donor, feeAmount } = event.args;
       logger.info({ pid, donor, feeAmount: feeAmount.toString() }, "ProtocolFeeCollected");
 
-      const prog = await db.find(v4Programs, { pid: Number(pid) });
+      const prog = await db.find(v4Programs, { chainId, pid: Number(pid) });
 
       if (prog) {
         const prevFee = BigInt(prog.protocolFeeCollected ?? "0");
-        await db.update(v4Programs, { pid: Number(pid) })
+        await db.update(v4Programs, { chainId, pid: Number(pid) })
           .set({ protocolFeeCollected: String(prevFee + BigInt(feeAmount)), updatedAt: new Date() });
       }
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ProtocolFeeCollected" });
-      await sendSseToAll("main", { step: "ProtocolFeeCollected", data: { pid, donor, feeAmount: String(feeAmount) }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ProtocolFeeCollected" });
+      await sendSseToAll("main", { chainId, step: "ProtocolFeeCollected", data: { pid, donor, feeAmount: String(feeAmount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ProtocolFeeCollected handler error");
     }
@@ -170,23 +176,24 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:StudentApplied", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, student, retryCount } = event.args;
 
-      await db.insert(v4Applicants).values({
+      await db.insert(v4Applicants).values({ chainId,
         pid: Number(pid),
         wallet: String(student),
         retryCount: Number(retryCount),
       }).onConflictDoUpdate({ retryCount: Number(retryCount), updatedAt: new Date() });
 
       const [applicantCountRow] = await db.sql.select({ value: count() })
-        .from(v4Applicants).where(eq(v4Applicants.pid, Number(pid)));
+        .from(v4Applicants).where(and(eq(v4Applicants.chainId, chainId), eq(v4Applicants.pid, Number(pid))));
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ applicantCount: Number(applicantCountRow?.value ?? 0), updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:StudentApplied" });
-      await sendSseToAll("main", { step: "StudentApplied", data: { pid: Number(pid), student }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:StudentApplied" });
+      await sendSseToAll("main", { chainId, step: "StudentApplied", data: { pid: Number(pid), student }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "StudentApplied handler error");
     }
@@ -194,12 +201,13 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ScoreSubmitted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, student, totalScore } = event.args;
-      await db.update(v4Applicants, { pid: Number(pid), wallet: String(student) })
+      await db.update(v4Applicants, { chainId, pid: Number(pid), wallet: String(student) })
         .set({ screeningScore: String(totalScore), totalScore: String(totalScore), updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ScoreSubmitted" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ScoreSubmitted" });
     } catch (err) {
       logger.error({ err }, "ScoreSubmitted handler error");
     }
@@ -207,22 +215,23 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:StudentScreenedOut", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, student, score, locked } = event.args;
-      await db.update(v4Applicants, { pid: Number(pid), wallet: String(student) })
+      await db.update(v4Applicants, { chainId, pid: Number(pid), wallet: String(student) })
         .set({
           status: locked ? "LOCKED" : "SCREENED_OUT",
           screeningScore: String(score),
           updatedAt: new Date(),
         });
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set((row) => ({
           resolveProgress: (row.resolveProgress ?? 0) + 1,
           updatedAt: new Date(),
         }));
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:StudentScreenedOut" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:StudentScreenedOut" });
     } catch (err) {
       logger.error({ err }, "StudentScreenedOut handler error");
     }
@@ -230,24 +239,25 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:StudentShortlisted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, student, score } = event.args;
-      await db.update(v4Applicants, { pid: Number(pid), wallet: String(student) })
+      await db.update(v4Applicants, { chainId, pid: Number(pid), wallet: String(student) })
         .set({ status: "SHORTLISTED", screeningScore: String(score), updatedAt: new Date() });
 
       const [shortlistedCountRow] = await db.sql.select({ value: count() })
         .from(v4Applicants)
-        .where(and(eq(v4Applicants.pid, Number(pid)), eq(v4Applicants.status, "SHORTLISTED")));
+        .where(and(eq(v4Applicants.chainId, chainId), eq(v4Applicants.pid, Number(pid)), eq(v4Applicants.status, "SHORTLISTED")));
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set((row) => ({
           shortlistedCount: Number(shortlistedCountRow?.value ?? 0),
           resolveProgress: (row.resolveProgress ?? 0) + 1,
           updatedAt: new Date(),
         }));
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:StudentShortlisted" });
-      await sendSseToAll("main", { step: "StudentShortlisted", data: { pid: Number(pid), student }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:StudentShortlisted" });
+      await sendSseToAll("main", { chainId, step: "StudentShortlisted", data: { pid: Number(pid), student }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "StudentShortlisted handler error");
     }
@@ -257,10 +267,11 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:VoteCast", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, voter, candidate, weight, useReputation } = event.args;
 
-      await db.insert(v4Votes).values({
+      await db.insert(v4Votes).values({ chainId,
         pid: Number(pid),
         voterAddress: String(voter).toLowerCase(),
         candidateAddress: String(candidate).toLowerCase(),
@@ -271,9 +282,9 @@ export const scholarshipCoreHandlers = () => {
       });
 
       if (!useReputation) {
-        const rep = await db.find(v4Reputation, { address: String(voter).toLowerCase() });
+        const rep = await db.find(v4Reputation, { chainId, address: String(voter).toLowerCase() });
         if (rep) {
-          await db.update(v4Reputation, { address: String(voter).toLowerCase() })
+          await db.update(v4Reputation, { chainId, address: String(voter).toLowerCase() })
             .set({
               remainingVotingPower: String(BigInt(rep.remainingVotingPower ?? "0") - BigInt(weight)),
               updatedAt: new Date(),
@@ -281,8 +292,8 @@ export const scholarshipCoreHandlers = () => {
         }
       }
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:VoteCast" });
-      await sendSseToAll("main", { step: "VoteCast", data: { pid: Number(pid), voter, candidate }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:VoteCast" });
+      await sendSseToAll("main", { chainId, step: "VoteCast", data: { pid: Number(pid), voter, candidate }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "VoteCast handler error");
     }
@@ -290,11 +301,12 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ConfidenceStaked", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, voter, scholar, amount } = event.args;
 
-      const stakeToken = await programTokenOf(db, Number(pid));
-      await db.insert(v4ConfidenceStakes).values({
+      const stakeToken = await programTokenOf(db, chainId, Number(pid));
+      await db.insert(v4ConfidenceStakes).values({ chainId,
         pid: Number(pid),
         token: stakeToken,
         voterAddress: String(voter),
@@ -302,7 +314,7 @@ export const scholarshipCoreHandlers = () => {
         amount: String(amount),
       }).onConflictDoUpdate({ amount: String(amount), updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ConfidenceStaked" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ConfidenceStaked" });
     } catch (err) {
       logger.error({ err }, "ConfidenceStaked handler error");
     }
@@ -312,10 +324,11 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ScholarSelected", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, scholar } = event.args;
 
-      await db.insert(v4Scholars).values({
+      await db.insert(v4Scholars).values({ chainId,
         pid: Number(pid),
         wallet: String(scholar),
         status: "ACTIVE",
@@ -330,17 +343,17 @@ export const scholarshipCoreHandlers = () => {
 
       const [activeScholarCountRow] = await db.sql.select({ value: count() })
         .from(v4Scholars)
-        .where(and(eq(v4Scholars.pid, Number(pid)), eq(v4Scholars.status, "ACTIVE")));
+        .where(and(eq(v4Scholars.chainId, chainId), eq(v4Scholars.pid, Number(pid)), eq(v4Scholars.status, "ACTIVE")));
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({
           activeScholarCount: Number(activeScholarCountRow?.value ?? 0),
           allocatedFund: String(progSync.allocatedFund),
           updatedAt: new Date(),
         });
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ScholarSelected" });
-      await sendSseToAll("main", { step: "ScholarSelected", data: { pid, scholar }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ScholarSelected" });
+      await sendSseToAll("main", { chainId, step: "ScholarSelected", data: { pid, scholar }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScholarSelected handler error");
     }
@@ -350,6 +363,7 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ScholarSlashed", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { scholar, pid, dtype } = event.args;
       const statusMap: Record<number, NonNullable<typeof v4Scholars.$inferInsert["status"]>> = {
@@ -357,7 +371,7 @@ export const scholarshipCoreHandlers = () => {
       };
       const status = statusMap[Number(dtype)] ?? "FROZEN";
 
-      await db.update(v4Scholars, { pid: Number(pid), wallet: String(scholar) })
+      await db.update(v4Scholars, { chainId, pid: Number(pid), wallet: String(scholar) })
         .set({
           status,
           isBlacklisted: Number(dtype) === 2,
@@ -366,7 +380,7 @@ export const scholarshipCoreHandlers = () => {
 
       // Record Fraud NFT if it's a heavy fraud
       if (Number(dtype) === 2) {
-        await db.insert(v4FraudNfts).values({
+        await db.insert(v4FraudNfts).values({ chainId,
           transactionHash: event.transaction.hash,
           scholarWallet: String(scholar),
           pid: Number(pid),
@@ -374,8 +388,8 @@ export const scholarshipCoreHandlers = () => {
         }).onConflictDoNothing();
       }
 
-      await insertBlock({ db, event, eventName: "ScholarshipCore:ScholarSlashed" });
-      await sendSseToAll("main", { step: "ScholarSlashed", data: { scholar, pid: Number(pid), isHeavy: Number(dtype) === 2 }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ScholarSlashed" });
+      await sendSseToAll("main", { chainId, step: "ScholarSlashed", data: { scholar, pid: Number(pid), isHeavy: Number(dtype) === 2 }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScholarSlashed handler error");
     }
@@ -383,12 +397,13 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ScholarCompleted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, scholar } = event.args;
-      await db.update(v4Scholars, { pid: Number(pid), wallet: String(scholar) })
+      await db.update(v4Scholars, { chainId, pid: Number(pid), wallet: String(scholar) })
         .set({ status: "COMPLETED", updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "ScholarCompleted", data: { pid: Number(pid), scholar }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "ScholarCompleted", data: { pid: Number(pid), scholar }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ScholarCompleted handler error");
     }
@@ -396,12 +411,13 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ProgramCompleted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ status: "COMPLETED", updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "ProgramCompleted", data: { pid: Number(pid) }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "ProgramCompleted", data: { pid: Number(pid) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ProgramCompleted handler error");
     }
@@ -409,12 +425,13 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ProgramCancelled", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ status: "CANCELLED", updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "ProgramCancelled", data: { pid: Number(pid) }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "ProgramCancelled", data: { pid: Number(pid) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ProgramCancelled handler error");
     }
@@ -424,15 +441,17 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:ApplicationDeadlineExtended", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, newEnd } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({
           applicationEnd: new Date(Number(newEnd) * 1000),
           updatedAt: new Date(),
         });
 
       await sendSseToAll("main", {
+        chainId,
         step: "ApplicationDeadlineExtended",
         data: { pid: Number(pid), newEnd: Number(newEnd) },
         status: true, blockHash: event.block.hash,
@@ -444,15 +463,17 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:VotingDeadlineExtended", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, newEnd } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({
           votingEnd: new Date(Number(newEnd) * 1000),
           updatedAt: new Date(),
         });
 
       await sendSseToAll("main", {
+        chainId,
         step: "VotingDeadlineExtended",
         data: { pid: Number(pid), newEnd: Number(newEnd) },
         status: true, blockHash: event.block.hash,
@@ -464,6 +485,7 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:AdminBypassStatusForced", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, newStatus } = event.args;
       const statusMap: Record<number, NonNullable<typeof v4Programs.$inferInsert["status"]>> = {
@@ -472,10 +494,11 @@ export const scholarshipCoreHandlers = () => {
       };
       const status = statusMap[Number(newStatus)] ?? "CREATED";
 
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({ status, updatedAt: new Date() });
 
       await sendSseToAll("main", {
+        chainId,
         step: "AdminBypassStatusForced",
         data: { pid: Number(pid), status },
         status: true, blockHash: event.block.hash,
@@ -487,9 +510,10 @@ export const scholarshipCoreHandlers = () => {
 
   ponder.on("ScholarshipCore:AdminBypassDatesUpdated", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { pid, appStart, appEnd, voteStart, voteEnd } = event.args;
-      await db.update(v4Programs, { pid: Number(pid) })
+      await db.update(v4Programs, { chainId, pid: Number(pid) })
         .set({
           applicationStart: new Date(Number(appStart) * 1000),
           applicationEnd: new Date(Number(appEnd) * 1000),
@@ -499,6 +523,7 @@ export const scholarshipCoreHandlers = () => {
         });
 
       await sendSseToAll("main", {
+        chainId,
         step: "AdminBypassDatesUpdated",
         data: { pid: Number(pid) },
         status: true, blockHash: event.block.hash,

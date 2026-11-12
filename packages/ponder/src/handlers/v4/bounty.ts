@@ -9,6 +9,7 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:DisputeRaised", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { disputeId, pid, scholar, bountyHunter, disputeType, evidenceCID, stake, potentialReward } = event.args;
 
@@ -16,8 +17,8 @@ export const scholarshipBountyHandlers = () => {
         0: "LIGHT_FRAUD", 1: "MILESTONE_FRAUD", 2: "HEAVY_FRAUD",
       };
 
-      const disputeToken = await programTokenOf(db, Number(pid));
-      await db.insert(v4Disputes).values({
+      const disputeToken = await programTokenOf(db, chainId, Number(pid));
+      await db.insert(v4Disputes).values({ chainId,
         blockchainId: Number(disputeId),
         pid: Number(pid),
         token: disputeToken,
@@ -32,10 +33,10 @@ export const scholarshipBountyHandlers = () => {
       }).onConflictDoUpdate({ updatedAt: new Date() });
 
       // Upsert BH profile
-      await upsertBountyHunter(db, String(bountyHunter));
+      await upsertBountyHunter(db, chainId, String(bountyHunter));
 
-      await insertBlock({ db, event, eventName: "ScholarshipBounty:DisputeRaised" });
-      await sendSseToAll("main", { step: "DisputeRaised", data: { disputeId, scholar, bountyHunter }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipBounty:DisputeRaised" });
+      await sendSseToAll("main", { chainId, step: "DisputeRaised", data: { disputeId, scholar, bountyHunter }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DisputeRaised handler error");
     }
@@ -43,11 +44,12 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:StudentDefended", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { disputeId, counterEvidenceCID } = event.args;
-      await context.db.update(v4Disputes, { blockchainId: Number(disputeId) })
+      await context.db.update(v4Disputes, { chainId, blockchainId: Number(disputeId) })
         .set({ counterEvidenceCID: String(counterEvidenceCID), updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "StudentDefended", data: { disputeId }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "StudentDefended", data: { disputeId }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "StudentDefended handler error");
     }
@@ -55,11 +57,12 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:StudentConceded", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { disputeId } = event.args;
-      await context.db.update(v4Disputes, { blockchainId: Number(disputeId) })
+      await context.db.update(v4Disputes, { chainId, blockchainId: Number(disputeId) })
         .set({ status: "STUDENT_CONCEDED", resolvedAt: new Date(), updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "StudentConceded", data: { disputeId }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "StudentConceded", data: { disputeId }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "StudentConceded handler error");
     }
@@ -67,11 +70,12 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:DisputeAutoGuilty", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { disputeId } = event.args;
-      await context.db.update(v4Disputes, { blockchainId: Number(disputeId) })
+      await context.db.update(v4Disputes, { chainId, blockchainId: Number(disputeId) })
         .set({ status: "AUTO_GUILTY", resolvedAt: new Date(), updatedAt: new Date() });
 
-      await sendSseToAll("main", { step: "DisputeAutoGuilty", data: { disputeId }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "DisputeAutoGuilty", data: { disputeId }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DisputeAutoGuilty handler error");
     }
@@ -79,9 +83,10 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:DisputeResolved", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { disputeId, bountyHunterWon, bhReward } = event.args;
-      const dispute = await db.update(v4Disputes, { blockchainId: Number(disputeId) })
+      const dispute = await db.update(v4Disputes, { chainId, blockchainId: Number(disputeId) })
         .set({
           status: bountyHunterWon ? "BH_WON" : "BH_LOST",
           bhRewardPaid: String(bhReward),
@@ -90,10 +95,10 @@ export const scholarshipBountyHandlers = () => {
         });
 
       // Update BH profile win/loss
-      const bh = await db.find(v4BountyHunters, { address: dispute.bountyHunter });
+      const bh = await db.find(v4BountyHunters, { chainId, address: dispute.bountyHunter });
 
       if (bh) {
-        await db.update(v4BountyHunters, { address: dispute.bountyHunter })
+        await db.update(v4BountyHunters, { chainId, address: dispute.bountyHunter })
           .set({
             totalWins: bountyHunterWon ? (bh.totalWins ?? 0) + 1 : bh.totalWins,
             totalLosses: !bountyHunterWon ? (bh.totalLosses ?? 0) + 1 : bh.totalLosses,
@@ -101,7 +106,7 @@ export const scholarshipBountyHandlers = () => {
           });
       }
 
-      await sendSseToAll("main", { step: "DisputeResolved", data: { disputeId, bountyHunterWon }, status: true, blockHash: event.block.hash });
+      await sendSseToAll("main", { chainId, step: "DisputeResolved", data: { disputeId, bountyHunterWon }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "DisputeResolved handler error");
     }
@@ -109,10 +114,11 @@ export const scholarshipBountyHandlers = () => {
 
    ponder.on("ScholarshipBounty:GriefingStakeApplied", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { disputeId, originalStake, appliedStake } = event.args;
 
-      await db.update(v4Disputes, { blockchainId: Number(disputeId) })
+      await db.update(v4Disputes, { chainId, blockchainId: Number(disputeId) })
         .set({
           isLateDispute: true,
           griefingStakeOriginal: String(originalStake),
@@ -120,8 +126,8 @@ export const scholarshipBountyHandlers = () => {
           updatedAt: new Date()
         });
 
-      await insertBlock({ db, event, eventName: "ScholarshipBounty:GriefingStakeApplied" });
-      await sendSseToAll("main", { step: "GriefingStakeApplied", data: { disputeId: Number(disputeId), appliedStake: String(appliedStake) }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipBounty:GriefingStakeApplied" });
+      await sendSseToAll("main", { chainId, step: "GriefingStakeApplied", data: { disputeId: Number(disputeId), appliedStake: String(appliedStake) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "GriefingStakeApplied handler error");
     }
@@ -129,25 +135,26 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:BHFlagged", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { bountyHunter, cooldownUntil } = event.args;
       const cooldownDate = new Date(Number(cooldownUntil) * 1000);
 
-      const existing = await db.find(v4BountyHunters, { address: String(bountyHunter) });
+      const existing = await db.find(v4BountyHunters, { chainId, address: String(bountyHunter) });
 
       if (existing) {
-        await db.update(v4BountyHunters, { address: String(bountyHunter) })
+        await db.update(v4BountyHunters, { chainId, address: String(bountyHunter) })
           .set({ isFlagged: true, cooldownUntil: cooldownDate, updatedAt: new Date() });
       } else {
-        await db.insert(v4BountyHunters).values({
+        await db.insert(v4BountyHunters).values({ chainId,
           address: String(bountyHunter),
           isFlagged: true,
           cooldownUntil: cooldownDate,
         });
       }
 
-      await insertBlock({ db, event, eventName: "ScholarshipBounty:BHFlagged" });
-      await sendSseToAll("main", { step: "BHFlagged", data: { bountyHunter, cooldownUntil: cooldownDate.toISOString() }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipBounty:BHFlagged" });
+      await sendSseToAll("main", { chainId, step: "BHFlagged", data: { bountyHunter, cooldownUntil: cooldownDate.toISOString() }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "BHFlagged handler error");
     }
@@ -155,9 +162,10 @@ export const scholarshipBountyHandlers = () => {
 
   ponder.on("ScholarshipBounty:ForfeitedStakesWithdrawn", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { recipient, amount } = event.args;
-      await insertBlock({ db: context.db, event, eventName: "ScholarshipBounty:ForfeitedStakesWithdrawn" });
-      await sendSseToAll("main", { step: "ForfeitedStakesWithdrawn", data: { recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
+      await insertBlock({ db: context.db, chainId, event, eventName: "ScholarshipBounty:ForfeitedStakesWithdrawn" });
+      await sendSseToAll("main", { chainId, step: "ForfeitedStakesWithdrawn", data: { recipient, amount: String(amount) }, status: true, blockHash: event.block.hash });
     } catch (err) {
       logger.error({ err }, "ForfeitedStakesWithdrawn handler error");
     }

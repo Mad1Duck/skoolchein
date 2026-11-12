@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePlaceConfidenceStake, useApproveUSDC } from "@/lib/contracts/write-hooks";
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
-import { v4Addresses } from "@/constants/contractsV4";
+import { useV4Addresses } from '@/lib/chain/useActiveChain';
 import { getTokenMeta } from "@/lib/contracts/v4/token";
 import { needsApproval } from "@/lib/contracts/write-hooks";
 
@@ -16,6 +16,7 @@ interface Props {
 }
 
 export function ConfidenceStakeModal({ isOpen, onClose, programId, candidateWallet, token }: Props) {
+  const v4Addresses = useV4Addresses();
   const tokenMeta = getTokenMeta(token);
   // Native stakes carry msg.value; approving the zero address would revert.
   const requiresApproval = needsApproval(token);

@@ -1,9 +1,9 @@
-import { scholarshipCoreAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr } from "@/lib/chain/addr";
+import { scholarshipCoreAbi } from "@/constants/contractsV4";
 import { stringToHex } from "viem";
 import { useTxHook } from "./use-tx-base";
 import { NATIVE_TOKEN, parseTokenAmount, nativeValueFor } from "../token";
 
-const CORE_ADDRESS = v4Addresses.ScholarshipCore;
 
 // ── Program Lifecycle ─────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export function useCreateProgram() {
     const totalFund = parseTokenAmount(args.totalFund, token);
 
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "createProgram",
       args: [
@@ -73,7 +73,7 @@ export function useOpenApplications() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const openApplications = (pid: bigint) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "openApplications",
       args: [pid],
@@ -86,7 +86,7 @@ export function useOpenScreening() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const openScreening = (pid: bigint) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "openScreening",
       args: [pid],
@@ -99,7 +99,7 @@ export function useCancelProgram() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const cancelProgram = (pid: bigint) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "cancelProgram",
       args: [pid],
@@ -112,7 +112,7 @@ export function useResolveShortlistBatch() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const resolveShortlistBatch = (pid: bigint, rankedSegment: `0x${string}`[], isLastBatch: boolean) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "resolveShortlistBatch",
       args: [pid, rankedSegment, isLastBatch],
@@ -135,7 +135,7 @@ export function useSelectWinners() {
     const hexExternalIds = externalIds.map(row => row.map(s => stringToHex(s || "", { size: 32 })));
 
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "selectWinners",
       args: [pid, ranked, amounts, descs, hexProviders, hexExternalIds],
@@ -148,7 +148,7 @@ export function useToggleOpenDonation() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const toggle = (pid: bigint, open: boolean) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "toggleOpenDonation",
       args: [pid, open],
@@ -172,7 +172,7 @@ export function useApplyProgram() {
     recommendScore: bigint;
   }) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "applyToProgram",
       args: [
@@ -201,7 +201,7 @@ export function useSubmitScore() {
     committeeAddress: `0x${string}`;
   }) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "submitCommitteeScore",
       args: [
@@ -223,7 +223,7 @@ export function useVoteForCandidate() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
   const vote = (pid: bigint, candidate: `0x${string}`, useReputation: boolean) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "voteForCandidate",
       args: [pid, candidate, useReputation],
@@ -247,7 +247,7 @@ export function usePlaceConfidenceStake() {
   ) => {
     const amount = parseTokenAmount(amountStr, token);
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "placeConfidenceStake",
       args: [pid, scholar, amount],
@@ -262,7 +262,7 @@ export function useSetBounty() {
 
   const setBounty = (bounty: `0x${string}`) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "setBounty",
       args: [bounty],
@@ -279,7 +279,7 @@ export function useClaimStudentNFT() {
 
   const claim = (pid: bigint, metadataURI: string) => {
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "claimStudentNFT",
       args: [pid, metadataURI],

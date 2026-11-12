@@ -1,11 +1,9 @@
-import { scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr, usdcAddr } from "@/lib/chain/addr";
+import { scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi } from "@/constants/contractsV4";
 import { parseUnits } from "viem";
 import { useTxHook } from "./use-tx-base";
 import { parseTokenAmount, nativeValueFor, isNativeToken } from "../token";
 
-const CORE_ADDRESS = v4Addresses.ScholarshipCore;
-const TREASURY_ADDRESS = v4Addresses.ScholarshipTreasury;
-const USDC_ADDRESS = v4Addresses.MockUSDC;
 
 // ── USDC ──────────────────────────────────────────────────────────────────────
 
@@ -22,7 +20,7 @@ export function useApproveUSDC() {
 
   const approve = (spender: `0x${string}`, amountStr: string) => {
     writeContract({
-      address: USDC_ADDRESS,
+      address: usdcAddr(),
       abi: mockUSDCAbi,
       functionName: "approve",
       args: [spender, parseUnits(amountStr, 6)],
@@ -37,7 +35,7 @@ export function useMintUSDC() {
 
   const mint = (to: `0x${string}`, amountStr: string) => {
     writeContract({
-      address: USDC_ADDRESS,
+      address: usdcAddr(),
       abi: mockUSDCAbi,
       functionName: "mint",
       args: [to, parseUnits(amountStr, 6)],
@@ -65,7 +63,7 @@ export function useDonate() {
   ) => {
     const amount = parseTokenAmount(amountStr, token);
     writeContract({
-      address: CORE_ADDRESS,
+      address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
       functionName: "donate",
       args: [pid, amount, nftMetadataURI],
@@ -81,7 +79,7 @@ export function useClaimYield() {
 
   const claimYield = (pid: bigint, voteAddress: `0x${string}`) => {
     writeContract({
-      address: TREASURY_ADDRESS,
+      address: addr("ScholarshipTreasury"),
       abi: scholarshipTreasuryAbi,
       functionName: "claimYield",
       args: [pid, voteAddress],
@@ -96,7 +94,7 @@ export function useClaimRefund() {
 
   const claimRefund = (pid: bigint, donor: `0x${string}`) => {
     writeContract({
-      address: TREASURY_ADDRESS,
+      address: addr("ScholarshipTreasury"),
       abi: scholarshipTreasuryAbi,
       functionName: "claimRefund",
       args: [pid, donor],

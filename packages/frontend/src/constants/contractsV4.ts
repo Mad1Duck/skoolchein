@@ -6,6 +6,23 @@
 
 // ── Deployed Addresses ────────────────────────────────────────────────────────
 
+// Per-chain addresses. Prefer this over `v4Addresses` in new code.
+export const v4Deployments = {
+  31338: {
+    FraudNFT: "0xde2Bd2ffEA002b8E84ADeA96e5976aF664115E2c" as `0x${string}`,
+    MockUSDC: "0x870526b7973b56163a6997bB7C886F5E4EA53638" as `0x${string}`,
+    ScholarshipReputation: "0x74Cf9087AD26D541930BaC724B7ab21bA8F00a27" as `0x${string}`,
+    ScholarshipTreasury: "0xefAB0Beb0A557E452b398035eA964948c750b2Fd" as `0x${string}`,
+    MilestoneManager: "0xaca81583840B1bf2dDF6CDe824ada250C1936B4D" as `0x${string}`,
+    ScholarshipCore: "0x70bDA08DBe07363968e9EE53d899dFE48560605B" as `0x${string}`,
+    ScholarshipAdmin: "0x26B862f640357268Bd2d9E95bc81553a2Aa81D7E" as `0x${string}`,
+    ScholarshipBounty: "0xA56F946D6398Dd7d9D4D9B337Cf9E0F68982ca5B" as `0x${string}`,
+    CommitteeGovernance: "0x5D42EBdBBa61412295D7b0302d6F50aC449Ddb4F" as `0x${string}`,
+    ScholarshipPriceOracle: "0xB06c856C8eaBd1d8321b687E188204C1018BC4E5" as `0x${string}`,
+},
+} as const;
+
+// Addresses of the default chain (31338); kept for backward compatibility.
 export const v4Addresses = {
   FraudNFT: "0xde2Bd2ffEA002b8E84ADeA96e5976aF664115E2c" as `0x${string}`,
   MockUSDC: "0x870526b7973b56163a6997bB7C886F5E4EA53638" as `0x${string}`,

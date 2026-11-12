@@ -1,5 +1,7 @@
 import { useReadContract } from "wagmi";
-import { scholarshipPriceOracleAbi, v4Addresses } from "@/constants/contractsV4";
+import { scholarshipPriceOracleAbi } from "@/constants/contractsV4";
+import { useActiveChain } from "@/lib/chain/useActiveChain";
+import { getV4Addresses, getActiveChainId } from "@/lib/chain/chains";
 import { parseUnits, formatUnits } from "viem";
 import { useTxHook } from "./use-tx-base";
 
@@ -15,14 +17,21 @@ import { useTxHook } from "./use-tx-base";
 export const USD_DECIMALS = 8;
 
 /**
- * Oracle address. Undefined until the oracle is included in a deployment —
- * callers must handle that (the admin UI shows a "not deployed" notice
- * rather than issuing calls to address(0)).
+ * Oracle address on the given chain. Undefined until the oracle is included in
+ * that chain's deployment — callers must handle that (the admin UI shows a
+ * "not deployed" notice rather than issuing calls to address(0)).
  */
-export const ORACLE_ADDRESS = (v4Addresses as Record<string, `0x${string}` | undefined>)
-  .ScholarshipPriceOracle;
+export const oracleAddressFor = (chainId: number) => getV4Addresses(chainId).ScholarshipPriceOracle;
 
-export const isOracleDeployed = Boolean(ORACLE_ADDRESS);
+/** Oracle on the active chain, resolved at call time (event handlers). */
+export const oracleAddress = () => oracleAddressFor(getActiveChainId());
+
+/** Render-time: active chain, its oracle address, and whether it is deployed. */
+export function useOracle() {
+  const { chainId } = useActiveChain();
+  const address = oracleAddressFor(chainId);
+  return { chainId, address, isDeployed: Boolean(address) };
+}
 
 /** "3000.50" → 300050000000n (8 decimals). */
 export function parseUsdPrice(price: string): bigint {
@@ -36,32 +45,38 @@ export function formatUsdPrice(price: bigint | string | null | undefined): strin
 
 /** Every token address in the registry. */
 export function useOracleTokens() {
+  const { chainId, address, isDeployed } = useOracle();
   return useReadContract({
-    address: ORACLE_ADDRESS,
+    chainId,
+    address,
     abi: scholarshipPriceOracleAbi,
     functionName: "getTokens",
-    query: { enabled: isOracleDeployed },
+    query: { enabled: isDeployed },
   });
 }
 
 /** Registry entry: [registered, symbol, decimals, priceUsd, updatedAt]. */
 export function useOracleTokenInfo(token?: `0x${string}`) {
+  const { chainId, address, isDeployed } = useOracle();
   return useReadContract({
-    address: ORACLE_ADDRESS,
+    chainId,
+    address,
     abi: scholarshipPriceOracleAbi,
     functionName: "tokens",
     args: token ? [token] : undefined,
-    query: { enabled: isOracleDeployed && Boolean(token) },
+    query: { enabled: isDeployed && Boolean(token) },
   });
 }
 
 /** Staleness threshold, in seconds. */
 export function useOracleMaxPriceAge() {
+  const { chainId, address, isDeployed } = useOracle();
   return useReadContract({
-    address: ORACLE_ADDRESS,
+    chainId,
+    address,
     abi: scholarshipPriceOracleAbi,
     functionName: "maxPriceAge",
-    query: { enabled: isOracleDeployed },
+    query: { enabled: isDeployed },
   });
 }
 
@@ -74,7 +89,7 @@ export function useRegisterToken() {
    */
   const registerToken = (token: `0x${string}`, symbol: string, decimals: number) => {
     writeContract({
-      address: ORACLE_ADDRESS!,
+      address: oracleAddress()!,
       abi: scholarshipPriceOracleAbi,
       functionName: "registerToken",
       args: [token, symbol, decimals],
@@ -89,7 +104,7 @@ export function useDeregisterToken() {
 
   const deregisterToken = (token: `0x${string}`) => {
     writeContract({
-      address: ORACLE_ADDRESS!,
+      address: oracleAddress()!,
       abi: scholarshipPriceOracleAbi,
       functionName: "deregisterToken",
       args: [token],
@@ -105,7 +120,7 @@ export function useSetTokenPrice() {
   /** @param priceUsd Human string, e.g. "3000.50". Scaled to 8 decimals here. */
   const setPrice = (token: `0x${string}`, priceUsd: string) => {
     writeContract({
-      address: ORACLE_ADDRESS!,
+      address: oracleAddress()!,
       abi: scholarshipPriceOracleAbi,
       functionName: "setPrice",
       args: [token, parseUsdPrice(priceUsd)],
@@ -121,7 +136,7 @@ export function useSetTokenPrices() {
   /** Batch update — one tx for a whole rate sheet. */
   const setPrices = (entries: Array<{ token: `0x${string}`; priceUsd: string }>) => {
     writeContract({
-      address: ORACLE_ADDRESS!,
+      address: oracleAddress()!,
       abi: scholarshipPriceOracleAbi,
       functionName: "setPrices",
       args: [
@@ -140,7 +155,7 @@ export function useSetMaxPriceAge() {
   /** @param seconds Age after which a rate is reported stale. */
   const setMaxPriceAge = (seconds: number) => {
     writeContract({
-      address: ORACLE_ADDRESS!,
+      address: oracleAddress()!,
       abi: scholarshipPriceOracleAbi,
       functionName: "setMaxPriceAge",
       args: [BigInt(seconds)],

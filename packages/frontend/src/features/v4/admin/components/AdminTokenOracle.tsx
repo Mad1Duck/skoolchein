@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useReadContracts } from 'wagmi';
 import { scholarshipPriceOracleAbi } from '@/constants/contractsV4';
 import {
-  ORACLE_ADDRESS,
-  isOracleDeployed,
+  useOracle,
   useOracleTokens,
   useOracleMaxPriceAge,
   useRegisterToken,
@@ -33,6 +32,7 @@ type TokenRow = {
  * surfaced separately below.
  */
 export function AdminTokenOracle() {
+  const { chainId, address: oracleAddress, isDeployed: isOracleDeployed } = useOracle();
   const { data: tokenAddresses, refetch: refetchTokens } = useOracleTokens();
   const { data: maxPriceAge, refetch: refetchMaxAge } = useOracleMaxPriceAge();
 
@@ -41,7 +41,8 @@ export function AdminTokenOracle() {
   // Fan out one `tokens(address)` read per registered token.
   const { data: tokenInfos, refetch: refetchInfos } = useReadContracts({
     contracts: addresses.map((addr) => ({
-      address: ORACLE_ADDRESS,
+      chainId,
+      address: oracleAddress,
       abi: scholarshipPriceOracleAbi,
       functionName: 'tokens' as const,
       args: [addr] as const,

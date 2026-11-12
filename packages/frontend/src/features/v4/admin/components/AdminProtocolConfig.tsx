@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { formatUnits, parseUnits } from 'viem';
-import { v4Addresses, scholarshipCoreAbi } from '@/constants/contractsV4';
+import { scholarshipCoreAbi } from '@/constants/contractsV4';
+import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
 import { useUpdateProtocolConfig } from '@/lib/contracts/write-hooks';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
 
 export function AdminProtocolConfig() {
+  const v4Addresses = useV4Addresses();
+  const { chainId } = useActiveChain();
   const { data: config, isLoading, refetch } = useReadContract({
+    chainId,
     address: v4Addresses.ScholarshipCore,
     abi: scholarshipCoreAbi,
     functionName: 'getProtocolConfig',

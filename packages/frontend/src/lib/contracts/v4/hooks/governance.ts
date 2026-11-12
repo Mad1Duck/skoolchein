@@ -1,7 +1,7 @@
-import { committeeGovernanceAbi, v4Addresses } from "@/constants/contractsV4";
+import { addr } from "@/lib/chain/addr";
+import { committeeGovernanceAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
 
-const COMMITTEE_ADDRESS = v4Addresses.CommitteeGovernance;
 
 // ── CommitteeGovernance — Committee & Voting Actions ────────────────────────
 
@@ -10,7 +10,7 @@ export function useAddCommitteeMember() {
 
   const addMember = (pid: bigint, member: `0x${string}`) => {
     writeContract({
-      address: COMMITTEE_ADDRESS,
+      address: addr("CommitteeGovernance"),
       abi: committeeGovernanceAbi,
       functionName: "addCommitteeMember",
       args: [pid, member],
@@ -25,7 +25,7 @@ export function useRemoveCommitteeMember() {
 
   const removeMember = (pid: bigint, member: `0x${string}`) => {
     writeContract({
-      address: COMMITTEE_ADDRESS,
+      address: addr("CommitteeGovernance"),
       abi: committeeGovernanceAbi,
       functionName: "removeCommitteeMember",
       args: [pid, member],
@@ -46,7 +46,7 @@ export function useCommitteeSubmitScore() {
     recommendScore: bigint;
   }) => {
     writeContract({
-      address: COMMITTEE_ADDRESS,
+      address: addr("CommitteeGovernance"),
       abi: committeeGovernanceAbi,
       functionName: "submitScore",
       args: [
@@ -71,7 +71,7 @@ export function useVoteOnDispute() {
     upholdDispute: boolean
   ) => {
     writeContract({
-      address: COMMITTEE_ADDRESS,
+      address: addr("CommitteeGovernance"),
       abi: committeeGovernanceAbi,
       functionName: "voteOnDispute",
       args: [disputeId, pid, upholdDispute],
@@ -90,7 +90,7 @@ export function useVoteOnMilestone() {
     approve: boolean
   ) => {
     writeContract({
-      address: COMMITTEE_ADDRESS,
+      address: addr("CommitteeGovernance"),
       abi: committeeGovernanceAbi,
       functionName: "voteOnMilestone",
       args: [milestoneId, pid, approve],
