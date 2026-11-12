@@ -61,6 +61,8 @@ export function MyRecommendationsCard({ programId, student }: Props) {
         </span>
       </div>
 
+      <p className="rounded-xl border-2 border-black bg-skyellow-light px-3 py-2 text-xs font-bold text-gray-700">{t('rec.card.waiting')}</p>
+
       {mine.length > 0 && (
         <ul className="rounded-xl border-2 border-black divide-y divide-black/10">
           {mine.map((r) => (

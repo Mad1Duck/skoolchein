@@ -8,6 +8,7 @@ import { ConfidenceStakeModal } from '../components/ConfidenceStakeModal';
 import { SelectWinnersModal } from '../components/SelectWinnersModal';
 import { ResolveShortlistModal } from '../components/ResolveShortlistModal';
 import { MyRecommendationsCard } from '../components/MyRecommendationsCard';
+import { ApplicantRow } from '../components/ApplicantRow';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +18,7 @@ import {
   useProgramScholars,
   useProgramMilestones,
   useProgramVotes,
+  useProgramRecommendations,
   useProgramDisputes,
 } from '@/lib/api/hooks';
 import { fetchProgramMeta } from '@/lib/ipfs';
@@ -29,6 +31,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
+import { statusLabel } from '@/lib/i18n/status';
 import { toDate } from '@/lib/time';
 import { useFormatMoney } from '@/lib/money';
 
@@ -77,7 +80,22 @@ export function ProgramDetailPage() {
   // Sub-resource queries (lazy loaded on tab switch)
   const scholarsQ = useProgramScholars(activeTab === 'scholars' ? id : '');
   const milestonesQ = useProgramMilestones(activeTab === 'milestones' ? id : '');
-  const votesQ = useProgramVotes(activeTab === 'votes' ? id : '');
+  const votesQ = useProgramVotes(activeTab === 'votes' || activeTab === 'applicants' ? id : '');
+  const recsQ = useProgramRecommendations(activeTab === 'applicants' ? id : '');
+
+  // Applicants best-first, so the rank shown is the rank the system will use.
+  const rankedApplicants = [...(applicantsQ.data ?? [])].sort((x, y) => Number(y.totalScore ?? 0) - Number(x.totalScore ?? 0));
+  const rankOf = new Map(rankedApplicants.map((a, i) => [a.wallet, i + 1]));
+  const votePct = (wallet: string) => {
+    let mine = 0n;
+    let all = 0n;
+    for (const v of votesQ.data ?? []) {
+      const w = BigInt(v.votingWeight || '0');
+      all += w;
+      if (v.candidateAddress.toLowerCase() === wallet.toLowerCase()) mine += w;
+    }
+    return all > 0n ? Number((mine * 1000n) / all) / 10 : 0;
+  };
   const disputesQ = useProgramDisputes(activeTab === 'disputes' ? id : '');
 
 
@@ -166,7 +184,7 @@ export function ProgramDetailPage() {
             // would only produce a failed transaction.
             myApplication ? (
               <NeoButton
-                label={t('detail.applied', { status: myApplication.status })}
+                label={t('detail.applied', { status: statusLabel(t, myApplication.status) })}
                 variant="secondary"
                 size="md"
                 disabled
@@ -185,7 +203,7 @@ export function ProgramDetailPage() {
               onClick={() => setActiveTab('applicants')}
             />
           )}
-          {program.openDonation && (
+          {program.openDonation && !myApplication && (
             <NeoButton
               label={t('detail.donate')}
               variant="success"
@@ -266,6 +284,7 @@ export function ProgramDetailPage() {
 
       <ProgramFundingCard
         program={program}
+        donateBlockedReason={myApplication ? t('detail.applicantCannotDonate') : undefined}
         meta={meta ?? undefined}
         onDonate={(amount) => {
           setDonateAmount(amount);
@@ -322,34 +341,22 @@ export function ProgramDetailPage() {
         {activeTab === 'overview' && <OverviewTab program={program} meta={meta ?? undefined} />}
         {activeTab === 'applicants' && (
           <ListTab
-            data={applicantsQ.data}
+            data={rankedApplicants}
             isLoading={applicantsQ.isLoading}
             renderItem={(a) => (
-              <div key={a.wallet} className="flex items-center justify-between p-4 md:p-5 gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <WalletAvatar address={a.wallet} size={32} />
-                  <div className="min-w-0">
-                    <p className="font-bold font-data text-sm">{shortenAddress(a.wallet)}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
-                      {t('detail.score')} <span className="font-data font-bold">{a.totalScore ?? '—'}</span> · {t('detail.retry')} <span className="font-data">{a.retryCount}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <NeoBadge status={a.status} />
-                  {program.status === 'VOTING' && program.openDonation && a.status === 'SHORTLISTED' && (
-                    <NeoButton
-                      label={t('detail.vote')}
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedCandidate({ address: a.wallet as `0x${string}` });
-                        setIsVoteOpen(true);
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
+              <ApplicantRow
+                key={a.wallet}
+                applicant={a}
+                rank={rankOf.get(a.wallet) ?? 0}
+                isMe={!!userAddress && a.wallet.toLowerCase() === userAddress.toLowerCase()}
+                recommendations={recsQ.data?.filter((r) => r.student.toLowerCase() === a.wallet.toLowerCase()) ?? []}
+                votePct={votePct(a.wallet)}
+                votingOpen={program.status === 'VOTING' && program.openDonation}
+                onVote={() => {
+                  setSelectedCandidate({ address: a.wallet as `0x${string}` });
+                  setIsVoteOpen(true);
+                }}
+              />
             )}
           />
         )}

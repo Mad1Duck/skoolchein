@@ -236,6 +236,7 @@ abstract contract ScholarshipCoreBase is Initializable {
     error PublicParticipationDisabled();
     error StudentNotCompleted(uint256 pid, address scholar);
     error StudentNFTNotConfigured();
+    error CannotVoteForSelf();
 
     // ── Shared Helpers ───────────────────────────────────────────────────────
     function _requireProgramExists(uint256 pid) internal view { if (pid == 0 || pid > _nextProgramId) revert ProgramNotFound(); }
@@ -325,6 +326,7 @@ abstract contract ScholarshipCoreBase is Initializable {
         _requireStatus(pid, ScholarshipTypes.ProgramStatus.VOTING);
         ScholarshipTypes.Program storage p = programs[pid];
         if (!p.openDonation) revert PublicParticipationDisabled();
+        if (candidate == msg.sender) revert CannotVoteForSelf();
         if (block.timestamp < uint256(p.votingStart) || block.timestamp > uint256(p.votingEnd)) revert TooEarly();
         if (applicants[pid][candidate].status != ScholarshipTypes.ApplicationStatus.SHORTLISTED) revert CandidateNotShortlisted();
         

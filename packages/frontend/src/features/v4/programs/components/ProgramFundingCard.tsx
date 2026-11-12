@@ -15,6 +15,8 @@ interface Props {
   meta?: ProgramMetadata;
   /** Opens the donate flow with the amount picked on this card. */
   onDonate: (amount: string) => void;
+  /** When set, donating is not available to this visitor; the card explains why instead. */
+  donateBlockedReason?: string;
 }
 
 /** Epoch-seconds deadline relevant to the program's current phase, or null. */
@@ -45,7 +47,7 @@ function useCountdown(endSec: number | null): string | null {
   return `${pad(d)}d:${pad(h)}h:${pad(m)}m:${pad(s)}s`;
 }
 
-export function ProgramFundingCard({ program, meta, onDonate }: Props) {
+export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReason }: Props) {
   const { t } = useT();
   const fmtAmount = useFormatMoney();
   const { address } = useAccount();
@@ -115,7 +117,11 @@ export function ProgramFundingCard({ program, meta, onDonate }: Props) {
         </p>
       </div>
 
-      {program.openDonation && (
+      {program.openDonation && donateBlockedReason && (
+        <p className="rounded-xl border-2 border-black bg-skyellow-light px-3 py-2 text-sm font-bold">{donateBlockedReason}</p>
+      )}
+
+      {program.openDonation && !donateBlockedReason && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <DonationPresets token={token} value={amount} onChange={setAmount} />

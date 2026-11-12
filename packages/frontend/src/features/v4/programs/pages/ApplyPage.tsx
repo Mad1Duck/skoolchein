@@ -4,7 +4,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import { useProgram, useProgramApplicants } from '@/lib/api/hooks';
-import { fetchProgramMeta, uploadToIPFS } from '@/lib/ipfs';
+import { fetchProgramMeta, rememberIPFSJson, uploadToIPFS } from '@/lib/ipfs';
 import { useApplyProgram } from '@/lib/contracts/write-hooks';
 import { useActiveChain } from '@/lib/chain/useActiveChain';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -224,7 +224,10 @@ export function ApplyPage() {
       const upload = async (type: string, name: string, meta: Record<string, unknown>, fallback: string) => {
         const res = await uploadToIPFS({ meta, type, name: `${name}-${suffix}` });
         setUploaded((n) => n + 1);
-        if (res?.metaCID) return res.metaCID;
+        if (res?.metaCID) {
+          rememberIPFSJson(res.metaCID, meta);
+          return res.metaCID;
+        }
         // Storing a made-up CID on the blockchain would be permanent, so only allow it in local dev.
         if (import.meta.env.DEV) return fallback;
         throw new Error('IPFS upload returned no CID');

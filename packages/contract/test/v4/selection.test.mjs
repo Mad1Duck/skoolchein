@@ -380,4 +380,39 @@ describe("deployment constraints", () => {
     assert.ok(size < 24_576, `Core is ${size} bytes`);
   });
 });
+
+  describe("conflict of interest: whoever competes for the scholarship cannot buy votes for it", () => {
+    it("an applicant cannot donate to the program they applied to", async () => {
+      const prog = await setupProgram(sys);
+      const students = await prog.openWindowAndApply();
+      await expectRevert(
+        sys.as(students[0]).write(core, "donate", [BigInt(prog.pid), parseEther("1"), "ipfs://d"], parseEther("1")),
+        "ApplicantCannotDonate",
+      );
+    });
+
+    it("a donor cannot then apply: the rule holds whichever comes first", async () => {
+      const prog = await setupProgram(sys);
+      await warpTo(prog.timeline[0]);
+      await sys.as(donor(0)).write(core, "donate", [BigInt(prog.pid), parseEther("1"), "ipfs://d"], parseEther("1"));
+      await expectRevert(
+        sys.as(donor(0)).write(core, "applyToProgram", [BigInt(prog.pid), "p", "d", "e", "r", 90n, 90n, 0n]),
+        "DonorCannotApply",
+      );
+    });
+
+    it("a candidate cannot vote for themselves", async () => {
+      const p = await votingReady();
+      await expectRevert(
+        sys.as(p.students[0]).write(core, "voteForCandidate", [BigInt(p.pid), p.students[0], false]),
+        "CannotVoteForSelf",
+      );
+    });
+
+    it("people who are neither applicants nor donors are unaffected", async () => {
+      const prog = await setupProgram(sys);
+      await prog.openWindowAndApply();
+      await sys.as(donor(1)).write(core, "donate", [BigInt(prog.pid), parseEther("1"), "ipfs://d"], parseEther("1"));
+    });
+  });
 });

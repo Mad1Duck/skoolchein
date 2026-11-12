@@ -27,9 +27,6 @@ interface IScholarshipCore {
     function getScholar(address wallet, uint256 pid)
         external view returns (ScholarshipTypes.Scholar memory);
 
-    function isStudentEligible(address wallet)
-        external view returns (bool eligible, string memory reason);
-
     /// @notice USDC value of undisbursed milestones for a given scholar.
     ///         Used by ScholarshipBounty to calculate BH stake and potential reward.
     function getRemainingFund(address wallet, uint256 pid)
