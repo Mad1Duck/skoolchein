@@ -233,6 +233,37 @@
 }
 ::-webkit-scrollbar { display: none; }
 
+/*
+ * Tailwind v4's preflight stopped giving buttons a pointer cursor, so every raw
+ * <button> (tabs, option cards, "Add funds" links, modal close, ...) looked
+ * unclickable. Restore it once here instead of sprinkling `cursor-pointer`
+ * on each element. Lives in @layer base, so any `cursor-*` utility on an
+ * element still wins.
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="range"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+}
+
 input, textarea, select {
   background-color: #fff;
   box-shadow: 2px 2px 0 0 #000;
