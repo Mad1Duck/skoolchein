@@ -382,6 +382,15 @@ export const id: Record<TranslationKey, string> = {
   'panel.dismiss': 'Abaikan',
   'panel.milestoneNo': 'Milestone #{id}',
 
+  // small confirmations
+  'milestone.proposeConfirmTitle': 'Konfirmasi Usulan Anda',
+  'milestone.proposeConfirmBody': 'Silakan konfirmasi untuk mengirim usulan milestone Anda.',
+  'milestone.proofConfirmTitle': 'Konfirmasi Bukti Anda',
+  'milestone.proofConfirmBody': 'Silakan konfirmasi untuk mengirim bukti milestone Anda.',
+  'apply.confirmTitle': 'Konfirmasi Pendaftaran Anda',
+  'apply.confirmBody': 'Silakan konfirmasi untuk mengirim pendaftaran Anda.',
+  'disputes.activeHint': 'Laporan yang butuh tanggapan dari penerima beasiswa, atau sedang menunggu peninjauan.',
+
   // dispute (report a problem)
   'dispute.title': 'Laporkan Masalah',
   'dispute.rulesTitle': 'Sebelum Melaporkan',

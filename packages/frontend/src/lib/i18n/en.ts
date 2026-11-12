@@ -388,6 +388,15 @@ export const en = {
   'panel.dismiss': 'Dismiss',
   'panel.milestoneNo': 'Milestone #{id}',
 
+  // small confirmations
+  'milestone.proposeConfirmTitle': 'Confirm Your Proposal',
+  'milestone.proposeConfirmBody': 'Please confirm to submit your milestone proposal.',
+  'milestone.proofConfirmTitle': 'Confirm Your Proof',
+  'milestone.proofConfirmBody': 'Please confirm to submit your milestone proof.',
+  'apply.confirmTitle': 'Confirm Your Application',
+  'apply.confirmBody': 'Please confirm to submit your application.',
+  'disputes.activeHint': 'Reports that need a response from the scholar, or are waiting for review.',
+
   // dispute (report a problem)
   'dispute.title': 'Report a Problem',
   'dispute.rulesTitle': 'Before You Report',

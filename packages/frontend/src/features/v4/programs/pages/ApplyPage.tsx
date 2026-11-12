@@ -8,8 +8,10 @@ import { useAccount } from 'wagmi';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
+import { useT } from '@/lib/i18n';
 
 export function ApplyPage() {
+  const { t } = useT();
   const { id } = useParams({ from: '/apply/$id' });
   const navigate = useNavigate();
   const { data: program, isLoading } = useProgram(id);
@@ -137,8 +139,8 @@ export function ApplyPage() {
           {step === 'tx' && (
             <div className="text-center py-16">
               <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4 shadow-[3px_3px_0_0_#000]" />
-              <p className="font-paytone text-xl">Confirm in Wallet</p>
-              <p className="text-gray-500 text-sm mt-1">Sign the smart contract interaction to submit.</p>
+              <p className="font-paytone text-xl">{t('apply.confirmTitle')}</p>
+              <p className="text-gray-500 text-sm mt-1">{t('apply.confirmBody')}</p>
             </div>
           )}
 

@@ -9,8 +9,10 @@ import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { RaiseDisputeModal } from "../components/RaiseDisputeModal";
 import { DefendModal } from "../components/DefendModal";
 import type { Milestone, Dispute, Scholar } from "@/lib/api/types";
+import { useT } from "@/lib/i18n";
 
 export function DisputesPage() {
+  const { t } = useT();
   const { address } = useAccount();
 
   // Queries
@@ -94,7 +96,7 @@ export function DisputesPage() {
             <h2 className="font-paytone text-2xl md:text-3xl">Active Disputes</h2>
             <span className="bg-skred text-white px-2 py-0.5 text-[10px] font-bold uppercase border border-black">{activeDisputes.length}</span>
           </div>
-          <p className="text-xs text-gray-500 mb-4">Disputes requiring a defense from the scholar, or awaiting oracle resolution.</p>
+          <p className="text-xs text-gray-500 mb-4">{t('disputes.activeHint')}</p>
 
           <div className="space-y-3">
             {loadingDisputes ? <NeoSkeleton lines={6} /> : activeDisputes.length === 0 ? (

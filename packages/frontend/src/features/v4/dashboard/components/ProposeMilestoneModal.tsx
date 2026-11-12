@@ -5,6 +5,7 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { useProposeMilestone } from '@/lib/contracts/write-hooks';
 import { useProgram } from '@/lib/api/hooks';
 import { formatTokenCompact, getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface Props {
 type MilestoneKind = 1 | 2; // 1 = OPTIONAL, 2 = NEGOTIATED
 
 export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
+  const { t } = useT();
   const [kind, setKind] = useState<MilestoneKind>(1);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -111,8 +113,8 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
         {step === 'tx' && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-            <p className="font-bold">Confirm Transaction in Wallet</p>
-            <p className="text-sm text-gray-600 mt-1">Sign to submit your milestone proposal.</p>
+            <p className="font-bold">{t('milestone.proposeConfirmTitle')}</p>
+            <p className="text-sm text-gray-600 mt-1">{t('milestone.proposeConfirmBody')}</p>
           </div>
         )}
 
