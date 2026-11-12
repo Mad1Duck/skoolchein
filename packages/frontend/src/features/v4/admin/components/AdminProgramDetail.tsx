@@ -5,6 +5,7 @@ import { NeoBadge } from "@/components/ui/NeoBadge";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { WalletAvatar } from "@/components/ui/WalletAvatar";
+import { CopyableText } from "@/components/ui/CopyableText";
 import {
   useProgramApplicants,
   useProgramScholars,
@@ -144,11 +145,11 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
                 label="Initiator"
                 value={
                   program.initiator ? (
-                    <span className="inline-flex items-center gap-2 font-data">
-                      <WalletAvatar address={program.initiator} size={18} />
-                      {short(program.initiator, 8, 6)}
-                      <CopyButton text={program.initiator} />
-                    </span>
+                    <CopyableText
+                      value={program.initiator}
+                      display={short(program.initiator, 8, 6)}
+                      leading={<WalletAvatar address={program.initiator} size={18} />}
+                    />
                   ) : (
                     <span className="text-gray-400">Unknown</span>
                   )
@@ -156,15 +157,21 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
               />
               <Line
                 label="Committee"
-                value={program.committeeContract ? <span className="font-data">{short(program.committeeContract, 8, 6)}</span> : "—"}
+                value={<CopyableText value={program.committeeContract} display={short(program.committeeContract, 8, 6)} />}
               />
               <Line
                 label="Token address"
-                value={<span className="font-data">{tokenMeta.isNative ? "Native" : short(token, 8, 6)}</span>}
+                value={
+                  tokenMeta.isNative ? (
+                    <span className="font-data text-xs">Native</span>
+                  ) : (
+                    <CopyableText value={token} display={short(token, 8, 6)} />
+                  )
+                }
               />
               <Line
                 label="Metadata CID"
-                value={<span className="font-data">{program.metadataCID ? short(program.metadataCID, 10, 6) : "—"}</span>}
+                value={<CopyableText value={program.metadataCID} display={short(program.metadataCID, 10, 6)} />}
               />
             </dl>
           </Block>
@@ -191,10 +198,8 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
               <RecordList loading={applicantsQ.isLoading} empty={!applicantsQ.data?.length}>
                 {applicantsQ.data?.map((a) => (
                   <li key={a.wallet} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                    <span className="inline-flex items-center gap-2 font-data text-sm font-bold">
-                      <WalletAvatar address={a.wallet} size={20} />
-                      {short(a.wallet)}
-                    </span>
+                    <CopyableText value={a.wallet} display={short(a.wallet)} leading={<WalletAvatar address={a.wallet} size={20} />} />
+
                     <span className="flex items-center gap-2">
                       <span className="font-data text-xs text-gray-500">score {a.totalScore ?? "—"}</span>
                       <NeoBadge status={a.status} />
@@ -207,10 +212,8 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
               <RecordList loading={scholarsQ.isLoading} empty={!scholarsQ.data?.length}>
                 {scholarsQ.data?.map((s) => (
                   <li key={s.wallet} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                    <span className="inline-flex items-center gap-2 font-data text-sm font-bold">
-                      <WalletAvatar address={s.wallet} size={20} />
-                      {short(s.wallet)}
-                    </span>
+                    <CopyableText value={s.wallet} display={short(s.wallet)} leading={<WalletAvatar address={s.wallet} size={20} />} />
+
                     <span className="flex items-center gap-2">
                       <span className="font-data text-xs text-gray-500">
                         {s.currentMilestone}/{s.totalMilestones} · {money(s.totalReceived)}
@@ -227,7 +230,11 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
                   <li key={m.blockchainId} className="flex items-center justify-between gap-3 px-3 py-2.5">
                     <span className="font-data text-sm font-bold">
                       #{m.blockchainId}
-                      <span className="ml-2 text-xs font-medium text-gray-500">{short(m.scholarWallet)}</span>
+                      {m.scholarWallet && (
+                        <span className="ml-2">
+                          <CopyableText value={m.scholarWallet} display={short(m.scholarWallet)} className="text-gray-500" />
+                        </span>
+                      )}
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="font-data text-xs text-gray-500">{formatTokenWithSymbol(m.amount, m.token ?? token)}</span>
@@ -286,23 +293,6 @@ function Chip({ className = "", children }: { className?: string; children: Reac
     <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 border-2 border-black rounded-full ${className}`}>
       {children}
     </span>
-  );
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1200);
-      }}
-      className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 border-2 border-black rounded-md bg-white hover:bg-skyellow"
-    >
-      {done ? "Copied" : "Copy"}
-    </button>
   );
 }
 

@@ -17,6 +17,7 @@ import {
 import { CreateProgramModal } from '../../programs/components/CreateProgramModal';
 import { useState, useMemo } from 'react';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { LiveBadge } from '@/components/ui/LiveBadge';
 import { ProviderProfileCard } from '../components/ProviderProfileCard';
 import { StudentProfileCard } from '../components/StudentProfileCard';
 import { DashboardMessageCard } from '../components/DashboardMessageCard';
@@ -215,7 +216,10 @@ export function DashboardPage() {
               <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">{t('nav.dashboard')}</h1>
             </div>
             <div className="flex flex-col items-start md:items-end gap-1">
-              <p className="text-xs font-data text-gray-400 uppercase tracking-widest">{t('dash.connected')}</p>
+              <div className="flex items-center gap-2">
+                <LiveBadge />
+                <p className="text-xs font-data text-gray-400 uppercase tracking-widest">{t('dash.connected')}</p>
+              </div>
               <p className="text-sm font-data text-gray-600">{address}</p>
             </div>
           </div>

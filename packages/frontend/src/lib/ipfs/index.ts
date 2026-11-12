@@ -29,7 +29,16 @@ export async function fetchIPFS<T = unknown>(cid: string): Promise<T | null> {
 
 /** Fetch program metadata from IPFS */
 export async function fetchProgramMeta(cid: string): Promise<ProgramMetadata | null> {
-  return fetchIPFS<ProgramMetadata>(cid);
+  const meta = await fetchIPFS<ProgramMetadata>(cid);
+  if (!meta) return null;
+  // The stored name keeps the backend's naming prefix ("skoolchein_program_My Program").
+  // That is for storage only — display just what the creator typed.
+  return meta.name ? { ...meta, name: stripNamePrefix(meta.name) } : meta;
+}
+
+/** "skoolchein_program_My Program" → "My Program". Names without the prefix pass through. */
+export function stripNamePrefix(name: string): string {
+  return name.replace(/^skoolchein_[a-z0-9]+_/i, "");
 }
 
 /** Fetch applicant profile from IPFS */

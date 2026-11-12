@@ -9,6 +9,8 @@ import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoBadge } from "@/components/ui/NeoBadge";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { WalletAvatar } from "@/components/ui/WalletAvatar";
+import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
+import { LiveBadge } from "@/components/ui/LiveBadge";
 import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProgramDetail } from "../components/AdminProgramDetail";
 import { AdminProtocolConfig } from "../components/AdminProtocolConfig";
@@ -139,8 +141,9 @@ export function AdminDashboardPage() {
         </div>
         <div className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[3px_3px_0_0_#000]">
           <WalletAvatar address={address as string} size={22} />
+          <LiveBadge />
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Admin</span>
-          <span className="font-data text-sm font-bold">{short(address as string)}</span>
+          <CopyableText value={address as string} display={short(address as string)} className="!text-sm" />
         </div>
       </div>
 
@@ -229,18 +232,12 @@ export function AdminDashboardPage() {
                 </td>
                 <td className="p-3">
                   {p.initiator ? (
-                    <button
-                      type="button"
-                      title="Copy address"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard?.writeText(p.initiator);
-                      }}
-                      className="inline-flex items-center gap-2 font-data text-xs font-bold text-skpurple hover:underline"
-                    >
-                      <WalletAvatar address={p.initiator} size={18} />
-                      {short(p.initiator)}
-                    </button>
+                    <CopyableText
+                      value={p.initiator}
+                      display={short(p.initiator)}
+                      leading={<WalletAvatar address={p.initiator} size={18} />}
+                      className="text-skpurple"
+                    />
                   ) : (
                     <span className="text-xs font-bold text-gray-400">Unknown</span>
                   )}
@@ -264,10 +261,12 @@ export function AdminDashboardPage() {
             <ListScroll>
               {creators.map((wallet) => (
                 <Row key={wallet}>
-                  <span className="inline-flex items-center gap-2 font-data font-bold text-sm min-w-0">
-                    <WalletAvatar address={wallet} size={20} />
-                    <span className="truncate">{short(wallet, 10, 8)}</span>
-                  </span>
+                  <CopyableText
+                    value={wallet}
+                    display={short(wallet, 10, 8)}
+                    leading={<WalletAvatar address={wallet} size={20} />}
+                    className="!text-sm min-w-0"
+                  />
                   <Pill className="bg-skyellow">CORE_ROLE</Pill>
                 </Row>
               ))}
@@ -277,7 +276,7 @@ export function AdminDashboardPage() {
             <ListScroll>
               {applicantsData?.map((a, i) => (
                 <Row key={i}>
-                  <span className="font-data font-bold text-sm">{short(a.applicant.wallet, 8, 4)}</span>
+                  <CopyableText value={a.applicant.wallet} display={short(a.applicant.wallet, 8, 4)} className="!text-sm" />
                   <span className="font-data text-xs font-bold text-gray-500">#{a.program?.pid}</span>
                   <NeoBadge status={a.applicant.status} />
                 </Row>
@@ -288,7 +287,7 @@ export function AdminDashboardPage() {
             <ListScroll>
               {scholarsData?.map((s, i) => (
                 <Row key={i}>
-                  <span className="font-data font-bold text-sm">{short(s.scholar.wallet, 8, 4)}</span>
+                  <CopyableText value={s.scholar.wallet} display={short(s.scholar.wallet, 8, 4)} className="!text-sm" />
                   <span className="font-data text-xs font-bold text-gray-500">#{s.program?.pid}</span>
                   <span className="font-data text-sm font-bold text-skpurple whitespace-nowrap">
                     {formatTokenWithSymbol(s.scholar.totalReceived || "0", s.program?.token)}
@@ -485,9 +484,7 @@ function ContractItem({ label, address }: { label: string; address: string }) {
   return (
     <div className="flex flex-wrap justify-between items-center gap-2 border-b-2 border-black/10 pb-3 last:border-b-0 last:pb-0">
       <span className="font-bold text-sm">{label}</span>
-      <span className="bg-white text-gray-600 font-data text-xs px-2 py-1 border-2 border-black rounded-lg shadow-[2px_2px_0_0_#000]">
-        {address.slice(0, 10)}...{address.slice(-8)}
-      </span>
+      <CopyableText value={address} display={truncateMiddle(address, 10, 8)} variant="box" />
     </div>
   );
 }

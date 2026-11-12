@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { getActiveChainId } from "@/lib/chain/chains";
+import { requestRealtimeRefresh } from "@/lib/realtime/realtime";
 
 /**
  * Shared helper for contract write transactions with loading and success states.
@@ -19,6 +21,12 @@ export function useTxHook() {
   // on another one, instead of sending the tx to whatever chain the wallet is on.
   const writeOnActiveChain = ((variables: any, options?: any) =>
     writeContract({ chainId: getActiveChainId(), ...variables }, options)) as typeof writeContract;
+
+  // The user's own transaction just landed: refresh live data now instead of
+  // waiting for the indexer's event to come back over the realtime feed.
+  useEffect(() => {
+    if (isSuccess) requestRealtimeRefresh();
+  }, [isSuccess]);
 
   return { 
     hash, 
