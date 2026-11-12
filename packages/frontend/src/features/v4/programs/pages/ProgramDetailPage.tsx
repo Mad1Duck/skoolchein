@@ -25,35 +25,16 @@ import { PhaseTimeline } from '@/components/ui/PhaseTimeline';
 import { StatCard } from '@/components/ui/StatCard';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
-import { formatTokenAmount, getTokenMeta } from '@/lib/contracts/v4/token';
+import { useT } from '@/lib/i18n';
+import { useFormatMoney } from '@/lib/money';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
 
-const TABS: Array<{ key: Tab; label: string }> = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'applicants', label: 'Applicants' },
-  { key: 'scholars', label: 'Scholars' },
-  { key: 'milestones', label: 'Milestones' },
-  { key: 'votes', label: 'Votes' },
-  { key: 'disputes', label: 'Disputes' },
-];
-
-/**
- * Format an amount in the PROGRAM'S OWN token.
- *
- * Amounts are denominated in whatever token backs the program — native uses 18
- * decimals, USDC uses 6 — so the decimal count must come from the token, never
- * be hardcoded (see the note on Applicant/Program.token in lib/api/types.ts).
- * The previous helper divided everything by 1e6 and prefixed "$", which
- * rendered a 52 ETH program as "$52,000,000,000,000,000" and labelled ETH as
- * dollars. Callers must NOT add their own "$".
- */
-function fmtAmount(raw: string | bigint | number | null | undefined, token?: string | null): string {
-  const n = Number(formatTokenAmount(BigInt(raw ?? 0), token));
-  return `${n.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${getTokenMeta(token).symbol}`;
-}
+const TAB_KEYS: Tab[] = ['overview', 'applicants', 'scholars', 'milestones', 'votes', 'disputes'];
 
 export function ProgramDetailPage() {
+  const { t } = useT();
+  const fmtAmount = useFormatMoney();
   const { id } = useParams({ from: '/programs/$id/' });
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
@@ -111,10 +92,10 @@ export function ProgramDetailPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-24 text-center">
         <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#000] rounded-lg p-10 inline-block">
-          <h2 className="font-paytone text-3xl mb-3">Program Not Found</h2>
-          <p className="text-gray-600 mb-6">This program does not exist or has been removed.</p>
+          <h2 className="font-paytone text-3xl mb-3">{t('detail.notFound')}</h2>
+          <p className="text-gray-600 mb-6">{t('detail.notFoundBody')}</p>
           <Link to="/programs">
-            <NeoButton label="Back to Programs" variant="secondary" size="md" />
+            <NeoButton label={t('detail.back')} variant="secondary" size="md" />
           </Link>
         </div>
       </div>
@@ -126,7 +107,7 @@ export function ProgramDetailPage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
         <Link to="/programs" className="font-bold hover:text-skpurple transition-colors duration-75">
-          Programs
+          {t('detail.programs')}
         </Link>
         <span className="text-gray-300">/</span>
         <span className="font-bold text-black">{meta?.name ?? `Program #${program.pid}`}</span>
@@ -166,7 +147,7 @@ export function ProgramDetailPage() {
                 disabled:opacity-40 disabled:shadow-none disabled:translate-x-[2px] disabled:translate-y-[2px]
               `}
             >
-              {program.openDonation ? 'Public: ON' : 'Public: OFF'}
+              {program.openDonation ? t('detail.donationsOn') : t('detail.donationsOff')}
             </button>
           )}
           {program.status === 'APPLICATION_OPEN' && (
@@ -175,20 +156,20 @@ export function ProgramDetailPage() {
             // would only produce a failed transaction.
             myApplication ? (
               <NeoButton
-                label={`Applied · ${myApplication.status}`}
+                label={t('detail.applied', { status: myApplication.status })}
                 variant="secondary"
                 size="md"
                 disabled
               />
             ) : (
               <Link to="/apply/$id" params={{ id: String(program.pid) }}>
-                <NeoButton label="Apply Now" variant="primary" size="md" />
+                <NeoButton label={t('detail.apply')} variant="primary" size="md" />
               </Link>
             )
           )}
           {program.status === 'VOTING' && program.openDonation && (
             <NeoButton
-              label="Cast Vote"
+              label={t('detail.castVote')}
               variant="primary"
               size="md"
               onClick={() => setActiveTab('applicants')}
@@ -196,7 +177,7 @@ export function ProgramDetailPage() {
           )}
           {program.openDonation && (
             <NeoButton
-              label="Donate"
+              label={t('detail.donate')}
               variant="success"
               size="md"
               onClick={() => setIsDonateOpen(true)}
@@ -204,7 +185,7 @@ export function ProgramDetailPage() {
           )}
           {userAddress === program.initiator && program.status === 'VOTING' && (
             <NeoButton
-              label="Select Winners"
+              label={t('detail.selectWinners')}
               variant="secondary"
               size="md"
               onClick={() => setIsSelectWinnersOpen(true)}
@@ -258,15 +239,16 @@ export function ProgramDetailPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total Fund" value={fmtAmount(program.totalFund, program.token)} color="green" />
-        <StatCard label="Spent" value={fmtAmount(program.spentFund, program.token)} color="orange" />
-        <StatCard label="Applicants" value={program.applicantCount} color="yellow" />
-        <StatCard label="Active Scholars" value={program.activeScholarCount} color="purple" />
+        <StatCard label={t('detail.statTotal')} value={fmtAmount(program.totalFund, program.token)} color="green" />
+        <StatCard label={t('detail.statSpent')} value={fmtAmount(program.spentFund, program.token)} color="orange" />
+        <StatCard label={t('detail.statApplicants')} value={program.applicantCount} color="yellow" />
+        <StatCard label={t('detail.statScholars')} value={program.activeScholarCount} color="purple" />
       </div>
 
       {/* Tabs — block style */}
       <div className="flex flex-wrap gap-1.5">
-        {TABS.map((tab) => {
+        {TAB_KEYS.map((tabKey) => {
+          const tab = { key: tabKey, label: t(`detail.tab.${tabKey}` as const) };
           const count =
             tab.key === 'applicants' && program._counts?.applicants
               ? program._counts.applicants
@@ -308,7 +290,7 @@ export function ProgramDetailPage() {
                   <div className="min-w-0">
                     <p className="font-bold font-data text-sm">{shortenAddress(a.wallet)}</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
-                      Score <span className="font-data font-bold">{a.totalScore ?? '—'}</span> · Retry <span className="font-data">{a.retryCount}</span>
+                      {t('detail.score')} <span className="font-data font-bold">{a.totalScore ?? '—'}</span> · {t('detail.retry')} <span className="font-data">{a.retryCount}</span>
                     </p>
                   </div>
                 </div>
@@ -316,7 +298,7 @@ export function ProgramDetailPage() {
                   <NeoBadge status={a.status} />
                   {program.status === 'VOTING' && program.openDonation && a.status === 'SHORTLISTED' && (
                     <NeoButton
-                      label="Vote"
+                      label={t('detail.vote')}
                       variant="primary"
                       size="sm"
                       onClick={() => {
@@ -341,7 +323,7 @@ export function ProgramDetailPage() {
                   <div className="min-w-0">
                     <p className="font-bold font-data text-sm">{shortenAddress(s.wallet)}</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
-                      Received <span className="font-data font-bold">{fmtAmount(s.totalReceived, program.token)}</span> · Milestone <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
+                      {t('detail.received')} <span className="font-data font-bold">{fmtAmount(s.totalReceived, program.token)}</span> · {t('detail.milestone')} <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
                     </p>
                   </div>
                 </div>
@@ -349,7 +331,7 @@ export function ProgramDetailPage() {
                   <NeoBadge status={s.status} />
                   {program.openDonation && s.status === 'ACTIVE' && (
                     <NeoButton
-                      label="Stake"
+                      label={t('detail.back2')}
                       variant="primary"
                       size="sm"
                       onClick={() => {
@@ -370,7 +352,7 @@ export function ProgramDetailPage() {
             renderItem={(m) => (
               <div key={m.blockchainId} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="min-w-0">
-                  <p className="font-bold text-sm">Milestone <span className="font-data">#{m.blockchainId}</span></p>
+                  <p className="font-bold text-sm">{t('detail.milestoneNo')} <span className="font-data">#{m.blockchainId}</span></p>
                   <p className="text-[11px] text-gray-500 font-data mt-0.5">
                     {m.scholarWallet ? shortenAddress(m.scholarWallet) : '—'} · {fmtAmount(m.amount, m.token ?? program.token)}
                   </p>
@@ -391,12 +373,12 @@ export function ProgramDetailPage() {
                   <div className="min-w-0">
                     <p className="text-sm leading-snug">
                       <span className="font-bold font-data">{shortenAddress(v.voterAddress)}</span>{' '}
-                      <span className="text-gray-500">voted for</span>{' '}
+                      <span className="text-gray-500">{t('detail.votedFor')}</span>{' '}
                       <span className="font-bold font-data text-skpurple">
                         {shortenAddress(v.candidateAddress)}
                       </span>
                     </p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Weight <span className="font-data font-bold">{v.votingWeight}</span></p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{t('detail.weight')} <span className="font-data font-bold">{v.votingWeight}</span></p>
                   </div>
                 </div>
               </div>
@@ -411,13 +393,13 @@ export function ProgramDetailPage() {
               <div key={d.blockchainId} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="min-w-0">
                   <p className="font-bold text-sm">
-                    Dispute <span className="font-data">#{d.blockchainId}</span>{' '}
+                    {t('detail.report')} <span className="font-data">#{d.blockchainId}</span>{' '}
                     <span className="text-[10px] font-extrabold font-data uppercase tracking-wider bg-gray-100 px-1.5 py-0.5 border border-black">
                       {d.disputeType.replace(/_/g, ' ')}
                     </span>
                   </p>
                   <p className="text-[11px] text-gray-500 font-data mt-0.5">
-                    BH {shortenAddress(d.bountyHunter)} <span className="text-gray-300">vs</span> Scholar {shortenAddress(d.scholarAddress)}
+                    {t('detail.reporter')} {shortenAddress(d.bountyHunter)} <span className="text-gray-300">{t('detail.vs')}</span> {t('detail.scholar')} {shortenAddress(d.scholarAddress)}
                   </p>
                 </div>
                 <NeoBadge status={d.status} />
@@ -431,6 +413,8 @@ export function ProgramDetailPage() {
 }
 
 function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
+  const { t } = useT();
+  const fmtAmount = useFormatMoney();
   const grossTotal = BigInt(program.totalFund) + BigInt(program.protocolFeeCollected || 0);
   // Money stays in bigint. An 18-decimal amount exceeds Number's 2^53 exact
   // range, so subtracting as Number silently loses precision on native-token
@@ -445,23 +429,23 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <NeoCard fill="cream" hoverable={false}>
         <NeoCardBody className="space-y-5">
-          <h3 className="font-paytone text-lg">Program Details</h3>
+          <h3 className="font-paytone text-lg">{t('detail.programDetails')}</h3>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Max Candidates</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.maxCandidates')}</dt>
               <dd className="font-bold font-data text-base">{program.maxCandidates}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Target Winners</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.targetWinners')}</dt>
               <dd className="font-bold font-data text-base">{program.targetWinners}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Screening Mode</dt>
-              <dd className="font-bold">{program.screeningMode === 0 ? 'By Committee' : 'By Student'}</dd>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.scoring')}</dt>
+              <dd className="font-bold">{program.screeningMode === 0 ? t('detail.byCommittee') : t('detail.byStudent')}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Education Level</dt>
-              <dd className="font-bold">{['SD', 'SMP', 'SMA', 'University'][program.educationLevel] ?? '—'}</dd>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.eduLevel')}</dt>
+              <dd className="font-bold">{[t('create.edu.elementary'), t('create.edu.junior'), t('create.edu.senior'), t('create.edu.university')][program.educationLevel] ?? '—'}</dd>
             </div>
           </dl>
         </NeoCardBody>
@@ -469,54 +453,54 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
 
       <NeoCard fill="yellow" hoverable={false}>
         <NeoCardBody className="space-y-5">
-          <h3 className="font-paytone text-lg">Financial Summary</h3>
+          <h3 className="font-paytone text-lg">{t('detail.financial')}</h3>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Gross Total</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.gross')}</dt>
               <dd className="font-bold font-data">{fmtAmount(grossTotal, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-skpurple font-bold text-xs uppercase tracking-wider">Net Total Fund</dt>
+              <dt className="text-skpurple font-bold text-xs uppercase tracking-wider">{t('detail.net')}</dt>
               <dd className="font-bold text-skpurple font-data text-base">{fmtAmount(program.totalFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline border-t-2 border-black/10 pt-2">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Allocated</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.allocated')}</dt>
               <dd className="font-bold font-data">{fmtAmount(program.allocatedFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Spent</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.spent')}</dt>
               <dd className="font-bold text-orange-600 font-data">{fmtAmount(program.spentFund, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">Yield Accrued</dt>
+              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.earnings')}</dt>
               <dd className="font-bold text-skpurple font-data">{fmtAmount(program.yieldAccrued, program.token)}</dd>
             </div>
           </dl>
 
           {/* Allocation Breakdown Bar */}
           <div className="pt-1">
-            <h4 className="font-bold text-[10px] uppercase text-gray-500 tracking-widest mb-2">Fund Allocation</h4>
+            <h4 className="font-bold text-[10px] uppercase text-gray-500 tracking-widest mb-2">{t('detail.allocation')}</h4>
             <div className="flex h-5 w-full bg-white border-2 border-black overflow-hidden">
               <div
                 className="h-full bg-skgreen border-r-2 border-black"
                 style={{ width: `${pctSpent}%` }}
-                title={`Spent: ${fmtAmount(program.spentFund, program.token)}`}
+                title={`${t('detail.spent')}: ${fmtAmount(program.spentFund, program.token)}`}
               />
               <div
                 className="h-full bg-skyellow border-r-2 border-black"
                 style={{ width: `${pctAllocated}%` }}
-                title={`Pending: ${fmtAmount(BigInt(program.allocatedFund) - BigInt(program.spentFund), program.token)}`}
+                title={`${t('detail.pending')}: ${fmtAmount(BigInt(program.allocatedFund) - BigInt(program.spentFund), program.token)}`}
               />
               <div
                 className="h-full bg-gray-200"
                 style={{ width: `${pctUnallocated}%` }}
-                title={`Unallocated: ${fmtAmount(unallocated, program.token)}`}
+                title={`${t('detail.unallocated')}: ${fmtAmount(unallocated, program.token)}`}
               />
             </div>
             <div className="flex justify-between text-[10px] font-bold text-gray-600 mt-1.5 uppercase tracking-wider">
-              <span className="text-green-700">Spent {pctSpent.toFixed(0)}%</span>
-              <span className="text-yellow-700">Pending {pctAllocated.toFixed(0)}%</span>
-              <span>Unallocated {pctUnallocated.toFixed(0)}%</span>
+              <span className="text-green-700">{t('detail.spent')} {pctSpent.toFixed(0)}%</span>
+              <span className="text-yellow-700">{t('detail.pending')} {pctAllocated.toFixed(0)}%</span>
+              <span>{t('detail.unallocated')} {pctUnallocated.toFixed(0)}%</span>
             </div>
           </div>
         </NeoCardBody>
@@ -534,12 +518,13 @@ function ListTab<T>({
   isLoading: boolean;
   renderItem: (item: T) => React.ReactNode;
 }) {
+  const { t } = useT();
   if (isLoading) return <NeoSkeleton lines={5} className="py-4" />;
   if (!data || data.length === 0) {
     return (
       <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-10 text-center">
-        <p className="font-paytone text-lg mb-1">No data yet</p>
-        <p className="text-gray-500 text-sm">Items will appear here once activity begins.</p>
+        <p className="font-paytone text-lg mb-1">{t('detail.emptyTitle')}</p>
+        <p className="text-gray-500 text-sm">{t('detail.emptyBody')}</p>
       </div>
     );
   }
