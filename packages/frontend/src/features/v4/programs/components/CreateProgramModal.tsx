@@ -13,6 +13,7 @@ import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
 import { friendlyErrorKey } from '@/lib/errors';
+import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 
 interface Props {
   isOpen: boolean;
@@ -62,6 +63,9 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
   const [metaCID, setMetaCID] = useState('');
 
   const tokenMeta = getTokenMeta(formData.token);
+  const limits = useProtocolLimits();
+  const candidatesOk = formData.maxCandidates >= limits.minCandidates && formData.maxCandidates <= limits.maxCandidates;
+  const winnersOk = formData.targetWinners >= 1 && formData.targetWinners <= formData.maxCandidates;
   // The creator funds the program from their own wallet, so check it can cover the fund first.
   const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(formData.token, formData.totalFund);
   const fundIdr =
@@ -271,20 +275,28 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 <input
                   type="number"
                   min={1}
-                  className="w-full"
+                  max={formData.maxCandidates}
+                  aria-invalid={!winnersOk}
+                  className={`w-full ${winnersOk ? '' : '!border-skred'}`}
                   value={formData.targetWinners}
                   onChange={(e) => set('targetWinners', Number(e.target.value))}
                 />
+                {!winnersOk && <p className="text-[11px] font-bold text-skred mt-1">{t('create.winnersRange')}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1">{t('create.maxCandidates')}</label>
                 <input
                   type="number"
-                  min={1}
-                  className="w-full"
+                  min={limits.minCandidates}
+                  max={limits.maxCandidates}
+                  aria-invalid={!candidatesOk}
+                  className={`w-full ${candidatesOk ? '' : '!border-skred'}`}
                   value={formData.maxCandidates}
                   onChange={(e) => set('maxCandidates', Number(e.target.value))}
                 />
+                <p className={`text-[11px] mt-1 ${candidatesOk ? 'text-gray-500' : 'font-bold text-skred'}`}>
+                  {t('create.candidatesRange', { min: limits.minCandidates, max: limits.maxCandidates })}
+                </p>
               </div>
             </div>
 
@@ -335,7 +347,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               <input
                 type="range"
                 min={0}
-                max={5}
+                max={limits.maxOptional}
                 value={formData.maxOptionalMilestones}
                 onChange={(e) => set('maxOptionalMilestones', Number(e.target.value))}
                 className="w-full accent-skpurple"
@@ -509,6 +521,8 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
                 !formData.totalFund ||
                 weightSum !== 100 ||
                 slashSum !== 100 ||
+                !candidatesOk ||
+                !winnersOk ||
                 !hasEnough
               }
             />

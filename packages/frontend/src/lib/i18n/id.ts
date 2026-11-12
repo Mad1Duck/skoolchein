@@ -45,6 +45,9 @@ export const id: Record<TranslationKey, string> = {
   'error.generic': 'Terjadi kesalahan. Coba lagi sebentar lagi.',
   'error.allowance': 'Izin transfer dana Anda belum cukup. Konfirmasi izin dulu, lalu coba lagi.',
   'error.tokenNotSupported': 'Mata uang ini belum diaktifkan untuk program. Pilih mata uang lain.',
+  'error.targetWinners': 'Jumlah penerima tidak boleh melebihi jumlah kandidat.',
+  'create.candidatesRange': 'Diizinkan: {min}–{max} kandidat',
+  'create.winnersRange': 'Antara 1 dan jumlah kandidat.',
   'error.candidateRange': 'Jumlah kandidat di luar batas yang diizinkan. Ubah lalu coba lagi.',
 
   // vote

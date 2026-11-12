@@ -23,7 +23,8 @@ export function friendlyErrorKey(error: unknown): TranslationKey {
   if (msg.includes('erc20insufficientallowance') || msg.includes('0xfb8f41b2')) return 'error.allowance';
   if (msg.includes('erc20insufficientbalance') || msg.includes('0xe450d38c')) return 'error.insufficient';
   if (msg.includes('tokennotsupported')) return 'error.tokenNotSupported';
-  if (msg.includes('invalidcandidaterange')) return 'error.candidateRange';
+  if (msg.includes('invalidcandidaterange') || msg.includes('0x57405680')) return 'error.candidateRange';
+  if (msg.includes('targetwinnersexceedsmax') || msg.includes('0xb9eb7584')) return 'error.targetWinners';
   if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('transfer amount exceeds')) {
     return 'error.insufficient';
   }
