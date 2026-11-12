@@ -7,6 +7,9 @@ COPY packages/backend/package.json ./packages/backend/package.json
 COPY packages/ponder/package.json ./packages/ponder/package.json
 COPY packages/frontend/package.json ./packages/frontend/package.json
 COPY packages/contract/package.json ./packages/contract/package.json
+# Some deps (bufferutil, utf-8-validate) have no prebuilt binary for Alpine/musl, so their
+# install script falls back to node-gyp, which needs Python and a C toolchain.
+RUN apk add --no-cache python3 make g++
 RUN bun install
 
 # packages/backend/src/config/ponder-client.ts imports Ponder's onchain
