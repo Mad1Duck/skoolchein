@@ -87,6 +87,39 @@ export const id: Record<TranslationKey, string> = {
   'stake.successBody': 'Anda menyetor {amount} {symbol} untuk mendukung {name}.',
   'stake.shortfall': 'Saldo Anda kurang sekitar {amount} untuk deposit ini.',
 
+  // loading overlay
+  'loading.waitTitle': 'Menunggu Konfirmasi',
+  'loading.waitBody': 'Silakan konfirmasi di wallet Anda untuk melanjutkan.',
+  'loading.processTitle': 'Memproses',
+  'loading.processBody': 'Biasanya hanya butuh beberapa detik.',
+  'loading.successTitle': 'Berhasil',
+  'loading.successDefault': 'Selesai.',
+  'loading.errorTitle': 'Terjadi Kesalahan',
+  'loading.errorDefault': 'Aksi tidak dapat diselesaikan.',
+
+  // defend (scholar responds to a report)
+  'defend.title': 'Tanggapi Laporan',
+  'defend.intro': 'Seseorang melaporkan masalah pada bukti milestone Anda. Tanggapi dengan jelas di sini. Jika Anda menyerah atau tidak menanggapi sebelum batas waktu, Anda kalah dalam sengketa.',
+  'defend.accusation': 'Bukti laporan:',
+  'defend.label': 'Tanggapan / bukti tandingan Anda',
+  'defend.placeholder': 'Jelaskan mengapa bukti Anda sah dan tanggapi klaim tersebut…',
+  'defend.submit': 'Kirim Tanggapan',
+  'defend.uploading': 'Mengunggah tanggapan Anda',
+  'defend.confirming': 'Konfirmasi Tanggapan Anda',
+  'defend.confirmingBody': 'Silakan konfirmasi untuk mengirim tanggapan Anda.',
+  'defend.successTitle': 'Tanggapan Terkirim',
+  'defend.successHeading': 'Tanggapan Anda aktif!',
+  'defend.successBody': 'Tanggapan Anda sudah tercatat. Tim peninjau akan memeriksanya.',
+
+  // candidate card
+  'candidate.anonymous': 'Pelajar Anonim',
+  'candidate.screening': 'Seleksi',
+  'candidate.total': 'Total',
+  'candidate.vote': 'Beri Suara',
+  'candidate.voted': 'Sudah memilih!',
+  'candidate.confirming': 'Mengonfirmasi…',
+  'candidate.back': 'Dukung',
+
   // dispute (report a problem)
   'dispute.title': 'Laporkan Masalah',
   'dispute.rulesTitle': 'Sebelum Melaporkan',

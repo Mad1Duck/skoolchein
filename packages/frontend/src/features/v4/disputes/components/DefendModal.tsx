@@ -3,17 +3,20 @@ import { uploadToIPFS } from "@/lib/ipfs";
 import { useDefendDispute } from "@/lib/contracts/write-hooks";
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
+import { useT } from "@/lib/i18n";
+import { friendlyErrorKey } from "@/lib/errors";
 import type { Dispute } from "@/lib/api/types";
 
-export function DefendModal({ 
-  isOpen, onClose, dispute 
-}: { 
-  isOpen: boolean; onClose: () => void; dispute: Dispute 
+export function DefendModal({
+  isOpen, onClose, dispute
+}: {
+  isOpen: boolean; onClose: () => void; dispute: Dispute
 }) {
+  const { t } = useT();
   const [evidenceText, setEvidenceText] = useState("");
   const [step, setStep] = useState<"form" | "uploading" | "tx">("form");
 
-  const { submitDefense, isPending, isSuccess } = useDefendDispute();
+  const { submitDefense, isPending, isSuccess, error } = useDefendDispute();
 
   const handleNext = async () => {
     if (step === "form") {
@@ -33,33 +36,36 @@ export function DefendModal({
 
   if (isSuccess) {
     return (
-      <NeoModal isOpen={isOpen} onClose={onClose} title="Defense Submitted">
+      <NeoModal isOpen={isOpen} onClose={onClose} title={t("defend.successTitle")}>
         <div className="text-center py-8">
-          <h2 className="text-2xl font-paytone mb-2">Defense Active!</h2>
-          <p className="text-gray-600 mb-6">Your defense has been recorded on-chain. The Oracle will review.</p>
-          <NeoButton label="Close" onClick={onClose} fullWidth variant="primary" />
+          <h2 className="text-2xl font-paytone mb-2">{t("defend.successHeading")}</h2>
+          <p className="text-gray-600 mb-6">{t("defend.successBody")}</p>
+          <NeoButton label={t("common.close")} onClick={onClose} fullWidth variant="primary" />
         </div>
       </NeoModal>
     );
   }
 
   return (
-    <NeoModal isOpen={isOpen} onClose={onClose} title="Defend Dispute">
+    <NeoModal isOpen={isOpen} onClose={onClose} title={t("defend.title")}>
       <div className="space-y-4">
         {step === "form" && (
           <>
             <p className="text-sm text-gray-700 bg-skyellow-light p-3 border-2 border-black rounded-lg">
-              A Bounty Hunter has disputed your milestone proof. Defend your case clearly here. If you concede or fail to respond before the deadline, you will lose the dispute.
+              {t("defend.intro")}
             </p>
-            <div className="bg-red-50 p-3 rounded border border-red-200 text-sm font-mono break-all line-clamp-2">
-              <span className="font-bold text-red-800">Accusation Evidence:</span> {dispute.evidenceCID}
-            </div>
+            <details className="text-xs">
+              <summary className="cursor-pointer font-bold">{t("common.advanced")}</summary>
+              <div className="mt-2 bg-red-50 p-3 rounded border border-red-200 font-mono break-all line-clamp-2">
+                <span className="font-bold text-red-800">{t("defend.accusation")}</span> {dispute.evidenceCID}
+              </div>
+            </details>
             <div>
-              <label className="block text-sm font-bold mb-1">Your Defense / Counter-Evidence</label>
-              <textarea 
+              <label className="block text-sm font-bold mb-1">{t("defend.label")}</label>
+              <textarea
                 className="w-full border-2 border-black p-2 rounded-lg neo-shadow-sm focus:outline-skblue"
                 rows={4}
-                placeholder="Explain why your proof is valid and refute the claim..."
+                placeholder={t("defend.placeholder")}
                 value={evidenceText}
                 onChange={(e) => setEvidenceText(e.target.value)}
               />
@@ -70,25 +76,30 @@ export function DefendModal({
         {step === "uploading" && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
-            <p className="font-bold">Uploading Defense to IPFS</p>
+            <p className="font-bold">{t("defend.uploading")}</p>
           </div>
         )}
 
         {step === "tx" && (
           <div className="text-center py-12">
             <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-            <p className="font-bold">Confirm Transaction</p>
-            <p className="text-sm text-gray-600">Please sign the smart contract interaction.</p>
+            <p className="font-bold">{t("defend.confirming")}</p>
+            <p className="text-sm text-gray-600">{t("defend.confirmingBody")}</p>
+            {error && (
+              <div className="bg-skred-light p-3 mt-4 text-xs text-skred border-2 border-black shadow-[2px_2px_0_0_#000]">
+                {t(friendlyErrorKey(error))}
+              </div>
+            )}
           </div>
         )}
 
         <div className="pt-4 border-t-2 border-gray-100 flex justify-end gap-2">
-          <NeoButton label="Cancel" variant="ghost" onClick={onClose} disabled={isPending || step === "uploading"} />
+          <NeoButton label={t("common.cancel")} variant="ghost" onClick={onClose} disabled={isPending || step === "uploading"} />
           {step === "form" && (
-            <NeoButton label="Submit Defense" variant="primary" onClick={handleNext} disabled={!evidenceText || evidenceText.length < 10} />
+            <NeoButton label={t("defend.submit")} variant="primary" onClick={handleNext} disabled={!evidenceText || evidenceText.length < 10} />
           )}
           {step === "tx" && (
-            <NeoButton label="Waiting for Wallet..." variant="primary" disabled loading={isPending} />
+            <NeoButton label={t("dispute.waiting")} variant="primary" disabled loading={isPending} />
           )}
         </div>
       </div>

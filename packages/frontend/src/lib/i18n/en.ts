@@ -93,6 +93,39 @@ export const en = {
   'stake.successBody': 'You put down {amount} {symbol} to back {name}.',
   'stake.shortfall': 'Your balance is about {amount} short for this deposit.',
 
+  // loading overlay
+  'loading.waitTitle': 'Waiting for Confirmation',
+  'loading.waitBody': 'Please confirm in your wallet to continue.',
+  'loading.processTitle': 'Processing',
+  'loading.processBody': 'This usually takes a few seconds.',
+  'loading.successTitle': 'Success',
+  'loading.successDefault': 'Done.',
+  'loading.errorTitle': 'Something Went Wrong',
+  'loading.errorDefault': 'The action could not be completed.',
+
+  // defend (scholar responds to a report)
+  'defend.title': 'Respond to a Report',
+  'defend.intro': 'Someone reported a problem with your milestone proof. Respond clearly here. If you give up or do not respond before the deadline, you lose the dispute.',
+  'defend.accusation': 'Report evidence:',
+  'defend.label': 'Your response / counter-evidence',
+  'defend.placeholder': 'Explain why your proof is valid and answer the claim…',
+  'defend.submit': 'Submit Response',
+  'defend.uploading': 'Uploading your response',
+  'defend.confirming': 'Confirm Your Response',
+  'defend.confirmingBody': 'Please confirm to submit your response.',
+  'defend.successTitle': 'Response Submitted',
+  'defend.successHeading': 'Your response is active!',
+  'defend.successBody': 'Your response has been recorded. The review team will look into it.',
+
+  // candidate card
+  'candidate.anonymous': 'Anonymous Student',
+  'candidate.screening': 'Screening',
+  'candidate.total': 'Total',
+  'candidate.vote': 'Cast Vote',
+  'candidate.voted': 'Voted!',
+  'candidate.confirming': 'Confirming…',
+  'candidate.back': 'Back',
+
   // dispute (report a problem)
   'dispute.title': 'Report a Problem',
   'dispute.rulesTitle': 'Before You Report',

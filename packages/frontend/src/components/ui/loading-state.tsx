@@ -2,27 +2,26 @@ import { appStateInjection } from "@/hooks/inject/app-state";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { NeoButton } from "../ui/NeoButton";
+import { useT } from "@/lib/i18n";
 
 function WaitWallet() {
+  const { t } = useT();
   return (
     <div className="space-y-4 text-center">
       <div className="w-12 h-12 border-2 border-black bg-skyellow mx-auto animate-pulse" />
-      <h2 className="font-paytone text-xl">Waiting for Wallet</h2>
-      <p className="text-sm text-gray-600">
-        Confirm the transaction in your wallet to continue.
-      </p>
+      <h2 className="font-paytone text-xl">{t("loading.waitTitle")}</h2>
+      <p className="text-sm text-gray-600">{t("loading.waitBody")}</p>
     </div>
   );
 }
 
 function WaitConfirmation() {
+  const { t } = useT();
   return (
     <div className="space-y-4 text-center">
       <div className="w-12 h-12 border-2 border-black bg-skpurple mx-auto animate-pulse" />
-      <h2 className="font-paytone text-xl">Processing on Chain</h2>
-      <p className="text-sm text-gray-600">
-        The transaction is being mined. This usually takes a few seconds.
-      </p>
+      <h2 className="font-paytone text-xl">{t("loading.processTitle")}</h2>
+      <p className="text-sm text-gray-600">{t("loading.processBody")}</p>
       <div className="w-full h-3 border-2 border-black bg-gray-100">
         <div className="h-full bg-skyellow animate-pulse" />
       </div>
@@ -31,25 +30,27 @@ function WaitConfirmation() {
 }
 
 function Success() {
+  const { t } = useT();
   const { loading: { loading, setLoading } } = appStateInjection.use();
   return (
     <div className="space-y-4 text-center">
       <div className="w-12 h-12 border-2 border-black bg-skgreen mx-auto" />
-      <h2 className="font-paytone text-xl text-black">Success</h2>
-      <p className="text-sm text-gray-600">{loading.message ?? "Transaction confirmed."}</p>
-      <NeoButton label="Close" variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
+      <h2 className="font-paytone text-xl text-black">{t("loading.successTitle")}</h2>
+      <p className="text-sm text-gray-600">{loading.message ?? t("loading.successDefault")}</p>
+      <NeoButton label={t("common.close")} variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
     </div>
   );
 }
 
 function Error() {
+  const { t } = useT();
   const { loading: { loading, setLoading } } = appStateInjection.use();
   return (
     <div className="space-y-4 text-center">
       <div className="w-12 h-12 border-2 border-black bg-skred mx-auto" />
-      <h2 className="font-paytone text-xl text-black">Error</h2>
-      <p className="text-sm text-gray-600">{loading.message ?? "Transaction failed."}</p>
-      <NeoButton label="Close" variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
+      <h2 className="font-paytone text-xl text-black">{t("loading.errorTitle")}</h2>
+      <p className="text-sm text-gray-600">{loading.message ?? t("loading.errorDefault")}</p>
+      <NeoButton label={t("common.close")} variant="secondary" size="sm" onClick={() => setLoading({ type: "none" })} />
     </div>
   );
 }
