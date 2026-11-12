@@ -31,7 +31,13 @@ services:
       # packages/ponder/src/services/sse.notify.service.ts). "localhost"
       # would resolve to this container, not scholarship-backend.
       BACKEND_INTERNAL_URL: http://scholarship-backend:3001
-      PONDER_RPC_URL: ${PONDER_RPC_URL:-http://100.73.196.95:8550}
+      # Public https RPC (Caddy -> node). The old 100.x default was a Tailscale
+      # address that containers on the deploy host cannot reach.
+      PONDER_RPC_URL: ${PONDER_RPC_URL:-https://rpc.nawasena-labs.com}
+      # Chains to index (comma-separated): 31338 nawasena, 8453 base, 1135 lisk.
+      # For each extra chain <ID> also set PONDER_RPC_URL_<ID>, START_BLOCK_<ID>
+      # and CONTRACT_*_<ID> in .env — env_file passes them straight through.
+      PONDER_CHAIN_IDS: ${PONDER_CHAIN_IDS:-31338}
       CHAIN: ${CHAIN:-nawasena}
       START_BLOCK: ${START_BLOCK:-0}
       CONTRACT_CORE: ${CONTRACT_CORE}
@@ -75,6 +81,10 @@ services:
       # docker network hostname, not localhost — Ponder is the only writer/
       # migration-owner for onchain tables, backend reads them over HTTP).
       PONDER_SQL_URL: ${PONDER_SQL_URL:-http://scholarship-ponder:42069/sql}
+      # Chains the API serves (default: whatever the indexer indexes) and the one
+      # used when a request doesn't name a chain.
+      SUPPORTED_CHAIN_IDS: ${SUPPORTED_CHAIN_IDS:-${PONDER_CHAIN_IDS:-31338}}
+      DEFAULT_CHAIN_ID: ${DEFAULT_CHAIN_ID:-31338}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       PINATA_GATEWAY: ${PINATA_GATEWAY}
@@ -106,7 +116,8 @@ services:
         VITE_BACKEND_HOST: ${VITE_BACKEND_HOST}
         VITE_INDEXER_HOST: ${VITE_INDEXER_HOST}
         VITE_IPFS_GATEWAY: ${VITE_IPFS_GATEWAY:-https://gateway.pinata.cloud/ipfs}
-        VITE_RPC_URL: ${VITE_RPC_URL:-http://100.73.196.95:8550}
+        VITE_RPC_URL: ${VITE_RPC_URL:-https://rpc.nawasena-labs.com}
+        VITE_DEFAULT_CHAIN_ID: ${DEFAULT_CHAIN_ID:-31338}
     container_name: scholarship-frontend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3102}:80"
