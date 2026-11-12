@@ -41,6 +41,12 @@ export const scholarshipCoreHandlers = () => {
         votingEnd: toDate(prog.votingEnd),
         openDonation: Boolean(prog.openDonation),
       }).onConflictDoUpdate({
+        // CommitteeAssigned is emitted before ProgramCreated (ScholarshipCore.sol),
+        // so its handler may already have created this row with an empty initiator
+        // and token. Fill them in here or they stay blank forever.
+        initiator: String(initiator),
+        token: String(token).toLowerCase(),
+        status: "CREATED",
         metadataCID: String(metadataCID),
         totalFund: String(prog.totalFund),
         targetWinners: Number(prog.targetWinners),
