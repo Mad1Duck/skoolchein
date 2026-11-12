@@ -33,7 +33,14 @@ type I18nValue = {
   tr: (key: TranslationKey, vars?: Vars) => ReactNode;
 };
 
-const I18nContext = createContext<I18nValue | undefined>(undefined);
+// In dev, Vite re-evaluates this module when a dictionary (en.ts / id.ts) changes. A fresh createContext()
+// would then be a DIFFERENT context from the one the already-mounted <I18nProvider> publishes, and every
+// consumer would throw "useI18n must be used within an I18nProvider". Reusing the previous instance keeps
+// the provider and its consumers on the same context across hot updates. (No effect in production builds.)
+const I18nContext: React.Context<I18nValue | undefined> =
+  (import.meta.hot?.data.i18nContext as React.Context<I18nValue | undefined> | undefined) ??
+  createContext<I18nValue | undefined>(undefined);
+if (import.meta.hot) import.meta.hot.data.i18nContext = I18nContext;
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(initialLang);

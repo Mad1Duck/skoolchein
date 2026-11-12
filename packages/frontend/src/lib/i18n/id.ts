@@ -197,6 +197,7 @@ export const id: Record<TranslationKey, string> = {
   'appl.unavailable': 'Ini belum bisa dimuat sekarang (gateway penyimpanan mungkin sedang sibuk).',
   'appl.retry': 'Coba lagi',
   'appl.empty': 'Tidak ada tulisan.',
+  'appl.notRecorded': 'Tulisan pendaftaran ini tidak tercatat, jadi tidak bisa ditampilkan.',
   'appl.public': 'Pendaftaran dan skor bersifat publik, jadi siapa pun bisa membaca dan memeriksanya.',
   'detail.applicantCannotDonate': 'Anda mendaftar ke program ini, jadi tidak bisa berdonasi ke dalamnya. Donasi memberi hak suara, dan pelamar tidak boleh memilih dirinya sendiri.',
   // recommendations (signed by the recommender, verified by the contract)

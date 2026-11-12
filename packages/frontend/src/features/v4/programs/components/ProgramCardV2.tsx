@@ -8,6 +8,7 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { fetchProgramMeta } from '@/lib/ipfs';
 import type { Program } from '@/lib/api/types';
 import { useT } from '@/lib/i18n';
+import { effectiveStatus } from '@/lib/programStatus';
 
 interface ProgramCardV2Props {
   program: Program;
@@ -80,15 +81,18 @@ export function ProgramCardV2({
     staleTime: Infinity,
   });
 
+  const shownStatus = effectiveStatus(program);
+  const canApply = shownStatus === 'APPLICATION_OPEN';
+
   const deadline =
-    program.status === 'VOTING'
+    shownStatus === 'VOTING'
       ? program.votingEnd
-      : program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING'
+      : shownStatus === 'APPLICATION_OPEN' || shownStatus === 'SCREENING'
         ? program.applicationEnd
         : program.createdAt;
 
   const timeLeft = getTimeLeft(deadline);
-  const status = getStatusKey(program.status);
+  const status = getStatusKey(shownStatus);
   const tokenMeta = getTokenMeta(program.token);
   const fund = toTokenNumber(program.totalFund, program.token);
   const initiator = program.initiator;
@@ -224,18 +228,31 @@ export function ProgramCardV2({
           <div
             className={`absolute w-max ${size === 'small' ? 'top-[14rem] left-[15.5rem]' : 'top-[16.5rem] left-[20rem]'}`}
           >
-            {!address ? (
-              <NeoButton label="Connect Wallet" variant="connect" size="lg" />
-            ) : (
-              <Link to="/apply/$id" params={{ id: String(program.pid) }}>
+            {/* Viewing never needs a wallet; applying does. The two are separate buttons, and Apply
+                is offered only while applications are actually open. */}
+            <div className="flex items-center gap-3 relative -left-1 -top-1">
+              <Link to="/programs/$id" params={{ id: String(program.pid) }}>
                 <button
-                  className="flex relative -left-1 -top-1 font-nunito px-6 py-3 text-2xl items-center gap-2.5 rounded-lg border-solid border-black bg-skpurple text-white hover:bg-skpurple-hover active:shadow-[inset_8px_8px_8px_0_rgba(0,0,0,0.25)] transition-transform active:translate-x-1 active:translate-y-1 border-2"
-                  onClick={(e) => e.stopPropagation()}
+                  className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000] transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none ${
+                    canApply ? 'bg-white text-black hover:bg-skbw' : 'bg-skpurple text-white hover:bg-skpurple-hover'
+                  }`}
                 >
-                  {labelButton ?? t('tabs.btnApply')}
+                  {canApply ? t('tabs.btnDetails') : (labelButton ?? t('tabs.btnDetails'))}
                 </button>
               </Link>
-            )}
+              {canApply &&
+                (!address ? (
+                  <NeoButton label="Connect Wallet" variant="connect" size={size === 'small' ? 'sm' : 'md'} />
+                ) : (
+                  <Link to="/apply/$id" params={{ id: String(program.pid) }}>
+                    <button
+                      className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black bg-skpurple text-white shadow-[3px_3px_0_0_#000] hover:bg-skpurple-hover transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none`}
+                    >
+                      {t('tabs.btnApply')}
+                    </button>
+                  </Link>
+                ))}
+            </div>
           </div>
         </div>
       </div>

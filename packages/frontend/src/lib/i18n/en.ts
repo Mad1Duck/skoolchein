@@ -203,6 +203,7 @@ export const en = {
   'appl.unavailable': 'This could not be loaded right now (the storage gateway may be busy).',
   'appl.retry': 'Try again',
   'appl.empty': 'Nothing written.',
+  'appl.notRecorded': 'The text of this application was not recorded, so it cannot be shown.',
   'appl.public': 'Applications and scores are public, so anyone can read and check them.',
   'detail.applicantCannotDonate': 'You applied to this program, so you cannot donate to it. Donations give voting power, and applicants may not vote for themselves.',
   // recommendations (signed by the recommender, verified by the contract)

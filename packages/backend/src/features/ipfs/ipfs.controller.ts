@@ -51,7 +51,16 @@ export class IpfsController {
       ? rawName
       : `skoolchein_${type}_${rawName}`;
 
+    // Everything else the client sent (an application's `content`, `hackquestId`, a program's
+    // `organization`, ...) belongs in the stored document. It used to be dropped here, so any text
+    // sent as `content` was uploaded as an empty shell and could never be read back.
+    const { file: _file, type: _type, name: _name, description: _description, attributes: _attributes, ...extra } = body;
+    const passthrough = Object.fromEntries(
+      Object.entries(extra).filter(([, v]) => typeof v !== "function" && !(v instanceof File)),
+    );
+
     const metadata = {
+      ...passthrough,
       name: finalName,
       description: typeof body.description === "string" ? body.description : "",
       attributes: parsedAttributes,

@@ -1,3 +1,4 @@
+import { effectiveStatus } from '@/lib/programStatus';
 import { useState, useEffect, memo } from 'react';
 import { usePrograms } from '@/lib/api/hooks';
 import type { Program } from '@/lib/api/types';
@@ -21,7 +22,7 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     ),
     color: 'bg-skpurple',
     filter: (p: Program) =>
-      p.status === 'APPLICATION_OPEN' || p.status === 'SCREENING' || p.status === 'ACTIVE',
+      ['APPLICATION_OPEN', 'SCREENING', 'ACTIVE'].includes(effectiveStatus(p)),
   },
   {
     id: 'vote',
@@ -33,7 +34,7 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     id: 'soon',
     label: t('tabs.soon'),
     color: 'bg-skgreen',
-    filter: (p: Program) => p.status === 'CREATED',
+    filter: (p: Program) => effectiveStatus(p) === 'CREATED',
   },
 ];
 

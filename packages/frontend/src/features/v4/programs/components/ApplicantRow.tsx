@@ -110,9 +110,9 @@ export function ApplicantRow({ applicant: a, rank, isMe, recommendations, votePc
             </ul>
           )}
 
-          <TextSection title={t('appl.about')} query={profile} extra={profile.data?.hackquestId ? `${t('appl.hackquest')}: ${profile.data.hackquestId}` : undefined} />
-          <TextSection title={t('appl.essay')} query={essay} />
-          <TextSection title={t('appl.docs')} query={docs} />
+          <TextSection title={t('appl.about')} cid={a.profileCID} query={profile} extra={profile.data?.hackquestId ? `${t('appl.hackquest')}: ${profile.data.hackquestId}` : undefined} />
+          <TextSection title={t('appl.essay')} cid={a.essayCID} query={essay} />
+          <TextSection title={t('appl.docs')} cid={a.documentCID} query={docs} />
 
           <p className="text-[11px] text-gray-500">{t('appl.public')}</p>
         </div>
@@ -132,10 +132,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function TextSection({
   title,
+  cid,
   query,
   extra,
 }: {
   title: string;
+  /** Empty when the indexer never recorded where the text is stored. */
+  cid: string;
   query: { data?: TextDoc | null; isLoading: boolean; isError: boolean; refetch: () => unknown };
   extra?: string;
 }) {
@@ -143,7 +146,9 @@ function TextSection({
   return (
     <section className="rounded-xl border-2 border-black bg-white p-4 space-y-2">
       <h4 className="font-paytone text-base">{title}</h4>
-      {query.isLoading ? (
+      {!cid ? (
+        <p className="text-sm text-gray-500">{t('appl.notRecorded')}</p>
+      ) : query.isLoading ? (
         <p className="text-sm text-gray-500">{t('appl.loading')}</p>
       ) : query.isError ? (
         <div className="space-y-2">
