@@ -19,6 +19,12 @@ const ROOT_ENV = path.resolve(MONO_ROOT, ".env");
 // can consume it without re-deriving the contract list by hand.
 const DEPLOYMENTS_ENV = path.resolve(MONO_ROOT, ".deployments.env");
 const FE_CONSTANTS = path.resolve(MONO_ROOT, "packages/frontend/src/constants");
+// Per-chain deployment registry (committed). One file per chain id so syncing a
+// new chain never overwrites another chain's addresses.
+const DEPLOYMENTS_DIR = path.resolve(ROOT, "deployments");
+// Chain whose unsuffixed env keys / `v4Addresses` export stay backward compatible.
+const LEGACY_CHAIN_ID = "31338";
+const DEFAULT_CHAIN_ID = process.env.DEFAULT_CHAIN_ID ?? LEGACY_CHAIN_ID;
 
 // ── Contract map: Ignition key → short name ──────────────────────────────────
 const CONTRACT_MAP: Record<string, string> = {
@@ -167,17 +173,31 @@ if (!abiOnly) {
     return content + `\n${key}="${value}"\n`;
   }
 
+  // Chain-scoped keys (CONTRACT_CORE_<chainId>) are always written; the
+  // unsuffixed legacy keys only for the legacy chain, so syncing another chain
+  // never overwrites nawasena's addresses.
+  const isLegacyChain = chainId === LEGACY_CHAIN_ID;
   for (const [name, address] of Object.entries(v4Addresses)) {
     const envKey = ENV_KEY_MAP[name];
     if (!envKey) continue;
-    envContent = upsertEnvVar(envContent, envKey, address);
-    console.log(`    ✅  ${envKey}=${address}`);
+    envContent = upsertEnvVar(envContent, `${envKey}_${chainId}`, address);
+    if (isLegacyChain) envContent = upsertEnvVar(envContent, envKey, address);
+    console.log(`    ✅  ${envKey}_${chainId}=${address}`);
   }
 
-  envContent = upsertEnvVar(envContent, "START_BLOCK", startBlock);
-  console.log(`    ✅  START_BLOCK=${startBlock}`);
+  envContent = upsertEnvVar(envContent, `START_BLOCK_${chainId}`, startBlock);
+  if (isLegacyChain) envContent = upsertEnvVar(envContent, "START_BLOCK", startBlock);
+  console.log(`    ✅  START_BLOCK_${chainId}=${startBlock}`);
 
   fs.writeFileSync(PONDER_ENV, envContent);
+
+  // Persist this chain's deployment in the per-chain registry.
+  fs.mkdirSync(DEPLOYMENTS_DIR, { recursive: true });
+  fs.writeFileSync(
+    path.join(DEPLOYMENTS_DIR, `${chainId}.json`),
+    JSON.stringify({ chainId: Number(chainId), startBlock: Number(startBlock), addresses: v4Addresses, syncedAt: new Date().toISOString() }, null, 2) + "\n",
+  );
+  console.log(`    ✅  deployments/${chainId}.json`);
 
   // Also write to root .env so docker-compose uses the same addresses
   if (fs.existsSync(ROOT_ENV)) {
@@ -186,11 +206,13 @@ if (!abiOnly) {
     for (const [name, address] of Object.entries(v4Addresses)) {
       const envKey = ENV_KEY_MAP[name];
       if (!envKey) continue;
-      rootEnvContent = upsertEnvVar(rootEnvContent, envKey, address);
-      console.log(`    ✅  ${envKey}=${address}`);
+      rootEnvContent = upsertEnvVar(rootEnvContent, `${envKey}_${chainId}`, address);
+      if (isLegacyChain) rootEnvContent = upsertEnvVar(rootEnvContent, envKey, address);
+      console.log(`    ✅  ${envKey}_${chainId}=${address}`);
     }
-    rootEnvContent = upsertEnvVar(rootEnvContent, "START_BLOCK", startBlock);
-    console.log(`    ✅  START_BLOCK=${startBlock}`);
+    rootEnvContent = upsertEnvVar(rootEnvContent, `START_BLOCK_${chainId}`, startBlock);
+    if (isLegacyChain) rootEnvContent = upsertEnvVar(rootEnvContent, "START_BLOCK", startBlock);
+    console.log(`    ✅  START_BLOCK_${chainId}=${startBlock}`);
     fs.writeFileSync(ROOT_ENV, rootEnvContent);
   }
 
@@ -207,10 +229,13 @@ if (!abiOnly) {
     ...Object.entries(v4Addresses)
       .map(([name, address]) => {
         const envKey = ENV_KEY_MAP[name];
-        return envKey ? `${envKey}="${address}"` : null;
+        if (!envKey) return null;
+        const scoped = `${envKey}_${chainId}="${address}"`;
+        return isLegacyChain ? `${envKey}="${address}"\n${scoped}` : scoped;
       })
       .filter((line): line is string => line !== null),
-    `START_BLOCK="${startBlock}"`,
+    ...(isLegacyChain ? [`START_BLOCK="${startBlock}"`] : []),
+    `START_BLOCK_${chainId}="${startBlock}"`,
     "",
   ];
   fs.writeFileSync(DEPLOYMENTS_ENV, fragmentLines.join("\n"));
@@ -226,12 +251,25 @@ if (!abiOnly) {
 console.log(`\n🎨  Writing → packages/frontend/src/constants/contractsV4.ts`);
 fs.mkdirSync(FE_CONSTANTS, { recursive: true });
 
-const hasAddresses = Object.keys(v4Addresses).length > 0;
-const addressLines = hasAddresses
-  ? Object.entries(v4Addresses)
-    .map(([name, addr]) => `  ${name}: "${addr}" as \`0x\${string}\`,`)
-    .join("\n")
+// Read every chain in the registry so syncing one chain never drops another.
+const registry: Record<string, Record<string, string>> = {};
+if (fs.existsSync(DEPLOYMENTS_DIR)) {
+  for (const f of fs.readdirSync(DEPLOYMENTS_DIR).filter((f) => /^\d+\.json$/.test(f))) {
+    const d = JSON.parse(fs.readFileSync(path.join(DEPLOYMENTS_DIR, f), "utf8"));
+    registry[String(d.chainId)] = d.addresses ?? {};
+  }
+}
+const toAddressBlock = (addrs: Record<string, string>, indent: string) =>
+  Object.entries(addrs)
+    .map(([name, addr]) => `${indent}${name}: "${addr}" as \`0x\${string}\`,`)
+    .join("\n");
+const defaultAddresses = registry[DEFAULT_CHAIN_ID] ?? {};
+const addressLines = Object.keys(defaultAddresses).length > 0
+  ? toAddressBlock(defaultAddresses, "  ")
   : "  // Addresses will be populated after deployment (npm run deploy-v4)";
+const deploymentsBlock = Object.entries(registry)
+  .map(([id, addrs]) => `  ${id}: {\n${toAddressBlock(addrs, "    ")}\n  },`)
+  .join("\n");
 
 const abiExports = Object.entries(abis)
   .map(([name, abi]) => {
@@ -243,16 +281,22 @@ const abiExports = Object.entries(abis)
 const feContent = `/**
  * contractsV4.ts
  * Auto-generated by sync-deployments.ts — do not edit manually.
- * Chain: ${chainId} | Synced: ${new Date().toISOString()}
+ * Default chain: ${DEFAULT_CHAIN_ID} | Last sync: chain ${chainId} | ${new Date().toISOString()}
  */
 
 // ── Deployed Addresses ────────────────────────────────────────────────────────
 
+// Per-chain addresses. Prefer this over \`v4Addresses\` in new code.
+export const v4Deployments = {
+${deploymentsBlock}
+} as const;
+
+// Addresses of the default chain (${DEFAULT_CHAIN_ID}); kept for backward compatibility.
 export const v4Addresses = {
 ${addressLines}
 } as const;
 
-export const v4ChainId = ${chainId};
+export const v4ChainId = ${DEFAULT_CHAIN_ID};
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
