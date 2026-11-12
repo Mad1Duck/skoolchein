@@ -87,12 +87,10 @@ export class DashboardService {
         .where(onChain(v4Reputation, eq(v4Reputation.address, wallet)))
         .limit(1),
 
-      ponderClient.db.select({
-        membership: v4CommitteeMembers,
-        program: v4Programs,
-      })
-        .from(v4CommitteeMembers)
-        .innerJoin(v4Programs, and(eq(v4CommitteeMembers.chainId, v4Programs.chainId), eq(v4CommitteeMembers.pid, v4Programs.pid)))
+      // Memberships only. Joining the two whole tables here returned program rows whose
+      // columns were shifted (pid came back null, so the dashboard showed "Program #null"),
+      // so the programs are fetched separately below.
+      ponderClient.db.select().from(v4CommitteeMembers)
         .where(onChain(v4CommitteeMembers,
           eq(v4CommitteeMembers.memberAddress, wallet),
           eq(v4CommitteeMembers.isActive, true),
@@ -100,7 +98,12 @@ export class DashboardService {
         .orderBy(desc(v4CommitteeMembers.addedAt)),
     ]);
 
-    const committeePrograms = committeeMemberships.map((m) => m.program);
+    const committeePids = [...new Set(committeeMemberships.map((m) => m.pid))];
+    const committeePrograms = committeePids.length === 0
+      ? []
+      : await ponderClient.db.select().from(v4Programs)
+          .where(onChain(v4Programs, or(...committeePids.map((pid) => eq(v4Programs.pid, pid)))))
+          .orderBy(desc(v4Programs.createdAt));
 
     const totalReceived = scholarships.reduce(
       (sum, s) => sum + BigInt(s.scholar.totalReceived ?? "0"), 0n

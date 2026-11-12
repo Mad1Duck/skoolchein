@@ -5,7 +5,22 @@ import { logger } from "@/utils/logger";
 import { insertBlock } from "@/services/block.log.service";
 import { sendSseToAll } from "@/services/sse.notify.service";
 import { count, eq, and } from "drizzle-orm";
+import { decodeFunctionData } from "viem";
 import { toDate, programTokenOf } from "./helpers";
+
+/** The four CIDs of an application, read from applyToProgram's calldata ({} when it is not a direct call). */
+function applicationCidsFrom(input: `0x${string}` | undefined): { profileCID?: string; documentCID?: string; essayCID?: string } {
+  if (!input) return {};
+  try {
+    const decoded = decodeFunctionData({ abi: scholarshipCoreAbi, data: input });
+    if (decoded.functionName !== "applyToProgram") return {};
+    const [, profileCID, documentCID, essayCID] = decoded.args;
+    return { profileCID, documentCID, essayCID };
+  } catch {
+    // Not a direct applyToProgram call (a smart-wallet batch, say): leave the CIDs unset rather than guess.
+    return {};
+  }
+}
 
 export const scholarshipCoreHandlers = () => {
 
@@ -187,11 +202,22 @@ export const scholarshipCoreHandlers = () => {
       const { db } = context;
       const { pid, student, retryCount } = event.args;
 
+      // StudentApplied does not carry the application's CIDs (Core has no room left for them), but the
+      // transaction that emitted it does: they are the arguments of applyToProgram.
+      const cids = applicationCidsFrom(event.transaction.input);
+
       await db.insert(v4Applicants).values({ chainId,
         pid: Number(pid),
         wallet: String(student),
         retryCount: Number(retryCount),
-      }).onConflictDoUpdate({ retryCount: Number(retryCount), updatedAt: new Date() });
+        ...cids,
+      }).onConflictDoUpdate({
+        retryCount: Number(retryCount),
+        // Applying again replaces the application and puts it back in the queue.
+        status: "PENDING_REVIEW",
+        ...cids,
+        updatedAt: new Date(),
+      });
 
       const [applicantCountRow] = await db.sql.select({ value: count() })
         .from(v4Applicants).where(and(eq(v4Applicants.chainId, chainId), eq(v4Applicants.pid, Number(pid))));
@@ -211,8 +237,14 @@ export const scholarshipCoreHandlers = () => {
       const chainId = context.chain.id;
       const { db } = context;
       const { pid, student, totalScore } = event.args;
-      await db.update(v4Applicants, { chainId, pid: Number(pid), wallet: String(student) })
-        .set({ screeningScore: String(totalScore), totalScore: String(totalScore), updatedAt: new Date() });
+      // applyToProgram emits ScoreSubmitted BEFORE StudentApplied, so the applicant's row may not exist
+      // yet. An update() here threw, and the score was lost: upsert instead.
+      await db.insert(v4Applicants).values({ chainId,
+        pid: Number(pid),
+        wallet: String(student),
+        screeningScore: String(totalScore),
+        totalScore: String(totalScore),
+      }).onConflictDoUpdate({ screeningScore: String(totalScore), totalScore: String(totalScore), updatedAt: new Date() });
 
       await insertBlock({ db, chainId, event, eventName: "ScholarshipCore:ScoreSubmitted" });
       await sendSseToAll("main", { chainId, step: "ScoreSubmitted", data: {}, status: true, blockHash: event.block.hash });
