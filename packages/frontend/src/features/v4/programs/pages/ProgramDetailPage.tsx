@@ -33,6 +33,7 @@ import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
 import { statusLabel } from '@/lib/i18n/status';
 import { toDate } from '@/lib/time';
+import { effectiveStatus } from '@/lib/programStatus';
 import { useFormatMoney } from '@/lib/money';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
@@ -159,25 +160,34 @@ export function ProgramDetailPage() {
             {meta?.organization && <span className="text-gray-300">|</span>}
             {meta?.organization && <span className="font-medium">{meta.organization}</span>}
           </div>
+
+          {/* Creator only. This is a setting, not an action, so it is a switch, and it says what it changes. */}
+          {userAddress === program.initiator && (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={program.openDonation}
+                disabled={isToggling}
+                onClick={() => {
+                  // Closing donations turns a public program into a private one, which is easy to do by accident.
+                  if (program.openDonation && !window.confirm(t('detail.donationsConfirm'))) return;
+                  toggle(BigInt(program.pid), !program.openDonation);
+                }}
+                className="inline-flex items-center gap-2.5 rounded-full border-2 border-black bg-white py-1.5 pl-2 pr-4 text-sm font-bold shadow-[2px_2px_0_0_#000] transition-all duration-75 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-40"
+              >
+                <span className={`relative h-6 w-11 rounded-full border-2 border-black transition-colors ${program.openDonation ? 'bg-skgreen-dark' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 size-4 rounded-full border-2 border-black bg-white transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
+                </span>
+                {program.openDonation ? t('detail.donationsOpen') : t('detail.donationsClosed')}
+              </button>
+              <span className="text-xs text-gray-500 max-w-md">
+                {program.openDonation ? t('detail.donationsOpenHint') : t('detail.donationsClosedHint')}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          {userAddress === program.initiator && (
-            <button
-              disabled={isToggling}
-              onClick={() => toggle(BigInt(program.pid), !program.openDonation)}
-              className={`
-                px-3 py-1.5 border-2 border-black text-[10px] font-extrabold uppercase tracking-widest
-                transition-all duration-75
-                ${program.openDonation
-                  ? 'bg-skgreen text-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-                  : 'bg-gray-200 text-gray-600 shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-                }
-                disabled:opacity-40 disabled:shadow-none disabled:translate-x-[2px] disabled:translate-y-[2px]
-              `}
-            >
-              {program.openDonation ? t('detail.donationsOn') : t('detail.donationsOff')}
-            </button>
-          )}
           {program.status === 'APPLICATION_OPEN' && (
             // Show the current application state instead of inviting a second
             // apply — the contract rejects a duplicate, so offering the button
@@ -294,7 +304,7 @@ export function ProgramDetailPage() {
 
       {/* Phase timeline */}
       <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-5 md:p-6">
-        <PhaseTimeline currentStatus={program.status} />
+        <PhaseTimeline currentStatus={effectiveStatus(program)} />
       </div>
 
       {/* Stats */}

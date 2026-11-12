@@ -9,9 +9,11 @@ import { toDate } from "@/lib/time";
  * running. Lists and buttons should treat that as open instead of "coming soon".
  */
 export function effectiveStatus(p: Pick<Program, "status" | "applicationStart" | "applicationEnd">): ProgramStatus {
-  if (p.status !== "CREATED") return p.status;
+  if (p.status !== "CREATED" && p.status !== "APPLICATION_OPEN") return p.status;
   const start = toDate(p.applicationStart)?.getTime();
   const end = toDate(p.applicationEnd)?.getTime();
   const now = Date.now();
+  // Applications are closed by the clock whether or not anyone has finalized the shortlist yet.
+  if (p.status === "APPLICATION_OPEN") return end !== undefined && now >= end ? "SCREENING" : p.status;
   return start !== undefined && end !== undefined && now >= start && now < end ? "APPLICATION_OPEN" : p.status;
 }
