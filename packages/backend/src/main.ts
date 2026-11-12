@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { HonoRouteBuilder, OpenAPIGenerator, HttpException } from "hono-forge";
