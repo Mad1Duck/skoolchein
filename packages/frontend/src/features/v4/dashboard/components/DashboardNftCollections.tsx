@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { DashboardCard } from "./DashboardCard";
+import { WalletBadges } from "./WalletBadges";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { useClaimStudentNFT } from "@/lib/contracts/v4/hooks/core";
 import { uploadToIPFS } from "@/lib/ipfs";
@@ -132,6 +133,7 @@ export function DashboardNftCollections({
           </div>
         </DashboardCard>
       )}
+      <WalletBadges />
     </section>
   );
 }
