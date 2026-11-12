@@ -15,11 +15,12 @@ export const scholarshipPriceOracleHandlers = () => {
 
   ponder.on("ScholarshipPriceOracle:TokenRegistered", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { token, symbol, decimals } = event.args;
       const addr = String(token).toLowerCase();
 
-      await db.insert(v4TokenRegistry).values({
+      await db.insert(v4TokenRegistry).values({ chainId,
         token: addr,
         symbol: String(symbol),
         decimals: Number(decimals),
@@ -33,8 +34,9 @@ export const scholarshipPriceOracleHandlers = () => {
         updatedAt: new Date(),
       });
 
-      await insertBlock({ db, event, eventName: "ScholarshipPriceOracle:TokenRegistered" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipPriceOracle:TokenRegistered" });
       await sendSseToAll("main", {
+        chainId,
         step: "TokenRegistered",
         data: { token: addr, symbol: String(symbol), decimals: Number(decimals) },
         status: true, blockHash: event.block.hash,
@@ -46,17 +48,19 @@ export const scholarshipPriceOracleHandlers = () => {
 
   ponder.on("ScholarshipPriceOracle:TokenDeregistered", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { token } = event.args;
       const addr = String(token).toLowerCase();
 
       // Soft-delete: keep symbol/decimals so historical amounts still render
       // with the right denomination.
-      await db.update(v4TokenRegistry, { token: addr })
+      await db.update(v4TokenRegistry, { chainId, token: addr })
         .set({ isRegistered: false, updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "ScholarshipPriceOracle:TokenDeregistered" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipPriceOracle:TokenDeregistered" });
       await sendSseToAll("main", {
+        chainId,
         step: "TokenDeregistered",
         data: { token: addr },
         status: true, blockHash: event.block.hash,
@@ -68,6 +72,7 @@ export const scholarshipPriceOracleHandlers = () => {
 
   ponder.on("ScholarshipPriceOracle:PriceUpdated", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { token, priceUsd, updatedAt } = event.args;
       const addr = String(token).toLowerCase();
@@ -76,7 +81,7 @@ export const scholarshipPriceOracleHandlers = () => {
       // Insert-or-update: the contract rejects prices for unregistered tokens,
       // but if TokenRegistered were ever missed (reorg, partial backfill) this
       // still records the rate rather than silently dropping it.
-      await db.insert(v4TokenRegistry).values({
+      await db.insert(v4TokenRegistry).values({ chainId,
         token: addr,
         priceUsd: String(priceUsd),
         priceUpdatedAt: priceAt,
@@ -87,8 +92,9 @@ export const scholarshipPriceOracleHandlers = () => {
         updatedAt: new Date(),
       });
 
-      await insertBlock({ db, event, eventName: "ScholarshipPriceOracle:PriceUpdated" });
+      await insertBlock({ db, chainId, event, eventName: "ScholarshipPriceOracle:PriceUpdated" });
       await sendSseToAll("main", {
+        chainId,
         step: "PriceUpdated",
         data: { token: addr, priceUsd: String(priceUsd) },
         status: true, blockHash: event.block.hash,

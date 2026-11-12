@@ -3,6 +3,7 @@ import { indexedBlocks } from "ponder:schema";
 
 type InsertBlockArgs = {
   db: Context["db"];
+  chainId: number;
   eventName: string;
   event: {
     block: {
@@ -12,11 +13,12 @@ type InsertBlockArgs = {
   };
 };
 
-export const insertBlock = async ({ db, eventName, event }: InsertBlockArgs) => {
+export const insertBlock = async ({ db, chainId, eventName, event }: InsertBlockArgs) => {
   const blockNumber = Number(event.block.number);
   const timestamp = new Date(Number(event.block.timestamp) * 1000);
 
   await db.insert(indexedBlocks).values({
+    chainId,
     blockNumber,
     eventName,
     timestamp,

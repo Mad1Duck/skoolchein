@@ -16,6 +16,7 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneCreated", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, pid, scholar, kind } = event.args;
       const mId = Number(id);
@@ -27,8 +28,8 @@ export const milestoneManagerHandlers = () => {
       const provider = decodeBytes32(event.args.provider);
       const externalId = decodeBytes32(event.args.externalId);
 
-      const token = await programTokenOf(db, Number(pid));
-      await db.insert(v4Milestones).values({
+      const token = await programTokenOf(db, chainId, Number(pid));
+      await db.insert(v4Milestones).values({ chainId,
         blockchainId: mId,
         pid: Number(pid),
         token,
@@ -47,8 +48,9 @@ export const milestoneManagerHandlers = () => {
         updatedAt: new Date(),
       });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneCreated" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCreated" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneCreated",
         data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
         status: true, blockHash: event.block.hash,
@@ -62,6 +64,7 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneProposed", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, pid, scholar, kind } = event.args;
       const mId = Number(id);
@@ -73,8 +76,8 @@ export const milestoneManagerHandlers = () => {
       const provider = decodeBytes32(event.args.provider);
       const externalId = decodeBytes32(event.args.externalId);
 
-      const token = await programTokenOf(db, Number(pid));
-      await db.insert(v4Milestones).values({
+      const token = await programTokenOf(db, chainId, Number(pid));
+      await db.insert(v4Milestones).values({ chainId,
         blockchainId: mId,
         pid: Number(pid),
         token,
@@ -94,8 +97,9 @@ export const milestoneManagerHandlers = () => {
         updatedAt: new Date(),
       });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneProposed" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneProposed" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneProposed",
         data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
         status: true, blockHash: event.block.hash,
@@ -109,10 +113,11 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneApproved", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, approvedBy } = event.args;
 
-      const milestone = await db.update(v4Milestones, { blockchainId: Number(id) })
+      const milestone = await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
         .set({ status: "PENDING", approvedBy: String(approvedBy), updatedAt: new Date() });
 
       if (milestone.pid) {
@@ -127,12 +132,13 @@ export const milestoneManagerHandlers = () => {
           functionName: "getProgram",
           args: [BigInt(milestone.pid)],
         });
-        await db.update(v4Programs, { pid: milestone.pid })
+        await db.update(v4Programs, { chainId, pid: milestone.pid })
           .set({ allocatedFund: String(progSync.allocatedFund), updatedAt: new Date() });
       }
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneApproved" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneApproved" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneApproved",
         data: { milestoneId: Number(id), approvedBy },
         status: true, blockHash: event.block.hash,
@@ -146,14 +152,16 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneRejected", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, rejectedBy } = event.args;
 
-      await db.update(v4Milestones, { blockchainId: Number(id) })
+      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
         .set({ status: "REJECTED", approvedBy: String(rejectedBy), updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneRejected" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRejected" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneRejected",
         data: { milestoneId: Number(id), rejectedBy },
         status: true, blockHash: event.block.hash,
@@ -167,12 +175,13 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneSubmitted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, scholar, proofCID } = event.args;
       const mId = Number(id);
       const submittedAt = new Date(Number(event.block.timestamp) * 1000);
 
-      await db.update(v4Milestones, { blockchainId: mId })
+      await db.update(v4Milestones, { chainId, blockchainId: mId })
         .set({
           proofCID: String(proofCID),
           status: "SUBMITTED",
@@ -180,8 +189,9 @@ export const milestoneManagerHandlers = () => {
           updatedAt: new Date(),
         });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneSubmitted" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneSubmitted" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneSubmitted",
         data: { milestoneId: mId, scholar },
         status: true, blockHash: event.block.hash,
@@ -195,11 +205,12 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneCompleted", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id, scholar, amount } = event.args;
       const mId = Number(id);
 
-      const milestone = await db.update(v4Milestones, { blockchainId: mId })
+      const milestone = await db.update(v4Milestones, { chainId, blockchainId: mId })
         .set({
           status: "COMPLETED",
           amount: String(amount),
@@ -208,11 +219,11 @@ export const milestoneManagerHandlers = () => {
         });
 
       if (milestone.pid && milestone.scholarWallet) {
-        const existingScholar = await db.find(v4Scholars, { pid: milestone.pid, wallet: milestone.scholarWallet });
+        const existingScholar = await db.find(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet });
 
         if (existingScholar) {
           const prev = BigInt(existingScholar.totalReceived ?? "0");
-          await db.update(v4Scholars, { pid: milestone.pid, wallet: milestone.scholarWallet })
+          await db.update(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet })
             .set({ totalReceived: String(prev + BigInt(amount)), updatedAt: new Date() });
         }
 
@@ -227,7 +238,7 @@ export const milestoneManagerHandlers = () => {
           functionName: "getProgram",
           args: [BigInt(milestone.pid)],
         });
-        await db.update(v4Programs, { pid: milestone.pid })
+        await db.update(v4Programs, { chainId, pid: milestone.pid })
           .set({
             spentFund: String(progSync.spentFund),
             allocatedFund: String(progSync.allocatedFund),
@@ -235,8 +246,9 @@ export const milestoneManagerHandlers = () => {
           });
       }
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneCompleted" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCompleted" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneCompleted",
         data: { milestoneId: mId, scholar, amount: String(amount) },
         status: true, blockHash: event.block.hash,
@@ -250,13 +262,15 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneFrozen", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id } = event.args;
-      await db.update(v4Milestones, { blockchainId: Number(id) })
+      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
         .set({ status: "FROZEN", updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneFrozen" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneFrozen" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneFrozen",
         data: { milestoneId: Number(id) },
         status: true, blockHash: event.block.hash,
@@ -270,13 +284,15 @@ export const milestoneManagerHandlers = () => {
 
   ponder.on("MilestoneManager:MilestoneReleased", async ({ event, context }) => {
     try {
+      const chainId = context.chain.id;
       const { db } = context;
       const { id } = event.args;
-      await db.update(v4Milestones, { blockchainId: Number(id) })
+      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
         .set({ status: "SUBMITTED", updatedAt: new Date() });
 
-      await insertBlock({ db, event, eventName: "MilestoneManager:MilestoneReleased" });
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneReleased" });
       await sendSseToAll("main", {
+        chainId,
         step: "MilestoneReleased",
         data: { milestoneId: Number(id) },
         status: true, blockHash: event.block.hash,
