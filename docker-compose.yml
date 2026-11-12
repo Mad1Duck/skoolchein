@@ -38,6 +38,11 @@ services:
       # For each extra chain <ID> also set PONDER_RPC_URL_<ID>, START_BLOCK_<ID>
       # and CONTRACT_*_<ID> in .env — env_file passes them straight through.
       PONDER_CHAIN_IDS: ${PONDER_CHAIN_IDS:-31338}
+      # Browser origins allowed to call /graphql and /sql ("*" = any). Local
+      # frontends (http://localhost:<port>) are always allowed unless
+      # CORS_ALLOW_LOCALHOST=false.
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ALLOW_LOCALHOST: ${CORS_ALLOW_LOCALHOST:-true}
       CHAIN: ${CHAIN:-nawasena}
       START_BLOCK: ${START_BLOCK:-0}
       CONTRACT_CORE: ${CONTRACT_CORE}
@@ -85,6 +90,11 @@ services:
       # used when a request doesn't name a chain.
       SUPPORTED_CHAIN_IDS: ${SUPPORTED_CHAIN_IDS:-${PONDER_CHAIN_IDS:-31338}}
       DEFAULT_CHAIN_ID: ${DEFAULT_CHAIN_ID:-31338}
+      # Browser origins allowed to call the API ("*" = any), e.g.
+      # "https://skoolcein.nawasena-labs.com". Local frontends
+      # (http://localhost:<port>) are always allowed unless CORS_ALLOW_LOCALHOST=false.
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ALLOW_LOCALHOST: ${CORS_ALLOW_LOCALHOST:-true}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       PINATA_GATEWAY: ${PINATA_GATEWAY}
