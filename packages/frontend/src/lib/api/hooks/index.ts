@@ -1,6 +1,6 @@
 import { useChainQuery as useQuery } from "../useChainQuery";
 import { api } from "../client";
-import type {
+import type { Recommendation,
   Program, ProgramDetail, Applicant, Scholar, Milestone,
   Vote, ConfidenceStake, Dispute, Reputation, DashboardData,
   PaginatedResponse, SingleResponse, AdminOverview, ExternalLearning, TokenRegistryEntry,
@@ -29,6 +29,7 @@ export const queryKeys = {
   programScholars:   (id: string) => ["program", id, "scholars"] as const,
   programMilestones: (id: string) => ["program", id, "milestones"] as const,
   programVotes:      (id: string) => ["program", id, "votes"] as const,
+  programRecommendations: (id: string) => ["program", id, "recommendations"] as const,
   programDisputes:   (id: string) => ["program", id, "disputes"] as const,
 };
 
@@ -86,6 +87,17 @@ export function useProgramMilestones(programId: string) {
     queryKey: queryKeys.programMilestones(programId),
     queryFn: async () => {
       const { data } = await api.get<{ data: Milestone[] }>(`/programs/${programId}/milestones`);
+      return data.data;
+    },
+    enabled: !!programId,
+  });
+}
+
+export function useProgramRecommendations(programId: string) {
+  return useQuery({
+    queryKey: queryKeys.programRecommendations(programId),
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Recommendation[] }>(`/programs/${programId}/recommendations`);
       return data.data;
     },
     enabled: !!programId,

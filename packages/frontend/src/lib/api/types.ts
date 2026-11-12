@@ -62,6 +62,8 @@ export interface Program {
   voteWeightBps?: number | null;
   /** Mandatory milestones in the creator's plan; null = never set (one milestone per winner). */
   milestonePlanCount?: number | null;
+  /** The creator limits who may recommend applicants to their own list. */
+  recommendersRestricted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -124,6 +126,15 @@ export interface Milestone {
   externalId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A verified recommendation: the recommender signed it, the contract checked it. */
+export interface Recommendation {
+  pid: number;
+  student: string;
+  recommender: string;
+  score: number;
+  createdAt: string;
 }
 
 export interface Vote {

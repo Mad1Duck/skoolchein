@@ -6,12 +6,15 @@ import { useProgram } from '@/lib/api/hooks';
 import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 import {
   useConfigureProgram,
+  useConfigureRecommenders,
   useEffectiveVoteWeight,
   useMilestonePlan,
   useSelectionAddress,
   useSelectionConfig,
 } from '@/lib/contracts/v4/hooks/selection';
 import { useT } from '@/lib/i18n';
+import { toDate } from '@/lib/time';
+import { isAddress } from 'viem';
 
 interface Props {
   isOpen: boolean;
@@ -52,6 +55,9 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
   const { plan } = useMilestonePlan(programId);
   const { maxMandatory } = useProtocolLimits();
   const { configureProgram, isPending, isSuccess } = useConfigureProgram();
+  const { configure: configureRecommenders, isPending: savingRecommenders } = useConfigureRecommenders();
+  const [restricted, setRestricted] = useState(false);
+  const [recommenderText, setRecommenderText] = useState('');
 
   const maxPct = (config?.maxVoteWeightBps ?? 10_000) / 100;
   const [weight, setWeight] = useState(30);
@@ -73,8 +79,9 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
           }))
         : [emptyRow()],
     );
+    setRestricted(!!program?.recommendersRestricted);
     setLoaded(true);
-  }, [isOpen, loaded, currentWeight, plan, maxPct]);
+  }, [isOpen, loaded, currentWeight, plan, maxPct, program?.recommendersRestricted]);
 
   useEffect(() => {
     if (isSuccess) onClose();
@@ -88,6 +95,16 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
   const totalBps = rows.reduce((sum, r) => sum + toBps(r.share), 0);
   const totalOk = totalBps === 10_000 && rows.every((r) => toBps(r.share) > 0);
   const locked = !!program && !['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status);
+
+  // Who may recommend: only for self-scored programs, and only while applications are open.
+  const lines = recommenderText.split(/[\s,;]+/).map((l) => l.trim()).filter(Boolean);
+  const recommenderListOk = lines.every((l) => isAddress(l));
+  const applicationsOpen =
+    !!program &&
+    ['CREATED', 'APPLICATION_OPEN'].includes(program.status) &&
+    Date.now() < (toDate(program.applicationEnd)?.getTime() ?? 0);
+  const showRecommenders = program?.screeningMode === 1;
+  const saveRecommenders = () => configureRecommenders(BigInt(programId), restricted, lines as `0x${string}`[]);
 
   const handleSave = () =>
     configureProgram(BigInt(programId), Math.round(weight * 100), {
@@ -181,6 +198,33 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
           </div>
           {!totalOk && <p className="text-xs font-bold text-skred">{t('settings.totalWrong')}</p>}
         </section>
+
+        {showRecommenders && (
+          <section className="space-y-3 rounded-xl border-2 border-black bg-white p-4">
+            <div>
+              <h3 className="font-paytone text-lg">{t('rec.settings.title')}</h3>
+              <p className="text-xs text-gray-600">{t('rec.settings.help')}</p>
+            </div>
+            {!applicationsOpen && <Notice>{t('rec.settings.locked')}</Notice>}
+            <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+              <input type="checkbox" className="size-4 accent-skpurple !shadow-none" checked={restricted}
+                disabled={!applicationsOpen} onChange={(e) => setRestricted(e.target.checked)} />
+              {t('rec.settings.restricted')}
+            </label>
+            {restricted && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-gray-500 block">{t('rec.settings.list')}</label>
+                <textarea rows={3} value={recommenderText} disabled={!applicationsOpen}
+                  onChange={(e) => setRecommenderText(e.target.value)} placeholder="0x…"
+                  className="w-full font-data !text-xs resize-none" />
+                {!recommenderListOk && <p className="text-xs font-bold text-skred">{t('rec.settings.invalid')}</p>}
+              </div>
+            )}
+            <NeoButton label={t('rec.settings.save')} variant="secondary" size="sm" className="!rounded-xl"
+              loading={savingRecommenders} disabled={savingRecommenders || !applicationsOpen || !selection || !recommenderListOk}
+              onClick={saveRecommenders} />
+          </section>
+        )}
 
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
           <NeoButton label={t('common.cancel')} variant="ghost" className="!rounded-xl" onClick={onClose} disabled={isPending} fullWidth />

@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {ScholarshipTypes} from "../libraries/ScholarshipTypes.sol";
 
@@ -17,6 +19,7 @@ interface IScholarshipCoreSelection {
     function getProtocolConfig() external view returns (ScholarshipTypes.ProtocolConfig memory);
     function voterCapBps() external view returns (uint16);
     function setVoterCapBps(uint16 bps) external;
+    function selectionSetRecommendScore(uint256 pid, address student, uint256 score, address by) external;
     function resolveProgress(uint256 pid) external view returns (uint32);
     function selectionApplyBatch(uint256 pid, address[] calldata shortlisted, address[] calldata screenedOut, bool isLast) external;
     function selectionActivate(uint256 pid, address[] calldata winners, uint32 mandatoryTotal) external;
@@ -67,7 +70,7 @@ interface IMilestoneManagerSelection {
  *         There is no voting and the money is the creator's own, so the creator chooses
  *         freely among the shortlisted, limited to targetWinners.
  */
-contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUpgradeable, EIP712Upgradeable {
 
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     uint256 private constant BPS = 10_000;
@@ -94,7 +97,24 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
     mapping(uint256 => MilestonePlan)  private _plans;
     mapping(uint256 => RankKey)        public lastShortlistKey; // progress of a multi-batch resolution
 
+    // ── Recommendations ──────────────────────────────────────────────────────
+    // A recommendation is the recommender's own signature (EIP-712) over (program, student, score,
+    // deadline). Anyone can deliver it, so the recommender pays no gas, but nobody but the
+    // recommender can produce it. The applicant's recommendation score is the average of them.
+
+    uint8 public constant MAX_RECOMMENDERS = 5;
+    bytes32 private constant RECOMMENDATION_TYPEHASH =
+        keccak256("Recommendation(uint256 pid,address student,uint8 score,uint256 deadline)");
+
+    struct RecInfo { uint16 count; uint32 sum; }
+    mapping(uint256 => mapping(address => RecInfo)) private _rec;                          // pid => student
+    mapping(uint256 => mapping(address => mapping(address => bool))) public hasRecommended; // pid => student => recommender
+    mapping(uint256 => bool) public recommendersRestricted;                                 // creator limits who may recommend
+    mapping(uint256 => mapping(address => bool)) public isRecommender;                      // the creator's list
+
     // ── Events ───────────────────────────────────────────────────────────────
+    event RecommendationSubmitted(uint256 indexed pid, address indexed student, address indexed recommender, uint8 score, uint256 average);
+    event RecommendersConfigured(uint256 indexed pid, bool restricted);
     event ProgramConfigured(uint256 indexed pid, uint16 voteWeightBps, uint256 milestoneCount);
     event WinnersSelected(uint256 indexed pid, address[] winners, bool bySystem);
     event ConfigUpdated(uint16 maxVoteWeightBps, uint16 defaultVoteWeightBps, uint16 voterCapBps);
@@ -117,6 +137,15 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
     error WrongWinnerCount();
     error DuplicateWinner(address who);
     error InvalidConfig();
+    error InvalidScore();
+    error SelfRecommendation();
+    error SignatureExpired();
+    error InvalidSignature();
+    error AlreadyRecommended();
+    error TooManyRecommenders();
+    error RecommenderNotAllowed();
+    error NotStudentScored();
+    error ApplicationsClosed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -124,6 +153,7 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
     function initialize(address admin, address _core) external initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
+        __EIP712_init("ScholarshipSelection", "1");
         core = IScholarshipCoreSelection(_core);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(UPGRADER_ROLE, admin);
@@ -215,6 +245,85 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
         for (uint256 i; i < externalIds.length; ) { plan.externalIds.push(externalIds[i]); unchecked { ++i; } }
 
         emit ProgramConfigured(pid, weightBps, n);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // RECOMMENDATIONS (verified, replaces the self-reported score)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Choose who may recommend applicants to this program.
+     * @dev    Creator only, while applications can still change. By default anyone but the applicant
+     *         can recommend; restricting to a list is the stronger guarantee, because otherwise an
+     *         applicant could recommend themselves from a second wallet.
+     * @param restricted  true = only addresses on the list may recommend.
+     * @param add         Addresses to allow.
+     * @param remove      Addresses to take off the list.
+     */
+    function configureRecommenders(uint256 pid, bool restricted, address[] calldata add, address[] calldata remove) external {
+        ScholarshipTypes.Program memory p = _program(pid);
+        if (msg.sender != p.initiator) revert NotInitiator();
+        if (p.status > ScholarshipTypes.ProgramStatus.APPLICATION_OPEN || block.timestamp >= p.applicationEnd) revert ApplicationsClosed();
+
+        recommendersRestricted[pid] = restricted;
+        for (uint256 i; i < add.length; ) { isRecommender[pid][add[i]] = true; unchecked { ++i; } }
+        for (uint256 i; i < remove.length; ) { isRecommender[pid][remove[i]] = false; unchecked { ++i; } }
+        emit RecommendersConfigured(pid, restricted);
+    }
+
+    /**
+     * @notice Record a recommendation signed by `recommender` and update the applicant's score.
+     * @dev    Anyone may submit it (the applicant, the recommender, a relayer). Only for programs where
+     *         the applicant scores themselves (BY_STUDENT): in committee mode the committee gives every
+     *         score. Allowed until the applicant has been processed by the shortlist.
+     *
+     *         The signed message is EIP-712 typed data:
+     *           Recommendation(uint256 pid, address student, uint8 score, uint256 deadline)
+     *         under the domain { name: "ScholarshipSelection", version: "1", chainId, verifyingContract }.
+     *         Smart-contract wallets work too (ERC-1271).
+     */
+    function submitRecommendation(
+        uint256 pid,
+        address student,
+        address recommender,
+        uint8 score,
+        uint256 deadline,
+        bytes calldata signature
+    ) external {
+        if (score > 100) revert InvalidScore();
+        if (block.timestamp > deadline) revert SignatureExpired();
+        if (recommender == student) revert SelfRecommendation();
+
+        ScholarshipTypes.Program memory p = _program(pid);
+        if (p.screeningMode != ScholarshipTypes.ScreeningMode.BY_STUDENT) revert NotStudentScored();
+        if (p.status != ScholarshipTypes.ProgramStatus.APPLICATION_OPEN && p.status != ScholarshipTypes.ProgramStatus.SCREENING)
+            revert WrongStatus(p.status);
+
+        (bool exists, ScholarshipTypes.ApplicationStatus st, , ) = core.getApplicant(pid, student);
+        if (!exists) revert NotAnApplicant(student);
+        if (st != ScholarshipTypes.ApplicationStatus.PENDING_REVIEW) revert AlreadyProcessed(student);
+
+        if (recommendersRestricted[pid] && !isRecommender[pid][recommender]) revert RecommenderNotAllowed();
+        if (hasRecommended[pid][student][recommender]) revert AlreadyRecommended();
+        RecInfo storage info = _rec[pid][student];
+        if (info.count >= MAX_RECOMMENDERS) revert TooManyRecommenders();
+
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(RECOMMENDATION_TYPEHASH, pid, student, score, deadline)));
+        if (!_isValidSignature(recommender, digest, signature)) revert InvalidSignature();
+
+        hasRecommended[pid][student][recommender] = true;
+        info.count += 1;
+        info.sum += score;
+        uint256 average = info.sum / info.count;
+
+        core.selectionSetRecommendScore(pid, student, average, recommender);
+        emit RecommendationSubmitted(pid, student, recommender, score, average);
+    }
+
+    /// @notice How many verified recommendations an applicant has, and their average (0 when none).
+    function recommendationOf(uint256 pid, address student) external view returns (uint256 count, uint256 average) {
+        RecInfo memory info = _rec[pid][student];
+        return (info.count, info.count == 0 ? 0 : info.sum / info.count);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -459,6 +568,17 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
         }
         amounts[n - 1] = share - assigned; // the remainder, so the milestones add up to exactly one portion
         return (amounts, plan.descriptions, plan.providers, plan.externalIds);
+    }
+
+    /// @dev EOA: ECDSA. Contract wallet: ERC-1271. (OpenZeppelin's SignatureChecker is avoided on purpose:
+    ///      it pulls in Bytes.sol, which needs the Cancun `mcopy` opcode, and this project targets Paris.)
+    function _isValidSignature(address signer, bytes32 digest, bytes calldata signature) private view returns (bool) {
+        if (signer.code.length == 0) {
+            (address recovered, ECDSA.RecoverError err, ) = ECDSA.tryRecover(digest, signature);
+            return err == ECDSA.RecoverError.NoError && recovered == signer;
+        }
+        (bool ok, bytes memory ret) = signer.staticcall(abi.encodeWithSelector(0x1626ba7e, digest, signature));
+        return ok && ret.length >= 32 && abi.decode(ret, (bytes32)) == bytes32(bytes4(0x1626ba7e));
     }
 
     function _trim(address[] memory a, uint256 n) private pure returns (address[] memory out) {

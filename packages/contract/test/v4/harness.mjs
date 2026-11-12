@@ -160,6 +160,34 @@ export async function deploySystem() {
   return { accounts, deployer, contracts, as, read, send, nextPid: 0 };
 }
 
+// ── recommendations (EIP-712, signed by the recommender) ─────────────────────
+export async function signRecommendation(sys, { pid, student, recommender, score, deadline }) {
+  const chainId = await publicClient.getChainId();
+  return walletFor(recommender).signTypedData({
+    account: recommender,
+    domain: { name: "ScholarshipSelection", version: "1", chainId, verifyingContract: sys.contracts.selection.address },
+    types: {
+      Recommendation: [
+        { name: "pid", type: "uint256" },
+        { name: "student", type: "address" },
+        { name: "score", type: "uint8" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    primaryType: "Recommendation",
+    message: { pid: BigInt(pid), student, score, deadline: BigInt(deadline) },
+  });
+}
+
+/** Signs as `recommender` and submits through `by` (anyone may relay it). Overrides allow testing bad input. */
+export async function recommend(sys, { pid, student, recommender, score, deadline, by, signature, signedScore }) {
+  const dl = deadline ?? (await now()) + 86_400;
+  const sig = signature ?? (await signRecommendation(sys, { pid, student, recommender, score: signedScore ?? score, deadline: dl }));
+  return sys.as(by ?? sys.accounts[15]).write(sys.contracts.selection, "submitRecommendation", [
+    BigInt(pid), student, recommender, score, BigInt(dl), sig,
+  ]);
+}
+
 // ── a program, ready to run ──────────────────────────────────────────────────
 const SCORE = (a) => ({ academic: a, income: a, recommend: a });
 
@@ -175,13 +203,17 @@ export async function setupProgram(sys, opts = {}) {
     totalFund = parseEther("100"),
     initiator = sys.accounts[1],
     donations = [], // [{ account, amount }] made during the application window
+    screeningMode = 1, // 1 = BY_STUDENT, 0 = BY_COMMITTEE
+    // Recommendations are no longer self-reported, so by default one recommender vouches for every
+    // applicant with the score the old tests typed in themselves. Set false to start from zero.
+    autoRecommend = true,
   } = opts;
   const { core } = sys.contracts;
   const t = await now();
   const timeline = [t + 60, t + 600, t + 700, t + 1000];
 
   await sys.as(initiator).write(core, "createProgram", [
-    "ipfs://program", 3, 1,
+    "ipfs://program", 3, screeningMode,
     { academicWeight: 40, incomeWeight: 40, essayWeight: 0, recommendWeight: 20, extracurricWeight: 0 },
     { bountyHunterPercent: 40, treasuryPercent: 40, protocolPercent: 20 },
     maxCandidates, targetWinners, timeline, 7 * 86400, totalFund, 0, zeroAddress, zeroAddress,
@@ -194,7 +226,13 @@ export async function setupProgram(sys, opts = {}) {
     for (let i = 0; i < scores.length; i++) {
       const s = sys.accounts[2 + i];
       students.push(s);
-      await sys.as(s).write(core, "applyToProgram", [BigInt(pid), "p", "d", "e", "r", BigInt(scores[i]), BigInt(scores[i]), BigInt(scores[i])]);
+      // The last argument (a self-reported recommendation) is ignored by the contract.
+      await sys.as(s).write(core, "applyToProgram", [BigInt(pid), "p", "d", "e", "r", BigInt(scores[i]), BigInt(scores[i]), 100n]);
+    }
+    if (autoRecommend && screeningMode === 1) {
+      for (let i = 0; i < scores.length; i++) {
+        await recommend(sys, { pid, student: students[i], recommender: sys.accounts[19], score: scores[i] });
+      }
     }
     for (const d of donations) {
       await sys.as(d.account).write(core, "donate", [BigInt(pid), d.amount, "ipfs://donor"], d.amount);

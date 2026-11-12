@@ -72,6 +72,17 @@ export class ProgramsController {
     return { data: await this.service.milestonesForProgram(pid, limit, offset) };
   }
 
+  @Get("/:pid/recommendations")
+  @ApiDoc({ summary: "Verified recommendations for a program's applicants" })
+  async recommendations(c: Context) {
+    const pid = Number(c.req.param("pid"));
+    const limit = Math.min(Number(c.req.query("limit") ?? 100), 200);
+    const offset = Number(c.req.query("offset") ?? 0);
+    if (Number.isNaN(pid)) throw HttpException.badRequest("Invalid pid");
+
+    return { data: await this.service.recommendationsForProgram(pid, limit, offset) };
+  }
+
   @Get("/:pid/votes")
   @ApiDoc({ summary: "Votes for a program" })
   async votes(c: Context) {

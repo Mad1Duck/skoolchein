@@ -1,10 +1,11 @@
-import { useReadContract } from "wagmi";
+import { useReadContract, useSignTypedData } from "wagmi";
 import { hexToString, stringToHex } from "viem";
 import { addr } from "@/lib/chain/addr";
 import { getV4Addresses } from "@/lib/chain/chains";
 import { useActiveChain } from "@/lib/chain/useActiveChain";
 import { scholarshipSelectionAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
+import { RECOMMENDATION_TYPES, type SignedRecommendation } from "@/lib/recommendations";
 
 /**
  * ScholarshipSelection: ranks the shortlist and chooses winners.
@@ -167,4 +168,66 @@ export function useSetSelectionConfig() {
     });
   };
   return { setConfig, isPending, isSuccess, error, hash, reset };
+}
+
+// ── Recommendations ───────────────────────────────────────────────────────────
+
+/** How many verified recommendations an applicant has, and their average. */
+export function useRecommendationOf(pid: number, student: string | undefined) {
+  const r = useSelectionRead("recommendationOf", [BigInt(pid), student], !!student);
+  const t = r.data as readonly [bigint, bigint] | undefined;
+  return { ...r, count: t ? Number(t[0]) : 0, average: t ? Number(t[1]) : 0 };
+}
+
+/** Whether the creator has put `who` on the program's recommender list. */
+export function useIsRecommender(pid: number, who: string | undefined) {
+  const r = useSelectionRead("isRecommender", [BigInt(pid), who], !!who);
+  return { ...r, allowed: Boolean(r.data) };
+}
+
+/** Sign a recommendation with the connected wallet (nothing is sent on-chain). */
+export function useSignRecommendation() {
+  const selection = useSelectionAddress();
+  const { chainId } = useActiveChain();
+  const { signTypedDataAsync, isPending } = useSignTypedData();
+
+  const sign = async (args: Omit<SignedRecommendation, "signature" | "recommender"> & { recommender: `0x${string}` }): Promise<SignedRecommendation> => {
+    if (!selection) throw new Error("The selection contract is not deployed on this network.");
+    const signature = await signTypedDataAsync({
+      domain: { name: "ScholarshipSelection", version: "1", chainId, verifyingContract: selection },
+      types: RECOMMENDATION_TYPES,
+      primaryType: "Recommendation",
+      message: { pid: BigInt(args.pid), student: args.student, score: args.score, deadline: BigInt(args.deadline) },
+    });
+    return { ...args, signature };
+  };
+  return { sign, isSigning: isPending };
+}
+
+/** Deliver a signed recommendation to the contract. Anyone can pay for this. */
+export function useSubmitRecommendation() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+  const submit = (r: SignedRecommendation) => {
+    writeContract({
+      address: addr("ScholarshipSelection"),
+      abi: scholarshipSelectionAbi,
+      functionName: "submitRecommendation",
+      args: [BigInt(r.pid), r.student, r.recommender, r.score, BigInt(r.deadline), r.signature],
+    });
+  };
+  return { submit, isPending, isSuccess, error, hash, reset };
+}
+
+/** Creator: limit who may recommend applicants, and add allowed addresses. */
+export function useConfigureRecommenders() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+  const configure = (pid: bigint, restricted: boolean, add: `0x${string}`[], remove: `0x${string}`[] = []) => {
+    writeContract({
+      address: addr("ScholarshipSelection"),
+      abi: scholarshipSelectionAbi,
+      functionName: "configureRecommenders",
+      args: [pid, restricted, add, remove],
+    });
+  };
+  return { configure, isPending, isSuccess, error, hash, reset };
 }

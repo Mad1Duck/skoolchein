@@ -1249,7 +1249,7 @@ export const scholarshipCoreAbi = [
       },
       {
         "internalType": "uint256",
-        "name": "recommendScore",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -2451,6 +2451,34 @@ export const scholarshipCoreAbi = [
       }
     ],
     "name": "selectionApplyBatch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "student",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "score",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "selectionSetRecommendScore",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

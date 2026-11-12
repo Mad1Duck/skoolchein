@@ -4,6 +4,8 @@ import {
   Status, AppStatus, parseEther, zeroAddress, artifact, ROLE,
 } from "./harness.mjs";
 
+// Hooks live inside this describe: top-level hooks would run for every test file in the process.
+describe("v4 selection", () => {
 let sys, snap;
 let core, selection, admin, milestones;
 
@@ -377,4 +379,5 @@ describe("deployment constraints", () => {
     const size = (a.deployedBytecode.length - 2) / 2;
     assert.ok(size < 24_576, `Core is ${size} bytes`);
   });
+});
 });

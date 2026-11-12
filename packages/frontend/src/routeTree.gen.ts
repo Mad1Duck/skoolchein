@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProgramsIndexRouteImport } from './routes/programs/index'
 import { Route as ApplyIdRouteImport } from './routes/apply/$id'
 import { Route as ProgramsIdIndexRouteImport } from './routes/programs/$id/index'
+import { Route as RecommendPidStudentRouteImport } from './routes/recommend/$pid/$student'
 import { Route as ProgramsIdApplyRouteImport } from './routes/programs/$id/apply'
 
 const VoteRoute = VoteRouteImport.update({
@@ -65,6 +66,11 @@ const ProgramsIdIndexRoute = ProgramsIdIndexRouteImport.update({
   path: '/programs/$id/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecommendPidStudentRoute = RecommendPidStudentRouteImport.update({
+  id: '/recommend/$pid/$student',
+  path: '/recommend/$pid/$student',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgramsIdApplyRoute = ProgramsIdApplyRouteImport.update({
   id: '/programs/$id/apply',
   path: '/programs/$id/apply',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/apply/$id': typeof ApplyIdRoute
   '/programs': typeof ProgramsIndexRoute
   '/programs/$id/apply': typeof ProgramsIdApplyRoute
+  '/recommend/$pid/$student': typeof RecommendPidStudentRoute
   '/programs/$id': typeof ProgramsIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/apply/$id': typeof ApplyIdRoute
   '/programs': typeof ProgramsIndexRoute
   '/programs/$id/apply': typeof ProgramsIdApplyRoute
+  '/recommend/$pid/$student': typeof RecommendPidStudentRoute
   '/programs/$id': typeof ProgramsIdIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/apply/$id': typeof ApplyIdRoute
   '/programs/': typeof ProgramsIndexRoute
   '/programs/$id/apply': typeof ProgramsIdApplyRoute
+  '/recommend/$pid/$student': typeof RecommendPidStudentRoute
   '/programs/$id/': typeof ProgramsIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/apply/$id'
     | '/programs'
     | '/programs/$id/apply'
+    | '/recommend/$pid/$student'
     | '/programs/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/apply/$id'
     | '/programs'
     | '/programs/$id/apply'
+    | '/recommend/$pid/$student'
     | '/programs/$id'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/apply/$id'
     | '/programs/'
     | '/programs/$id/apply'
+    | '/recommend/$pid/$student'
     | '/programs/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   ApplyIdRoute: typeof ApplyIdRoute
   ProgramsIndexRoute: typeof ProgramsIndexRoute
   ProgramsIdApplyRoute: typeof ProgramsIdApplyRoute
+  RecommendPidStudentRoute: typeof RecommendPidStudentRoute
   ProgramsIdIndexRoute: typeof ProgramsIdIndexRoute
 }
 
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProgramsIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recommend/$pid/$student': {
+      id: '/recommend/$pid/$student'
+      path: '/recommend/$pid/$student'
+      fullPath: '/recommend/$pid/$student'
+      preLoaderRoute: typeof RecommendPidStudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/programs/$id/apply': {
       id: '/programs/$id/apply'
       path: '/programs/$id/apply'
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApplyIdRoute: ApplyIdRoute,
   ProgramsIndexRoute: ProgramsIndexRoute,
   ProgramsIdApplyRoute: ProgramsIdApplyRoute,
+  RecommendPidStudentRoute: RecommendPidStudentRoute,
   ProgramsIdIndexRoute: ProgramsIdIndexRoute,
 }
 export const routeTree = rootRouteImport

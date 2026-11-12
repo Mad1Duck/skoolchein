@@ -7,6 +7,7 @@ import { VoteModal } from '../components/VoteModal';
 import { ConfidenceStakeModal } from '../components/ConfidenceStakeModal';
 import { SelectWinnersModal } from '../components/SelectWinnersModal';
 import { ResolveShortlistModal } from '../components/ResolveShortlistModal';
+import { MyRecommendationsCard } from '../components/MyRecommendationsCard';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -254,6 +255,14 @@ export function ProgramDetailPage() {
       {isResolveOpen && (
         <ResolveShortlistModal isOpen onClose={() => setIsResolveOpen(false)} programId={program.pid} />
       )}
+
+      {/* An applicant of a self-scored program: who recommended them, and how to ask for more. */}
+      {userAddress &&
+        myApplication?.status === 'PENDING_REVIEW' &&
+        program.screeningMode === 1 &&
+        ['APPLICATION_OPEN', 'SCREENING'].includes(program.status) && (
+          <MyRecommendationsCard programId={program.pid} student={userAddress} />
+        )}
 
       <ProgramFundingCard
         program={program}
