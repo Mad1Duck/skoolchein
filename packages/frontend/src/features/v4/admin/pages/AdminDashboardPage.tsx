@@ -18,6 +18,7 @@ import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProgramDetail } from "../components/AdminProgramDetail";
 import { AdminProtocolConfig } from "../components/AdminProtocolConfig";
 import { AdminTokenOracle } from "../components/AdminTokenOracle";
+import { AdminSelectionConfig } from "../components/AdminSelectionConfig";
 import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 
 type Tab = "programs" | "users" | "treasury" | "config";
@@ -362,6 +363,7 @@ export function AdminDashboardPage() {
       {activeTab === "config" && (
         <div className="space-y-8">
           <AdminProtocolConfig />
+          <AdminSelectionConfig />
           <AdminTokenOracle />
         </div>
       )}

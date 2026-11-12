@@ -347,7 +347,7 @@ library ScholarshipTypes {
     uint256 constant DEFAULT_FREEZE_HEAVY             = 730 days;
     uint256 constant DEFAULT_SCORE_MAX                = 1000;
     uint256 constant DEFAULT_SCREENING_THRESHOLD      = 600;
-    uint8   constant DEFAULT_QUORUM_PERCENT           = 50;
+    uint8   constant DEFAULT_QUORUM_PERCENT           = 0; // minimum turnout (% of fund) for votes to count toward the score; 0 = always
     uint8   constant DEFAULT_CONFIDENCE_SLASH_PCT     = 50;
     uint8   constant DEFAULT_CONFIDENCE_BONUS_PCT     = 20;
     uint8   constant DEFAULT_MAX_COMMITTEE_MEMBERS    = 15;
@@ -409,7 +409,7 @@ library ScholarshipTypes {
         // Scoring
         uint256 scoreMax;               // Maximum raw score
         uint256 screeningThreshold;     // Minimum score to be shortlisted
-        uint8   quorumPercent;          // % of totalDonated that must vote
+        uint8   quorumPercent;          // Votes count toward the final score only if total vote power >= this % of the program fund (0 = always count)
         // Confidence stakes
         uint8   confidenceSlashPct;     // % of stake slashed on scholar fail
         uint8   confidenceBonusPct;     // % bonus from yield pool on scholar success
@@ -422,4 +422,25 @@ library ScholarshipTypes {
         uint8   maxOptionalMilestones;  // Per scholar per program
         uint256 optionalApprovalWindow; // Window for committee to act on proposal
     }
+
+    /**
+     * @notice Admin-tunable parameters for winner selection (stored in ScholarshipSelection).
+     *
+     * @dev    Deliberately NOT part of ProtocolConfig: that struct sits in the middle of
+     *         ScholarshipCoreBase's storage layout, so growing it would shift every variable
+     *         declared after it and corrupt a live proxy.
+     *
+     *         Basis points (10_000 = 100%). `isSet` distinguishes "admin never configured"
+     *         (use the defaults) from "admin deliberately set zeros". The per-voter cap is the
+     *         third setting but is stored in Core (voterCapBps), where the vote path reads it.
+     */
+    struct SelectionConfig {
+        uint16 maxVoteWeightBps;      // Ceiling a program creator may choose for the vote share of the final score
+        uint16 defaultVoteWeightBps;  // Used when the creator did not choose one
+        bool   isSet;
+    }
+
+    uint16 constant DEFAULT_MAX_VOTE_WEIGHT_BPS     = 10_000; // creators may go up to 100%
+    uint16 constant DEFAULT_VOTE_WEIGHT_BPS         = 3_000;  // 30% when the creator does not choose
+    uint16 constant BPS                             = 10_000;
 }

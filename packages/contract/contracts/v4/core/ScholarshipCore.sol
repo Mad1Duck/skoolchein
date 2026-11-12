@@ -210,26 +210,53 @@ contract ScholarshipCore is ScholarshipCoreBase {
 
     // ── Status transitions ───────────────────────────────────────────────────
 
-    function openApplications(uint256 pid) external programExists(pid) onlyInitiator(pid) {
+    /**
+     * @notice Move CREATED -> APPLICATION_OPEN once the application window has started.
+     * @dev    Callable by anyone (a keeper, a donor, the creator). It carries no discretion:
+     *         the only input is the clock, so restricting it to the creator only let a
+     *         forgetful creator stall their own program. donate()/applyToProgram() also open
+     *         the window themselves, so calling this is optional.
+     */
+    function openApplications(uint256 pid) external programExists(pid) {
         _requireStatus(pid, ScholarshipTypes.ProgramStatus.CREATED);
         if (block.timestamp < programs[pid].applicationStart) revert TooEarly();
         programs[pid].status = ScholarshipTypes.ProgramStatus.APPLICATION_OPEN;
         emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN);
     }
 
-    function openScreening(uint256 pid) external programExists(pid) onlyInitiator(pid) {
+    /// @notice Move APPLICATION_OPEN -> SCREENING once the application window has ended. Callable by anyone.
+    function openScreening(uint256 pid) external programExists(pid) {
         _requireStatus(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN);
         if (block.timestamp < programs[pid].applicationEnd) revert TooEarly();
         programs[pid].status = ScholarshipTypes.ProgramStatus.SCREENING;
         emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.SCREENING);
     }
 
+    /**
+     * @dev Gate for donate()/applyToProgram(): the program must be inside its application
+     *      window by the CLOCK, not merely carry a stored status. Opens the window on first
+     *      use and, unlike the stored-status check this replaces, closes it at
+     *      `applicationEnd` even if nobody has called openScreening().
+     */
+    function _syncApplicationWindow(uint256 pid) internal {
+        ScholarshipTypes.Program storage p = programs[pid];
+        ScholarshipTypes.ProgramStatus st = p.status;
+        if (st == ScholarshipTypes.ProgramStatus.CREATED && block.timestamp >= p.applicationStart) {
+            st = ScholarshipTypes.ProgramStatus.APPLICATION_OPEN;
+            p.status = st;
+            emit ProgramStatusChanged(pid, st);
+        }
+        if (st != ScholarshipTypes.ProgramStatus.APPLICATION_OPEN || block.timestamp >= p.applicationEnd)
+            revert InvalidProgramStatus(ScholarshipTypes.ProgramStatus.APPLICATION_OPEN, st);
+    }
+    modifier inApplicationWindow(uint256 pid) { _syncApplicationWindow(pid); _; }
+
     // ═══════════════════════════════════════════════════════════════════
     // PHASE 1 — DONATIONS
     // ═══════════════════════════════════════════════════════════════════
 
     function donate(uint256 pid, uint256 grossAmount, string calldata nftMetadataURI)
-        external payable nonReentrant programExists(pid) inStatus(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN)
+        external payable nonReentrant programExists(pid) inApplicationWindow(pid)
     {
         if (!programs[pid].openDonation) revert PublicParticipationDisabled();
 
@@ -263,7 +290,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
         uint256 pid,
         string calldata pCID, string calldata dCID, string calldata eCID, string calldata rCID,
         uint256 academicScore, uint256 incomeScore, uint256 recommendScore
-    ) external nonReentrant programExists(pid) inStatus(pid, ScholarshipTypes.ProgramStatus.APPLICATION_OPEN) {
+    ) external nonReentrant programExists(pid) inApplicationWindow(pid) {
         _requireStudentEligible(msg.sender);
         ScholarshipTypes.Program storage prog = programs[pid];
         if (msg.sender == prog.initiator) revert CannotApplyToOwnProgram();
@@ -296,45 +323,61 @@ contract ScholarshipCore is ScholarshipCoreBase {
         _setScore(pid, applicant, a, i, r, comm);
     }
 
-    function resolveShortlistBatch(uint256 pid, address[] calldata rankedSegment, bool isLastBatch) external programExists(pid) onlyInitiator(pid) {
-        _requireStatus(pid, ScholarshipTypes.ProgramStatus.SCREENING);
+    // ═══════════════════════════════════════════════════════════════════
+    // SELECTION HOOKS: ScholarshipSelection only (SELECTION_ROLE)
+    //
+    // The ranking, vote weighting and winner choice live in ScholarshipSelection
+    // (this contract is at the EIP-170 size limit). It verifies the order on-chain
+    // and then asks Core to record the outcome here. Core keeps ownership of the
+    // state; it just no longer decides who wins.
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// @notice Score and status of one applicant, for ScholarshipSelection.
+    function getApplicant(uint256 pid, address wallet)
+        external view returns (bool exists, ScholarshipTypes.ApplicationStatus status, uint32 screeningScore, uint128 voteScore)
+    {
+        ScholarshipTypes.Applicant storage a = applicants[pid][wallet];
+        // An unset struct also reads as status PENDING_REVIEW, so existence must be explicit.
+        return (a.wallet != address(0), a.status, a.screeningScore, a.voteScore);
+    }
+
+    /**
+     * @notice Record one batch of the shortlist resolution.
+     * @param isLast  true on the final batch: requires every applicant to have been processed,
+     *                then opens the voting phase.
+     */
+    function selectionApplyBatch(
+        uint256 pid,
+        address[] calldata shortlisted,
+        address[] calldata screenedOut,
+        bool isLast
+    ) external onlyRole(SELECTION_ROLE) {
         ScholarshipTypes.Program storage prog = programs[pid];
-        
-        // Private programs skip the delay before resolution
-        if (prog.openDonation && block.timestamp < uint256(prog.votingStart)) revert TooEarly();
+        // The window closed by the clock; no one has called openScreening() yet.
+        if (prog.status == ScholarshipTypes.ProgramStatus.APPLICATION_OPEN) {
+            prog.status = ScholarshipTypes.ProgramStatus.SCREENING;
+            emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.SCREENING);
+        }
+        _requireStatus(pid, ScholarshipTypes.ProgramStatus.SCREENING);
 
-        uint32 currentCount = resolveProgress[pid];
-        uint256 n = rankedSegment.length;
-        uint256 maxC = uint256(prog.maxCandidates);
-
-        for (uint256 i; i < n; ) {
-            address st = rankedSegment[i];
-            uint256 globalIdx = currentCount + i;
-            
-            // 1. Sort validation (if not the first applicant ever resolved)
-            if (globalIdx > 0) {
-                // This logic requires the caller to send segments that overlap by 1 element if they want full sort validation
-                // or we store the lastScore. Let's store the lastScore for gas efficiency.
-            }
-
-            ScholarshipTypes.Applicant storage app = applicants[pid][st];
-            
-            // 2. Shortlist Logic
-            if (globalIdx < maxC && app.screeningScore >= ScholarshipTypes.SCREENING_THRESHOLD) {
-                app.status = ScholarshipTypes.ApplicationStatus.SHORTLISTED;
-                _shortlist[pid].push(st);
-                prog.shortlistedCount++;
-                emit StudentShortlisted(pid, st, app.screeningScore);
-            } else {
-                _markScreenedOut(pid, st);
-            }
+        for (uint256 i; i < shortlisted.length; ) {
+            ScholarshipTypes.Applicant storage app = applicants[pid][shortlisted[i]];
+            app.status = ScholarshipTypes.ApplicationStatus.SHORTLISTED;
+            _shortlist[pid].push(shortlisted[i]);
+            prog.shortlistedCount++;
+            emit StudentShortlisted(pid, shortlisted[i], app.screeningScore);
+            unchecked { ++i; }
+        }
+        for (uint256 i; i < screenedOut.length; ) {
+            _markScreenedOut(pid, screenedOut[i]);
             unchecked { ++i; }
         }
 
-        resolveProgress[pid] = currentCount + uint32(n);
+        uint32 done = resolveProgress[pid] + uint32(shortlisted.length + screenedOut.length);
+        resolveProgress[pid] = done;
 
-        if (isLastBatch) {
-            if (resolveProgress[pid] < _programApplicants[pid].length) revert ApplicantListIncomplete();
+        if (isLast) {
+            if (done < _programApplicants[pid].length) revert ApplicantListIncomplete();
             prog.status = ScholarshipTypes.ProgramStatus.VOTING;
             emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.VOTING);
         }
@@ -347,20 +390,42 @@ contract ScholarshipCore is ScholarshipCoreBase {
         emit StudentScreenedOut(pid, student, app.screeningScore, locked);
     }
 
+    /**
+     * @notice Turn the chosen shortlisted applicants into scholars and start the program.
+     * @dev    The mandatory milestones are created by ScholarshipSelection directly on the
+     *         MilestoneManager, which keeps that array-heavy call out of this contract.
+     * @param mandatoryTotal  Number of mandatory milestones each winner will have.
+     */
+    function selectionActivate(uint256 pid, address[] calldata winners, uint32 mandatoryTotal)
+        external onlyRole(SELECTION_ROLE)
+    {
+        _requireStatus(pid, ScholarshipTypes.ProgramStatus.VOTING);
+        programs[pid].status = ScholarshipTypes.ProgramStatus.ACTIVE;
+        emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.ACTIVE);
+
+        for (uint256 i; i < winners.length; ) {
+            address s = winners[i];
+            if (applicants[pid][s].status != ScholarshipTypes.ApplicationStatus.SHORTLISTED) revert CandidateNotShortlisted();
+            scholars[s][pid] = ScholarshipTypes.Scholar({
+                pid: pid,
+                wallet: s,
+                status: ScholarshipTypes.StudentStatus.ACTIVE,
+                isBlacklisted: false,
+                mandatoryTotal: mandatoryTotal,
+                mandatoryCompleted: 0,
+                optionalApproved: 0,
+                optionalCompleted: 0,
+                freezeUntil: 0,
+                totalReceived: 0
+            });
+            emit ScholarSelected(pid, s);
+            unchecked { ++i; }
+        }
+    }
+
     function toggleOpenDonation(uint256 pid, bool open) external programExists(pid) onlyInitiator(pid) {
         programs[pid].openDonation = open;
         emit OpenDonationToggled(pid, open);
-    }
-
-    function selectWinners(
-        uint256 pid,
-        address[] calldata ranked,
-        uint256[][] calldata amounts,
-        string[][] calldata descs,
-        bytes32[][] calldata providers,
-        bytes32[][] calldata externalIds
-    ) external nonReentrant programExists(pid) {
-        _selectWinners(pid, ranked, amounts, descs, providers, externalIds);
     }
 
     function cancelProgram(uint256 pid) external nonReentrant programExists(pid) onlyInitiator(pid) {

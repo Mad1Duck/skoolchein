@@ -842,6 +842,19 @@ export const milestoneManagerAbi = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "selection",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -868,6 +881,19 @@ export const milestoneManagerAbi = [
       }
     ],
     "name": "setProgramCommittee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "selectionAddr",
+        "type": "address"
+      }
+    ],
+    "name": "setSelection",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

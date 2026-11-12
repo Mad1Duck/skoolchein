@@ -1,6 +1,5 @@
 import { addr } from "@/lib/chain/addr";
 import { scholarshipCoreAbi } from "@/constants/contractsV4";
-import { stringToHex } from "viem";
 import { useTxHook } from "./use-tx-base";
 import { NATIVE_TOKEN, parseTokenAmount, nativeValueFor } from "../token";
 
@@ -106,42 +105,6 @@ export function useCancelProgram() {
     });
   };
   return { cancelProgram, isPending, isSuccess, error, hash, reset };
-}
-
-export function useResolveShortlistBatch() {
-  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
-  const resolveShortlistBatch = (pid: bigint, rankedSegment: `0x${string}`[], isLastBatch: boolean) => {
-    writeContract({
-      address: addr("ScholarshipCore"),
-      abi: scholarshipCoreAbi,
-      functionName: "resolveShortlistBatch",
-      args: [pid, rankedSegment, isLastBatch],
-    });
-  };
-  return { resolveShortlistBatch, isPending, isSuccess, error, hash, reset };
-}
-
-export function useSelectWinners() {
-  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
-  const selectWinners = (
-    pid: bigint,
-    ranked: `0x${string}`[],
-    amounts: bigint[][],
-    descs: string[][],
-    providers: string[][],
-    externalIds: string[][]
-  ) => {
-    const hexProviders = providers.map(row => row.map(s => stringToHex(s || "", { size: 32 })));
-    const hexExternalIds = externalIds.map(row => row.map(s => stringToHex(s || "", { size: 32 })));
-
-    writeContract({
-      address: addr("ScholarshipCore"),
-      abi: scholarshipCoreAbi,
-      functionName: "selectWinners",
-      args: [pid, ranked, amounts, descs, hexProviders, hexExternalIds],
-    });
-  };
-  return { selectWinners, isPending, isSuccess, error, hash, reset };
 }
 
 export function useToggleOpenDonation() {

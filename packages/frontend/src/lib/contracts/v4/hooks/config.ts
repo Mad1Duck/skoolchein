@@ -17,11 +17,14 @@ export function useProtocolLimits() {
     abi: scholarshipCoreAbi,
     functionName: "getProtocolConfig",
   });
-  const cfg = data as { minCandidates: number; maxCandidates: number; maxOptionalMilestones: number } | undefined;
+  const cfg = data as { minCandidates: number; maxCandidates: number; maxOptionalMilestones: number; screeningThreshold: bigint; maxMandatoryMilestones: number } | undefined;
   return {
     minCandidates: Number(cfg?.minCandidates ?? 5),
     maxCandidates: Number(cfg?.maxCandidates ?? 20),
     maxOptional: Number(cfg?.maxOptionalMilestones ?? 5),
+    maxMandatory: Number(cfg?.maxMandatoryMilestones ?? 10),
+    /** Minimum screening score to be shortlisted (admin-set; contract default 600). */
+    screeningThreshold: Number(cfg?.screeningThreshold ?? 600),
     loaded: Boolean(cfg),
   };
 }

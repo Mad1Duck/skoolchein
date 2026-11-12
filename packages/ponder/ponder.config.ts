@@ -7,6 +7,7 @@ import { scholarshipReputationAbi } from "./abis/v4/ScholarshipReputation";
 import { committeeGovernanceAbi } from "./abis/v4/CommitteeGovernance";
 import { milestoneManagerAbi } from "./abis/v4/MilestoneManager";
 import { scholarshipPriceOracleAbi } from "./abis/v4/ScholarshipPriceOracle";
+import { scholarshipSelectionAbi } from "./abis/v4/ScholarshipSelection";
 
 dotenv.config();
 
@@ -35,7 +36,8 @@ if (process.env.DATABASE_INDEXER_URL) {
  *   START_BLOCK_<ID>         first block to index (default 0)
  *   CONTRACT_CORE_<ID>, CONTRACT_TREASURY_<ID>, CONTRACT_BOUNTY_<ID>,
  *   CONTRACT_REPUTATION_<ID>, CONTRACT_COMMITTEE_<ID>,
- *   CONTRACT_MILESTONE_MANAGER_<ID>, CONTRACT_PRICE_ORACLE_<ID> (optional)
+ *   CONTRACT_MILESTONE_MANAGER_<ID>, CONTRACT_PRICE_ORACLE_<ID> (optional),
+ *   CONTRACT_SELECTION_<ID> (optional)
  *
  * For nawasena (31338) the legacy unsuffixed names (PONDER_RPC_URL, START_BLOCK,
  * CONTRACT_CORE, ...) are still honoured, so existing .env files keep working.
@@ -143,5 +145,8 @@ export default createConfig({
     // token list and rates over REST without every client doing its own
     // contract reads. Optional per chain — see optionalAddress.
     ScholarshipPriceOracle: { abi: scholarshipPriceOracleAbi, chain: perChain("CONTRACT_PRICE_ORACLE", true) },
+    // Winner selection: vote weight + milestone plan per program, selection config.
+    // Optional per chain so an indexer pointed at an older deployment still starts.
+    ScholarshipSelection: { abi: scholarshipSelectionAbi, chain: perChain("CONTRACT_SELECTION", true) },
   },
 });

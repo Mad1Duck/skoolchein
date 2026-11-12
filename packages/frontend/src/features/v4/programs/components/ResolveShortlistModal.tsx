@@ -1,146 +1,143 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useAccount } from 'wagmi';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
-import { NeoBadge } from '@/components/ui/NeoBadge';
-import { useResolveShortlistBatch } from '@/lib/contracts/v4/hooks/core';
-import type { Applicant } from '@/lib/api/types';
-import { useProgram } from '@/lib/api/hooks';
+import { useProgram, useProgramApplicants } from '@/lib/api/hooks';
+import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
+import { useRankedApplicants, useResolveShortlist, useSelectionAddress } from '@/lib/contracts/v4/hooks/selection';
 import { useT } from '@/lib/i18n';
+import { toDate } from '@/lib/time';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   programId: number;
-  applicants: Applicant[];
 }
 
-export function ResolveShortlistModal({ isOpen, onClose, programId, applicants }: Props) {
-  const { t, tr } = useT();
-  // Auto-sort by screeningScore descending, allow manual reorder via drag
-  const [ranked, setRanked] = useState<Applicant[]>([]);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
+/** Applicants handled per transaction; keeps every step small. */
+const BATCH_SIZE = 50;
 
-  const { data: program } = useProgram(programId.toString());
-  const { resolveShortlistBatch, isPending, isSuccess } = useResolveShortlistBatch();
+/**
+ * Finalizes the shortlist. The order is not chosen here: ScholarshipSelection ranks the
+ * applicants by screening score and the contract rejects any other order, so this modal
+ * only shows what the system will do and submits it. Anyone can run it once it is time.
+ */
+export function ResolveShortlistModal({ isOpen, onClose, programId }: Props) {
+  const { t } = useT();
+  const { address } = useAccount();
+  const selection = useSelectionAddress();
+  const { screeningThreshold } = useProtocolLimits();
 
-  // Progress tracking
-  // Using a fallback for blockchainProgress while the API is updated
-  const blockchainProgress = program && typeof program === 'object' && 'blockchainProgress' in program
-    ? (program as { blockchainProgress?: number }).blockchainProgress ?? 0
-    : 0; 
-  const BATCH_SIZE = 50;
+  const { data: program } = useProgram(String(programId));
+  const { data: applicants = [] } = useProgramApplicants(String(programId));
+  const { data: ranked = [] } = useRankedApplicants(programId, isOpen);
+  const { resolveShortlist, isPending, isSuccess, reset } = useResolveShortlist();
 
+  const scoreOf = new Map(applicants.map((a) => [a.wallet.toLowerCase(), Number(a.screeningScore)]));
+  const total = program?.applicantCount ?? 0;
+  const processed = Math.max(0, total - ranked.length);
+  const maxCandidates = program?.maxCandidates ?? 0;
+
+  // Who may call, and from when. Mirrors ScholarshipSelection.resolveShortlist.
+  const isPublic = program?.openDonation ?? true;
+  const isCreator = !!address && !!program && address.toLowerCase() === program.initiator.toLowerCase();
+  const opensAt = isPublic ? toDate(program?.votingStart) : null;
+  const tooEarly = !!opensAt && Date.now() < opensAt.getTime();
+  const creatorOnly = !isPublic && !isCreator;
+
+  const wasFinalBatch = useRef(false);
   useEffect(() => {
-    // Auto-sort on open
-    const sorted = [...applicants].sort(
-      (a, b) => Number(b.screeningScore) - Number(a.screeningScore)
-    );
-    setRanked(sorted);
-  }, [applicants, isOpen]);
-
-  useEffect(() => {
-    if (isSuccess) onClose();
-  }, [isSuccess, onClose]);
-
-  const handleDragStart = (idx: number) => setDragIdx(idx);
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    const next = [...ranked];
-    const [moved] = next.splice(dragIdx, 1);
-    next.splice(idx, 0, moved);
-    setRanked(next);
-    setDragIdx(idx);
-  };
-  const handleDragEnd = () => setDragIdx(null);
+    if (!isSuccess) return;
+    reset();
+    if (wasFinalBatch.current) onClose();
+  }, [isSuccess, reset, onClose]);
 
   const handleConfirm = () => {
-    const wallets = ranked.map((a) => a.wallet as `0x${string}`);
-    // Extract segment starting from current on-chain progress
-    const segment = wallets.slice(blockchainProgress, blockchainProgress + BATCH_SIZE);
-    const isLastBatch = (blockchainProgress + segment.length) >= wallets.length;
-
-    resolveShortlistBatch(BigInt(programId), segment, isLastBatch);
+    const segment = ranked.slice(0, BATCH_SIZE);
+    wasFinalBatch.current = ranked.length <= BATCH_SIZE;
+    resolveShortlist(BigInt(programId), segment, wasFinalBatch.current);
   };
 
-  const progressPercent = Math.min(100, Math.round((blockchainProgress / ranked.length) * 100)) || 0;
+  const blocked = !selection || tooEarly || creatorOnly || ranked.length === 0;
+  const left = Math.max(0, ranked.length - BATCH_SIZE);
+  const progressPercent = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0;
 
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title={t('shortlist.title', { id: programId })}>
       <div className="space-y-4">
-        <div className="bg-skyellow-light border-2 border-black p-3 text-sm shadow-[3px_3px_0_0_#000]">
-          <p className="font-bold">{t('shortlist.instructions')}</p>
-          <p className="text-gray-700 mt-1">{tr('shortlist.body', { size: BATCH_SIZE })}</p>
-          
-          {/* Progress bar */}
-          <div className="mt-3">
+        <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm space-y-2">
+          <p className="text-gray-700">{t('shortlist.intro')}</p>
+          <p className="font-bold">{t('shortlist.rule', { max: maxCandidates, threshold: screeningThreshold })}</p>
+          <div>
             <div className="flex justify-between text-xs font-bold mb-1">
               <span>{t('shortlist.progress')}</span>
-              <span>{blockchainProgress} / {ranked.length}</span>
+              <span className="font-data">{processed} / {total}</span>
             </div>
-            <div className="w-full bg-white border-2 border-black h-4 overflow-hidden">
-              <div 
-                className="bg-skpurple h-full transition-all duration-500" 
-                style={{ width: `${progressPercent}%` }}
-              />
+            <div className="w-full bg-white border-2 border-black rounded-full h-3 overflow-hidden">
+              <div className="bg-skpurple h-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         </div>
 
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-          {ranked.map((a, idx) => (
-            <div
-              key={a.wallet}
-              draggable
-              onDragStart={() => handleDragStart(idx)}
-              onDragOver={(e) => handleDragOver(e, idx)}
-              onDragEnd={handleDragEnd}
-              className={`flex items-center gap-3 p-3 border-2 cursor-grab active:cursor-grabbing transition-all select-none ${
-                dragIdx === idx ? 'border-skpurple bg-skpurple-light' : 'border-black bg-white hover:bg-gray-50'
-              }`}
-            >
-              {/* Rank badge */}
-              <div className="w-7 h-7 bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 border-2 border-black">
-                {idx + 1}
+        {!selection && <Notice>{t('shortlist.noContract')}</Notice>}
+        {selection && tooEarly && opensAt && <Notice>{t('shortlist.notYet', { date: opensAt.toLocaleString() })}</Notice>}
+        {selection && creatorOnly && <Notice>{t('shortlist.creatorOnly')}</Notice>}
+
+        <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+          {ranked.map((wallet, i) => {
+            const rank = processed + i + 1;
+            const score = scoreOf.get(wallet.toLowerCase());
+            const shortlisted = rank <= maxCandidates && (score ?? 0) >= screeningThreshold;
+            return (
+              <div key={wallet} className="flex items-center gap-3 p-3 rounded-xl border-2 border-black bg-white">
+                <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
+                  {rank}
+                </div>
+                <WalletAvatar address={wallet} size={28} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm font-data truncate">{shortenAddress(wallet)}</p>
+                  <p className="text-xs text-gray-500">
+                    {t('shortlist.score')} <span className="font-bold font-data">{score ?? '—'}</span>
+                  </p>
+                </div>
+                <span
+                  className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 border-2 border-black rounded-full ${
+                    shortlisted ? 'bg-skgreen' : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {shortlisted ? t('shortlist.in') : t('shortlist.out')}
+                </span>
               </div>
+            );
+          })}
 
-              {/* Drag handle */}
-              <div className="text-gray-400 shrink-0">⠿</div>
-
-              <WalletAvatar address={a.wallet} size={28} />
-
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate">{shortenAddress(a.wallet)}</p>
-                <p className="text-xs text-gray-500">
-                  {t('shortlist.score')} <span className="font-bold">{a.screeningScore}</span>
-                  {' '}• {t('shortlist.retries')} {a.retryCount}
-                </p>
-              </div>
-
-              <NeoBadge status={a.status} />
-            </div>
-          ))}
-
-          {ranked.length === 0 && (
-            <p className="text-center py-8 text-gray-500">{t('shortlist.empty')}</p>
-          )}
+          {ranked.length === 0 && <p className="text-center py-8 text-gray-500">{t('shortlist.empty')}</p>}
         </div>
 
         <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
-          <NeoButton label={t('common.cancel')} variant="ghost" onClick={onClose} disabled={isPending} fullWidth />
+          <NeoButton label={t('common.cancel')} variant="ghost" className="!rounded-xl" onClick={onClose} disabled={isPending} fullWidth />
           <NeoButton
-            label={isPending ? t('shortlist.processing') :
-                   blockchainProgress === 0 ? t('shortlist.confirm', { count: ranked.length }) :
-                   t('shortlist.continue', { done: blockchainProgress })}
+            label={
+              isPending
+                ? t('shortlist.processing')
+                : left > 0
+                  ? t('shortlist.next', { left })
+                  : t('shortlist.confirm', { count: ranked.length })
+            }
             variant="primary"
+            className="!rounded-xl"
             onClick={handleConfirm}
             loading={isPending}
-            disabled={isPending || ranked.length === 0 || blockchainProgress >= ranked.length}
+            disabled={isPending || blocked}
             fullWidth
           />
         </div>
       </div>
     </NeoModal>
   );
+}
+
+function Notice({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-xl border-2 border-black bg-skred-light px-3 py-2 text-sm font-bold">{children}</p>;
 }

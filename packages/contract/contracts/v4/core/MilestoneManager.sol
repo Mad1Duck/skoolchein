@@ -49,6 +49,7 @@ contract MilestoneManager is Initializable {
     mapping(uint256 => address) public programCommittee; // pid → CommitteeGovernance
 
     modifier onlyCore()      { if (msg.sender != core)  revert NotCore();      _; }
+    modifier onlyCoreOrSelection() { if (msg.sender != core && msg.sender != selection) revert NotCore(); _; }
     modifier onlyCommittee(uint256 pid) {
         address cg = programCommittee[pid];
         if (cg == address(0) || msg.sender != cg) revert NotCommittee();
@@ -75,6 +76,11 @@ contract MilestoneManager is Initializable {
 
     // ── Interface (minimal) to Treasury ─────────────────────────────────────
     ITreasuryMin private _treasuryContract;
+
+    // ── Selection contract ───────────────────────────────────────────────────
+    // APPENDED DELIBERATELY after every existing variable: this is a live UUPS proxy.
+    /// ScholarshipSelection: creates a winner's mandatory milestones when winners are chosen.
+    address public selection;
 
     // ── Events ───────────────────────────────────────────────────────────────
     event MilestoneCreated(uint256 indexed id, uint256 indexed pid, address indexed scholar, ScholarshipTypes.MilestoneKind kind, bytes32 provider, bytes32 externalId);
@@ -127,6 +133,11 @@ contract MilestoneManager is Initializable {
         _coreContract = IScholarshipCoreMin(coreAddr);
     }
 
+    function setSelection(address selectionAddr) external {
+        if (msg.sender != admin) revert NotCore();
+        selection = selectionAddr;
+    }
+
     function setProgramCommittee(uint256 pid, address committeeContract) external {
         if (msg.sender != admin && msg.sender != core) revert NotCore();
         programCommittee[pid] = committeeContract;
@@ -151,7 +162,7 @@ contract MilestoneManager is Initializable {
         string[] calldata descs,
         bytes32[] calldata providers,
         bytes32[] calldata externalIds
-    ) external onlyCore {
+    ) external onlyCoreOrSelection {
         uint256 n = amounts.length;
         uint8 maxMandatory = _coreContract.getProtocolConfig().maxMandatoryMilestones;
         if (n == 0 || n > maxMandatory) revert TooManyMandatory();

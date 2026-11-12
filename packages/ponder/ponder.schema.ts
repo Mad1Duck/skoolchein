@@ -79,6 +79,10 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
   votingEnd: t.timestamp("voting_end", { withTimezone: true }),
   openDonation: t.boolean("open_donation").default(true),
   resolveProgress: t.integer("resolve_progress").default(0),
+  // Chosen by the creator through ScholarshipSelection.configureProgram. NULL means they
+  // never did, so the admin's default vote weight and a single-milestone plan apply.
+  voteWeightBps: t.integer("vote_weight_bps"),
+  milestonePlanCount: t.integer("milestone_plan_count"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({

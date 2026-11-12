@@ -14,7 +14,6 @@ import { NeoBadge } from '@/components/ui/NeoBadge';
 import type { TranslationKey } from '@/lib/i18n/en';
 import {
   useOpenApplications,
-  useOpenScreening,
   useCancelProgram,
   useClaimYield,
   useSubmitMilestone,
@@ -36,6 +35,8 @@ import { useProgramApplicants, useProgramMilestones, useExternalProgress } from 
 import { CommitteeManagementModal } from '../../programs/components/CommitteeManagementModal';
 import { ResolveShortlistModal } from '../../programs/components/ResolveShortlistModal';
 import { SelectWinnersModal } from '../../programs/components/SelectWinnersModal';
+import { ProgramSettingsModal } from '../../programs/components/ProgramSettingsModal';
+import { toEpochSec } from '@/lib/time';
 import { ProposeMilestoneModal } from './ProposeMilestoneModal';
 import { CommitteeScoreModal } from './CommitteeScoreModal';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
@@ -58,8 +59,9 @@ export function InitiatorPanel({
 }) {
   const { t } = useT();
   const [manageCommitteeFor, setManageCommitteeFor] = useState<number | null>(null);
-  const [resolveShortlistFor, setResolveShortlistFor] = useState<Program | null>(null);
-  const [selectWinnersFor, setSelectWinnersFor] = useState<Program | null>(null);
+  const [resolveShortlistFor, setResolveShortlistFor] = useState<number | null>(null);
+  const [selectWinnersFor, setSelectWinnersFor] = useState<number | null>(null);
+  const [settingsFor, setSettingsFor] = useState<number | null>(null);
 
   return (
     <section className="w-full">
@@ -83,8 +85,9 @@ export function InitiatorPanel({
               key={p.pid}
               program={p}
               onManageCommittee={() => setManageCommitteeFor(p.pid)}
-              onResolveShortlist={() => setResolveShortlistFor(p)}
-              onSelectWinners={() => setSelectWinnersFor(p)}
+              onResolveShortlist={() => setResolveShortlistFor(p.pid)}
+              onSelectWinners={() => setSelectWinnersFor(p.pid)}
+              onSettings={() => setSettingsFor(p.pid)}
             />
           ))
         )}
@@ -98,52 +101,18 @@ export function InitiatorPanel({
         />
       )}
 
-      {resolveShortlistFor && (
-        <ResolveShortlistForProgram
-          program={resolveShortlistFor}
-          onClose={() => setResolveShortlistFor(null)}
-        />
+      {resolveShortlistFor !== null && (
+        <ResolveShortlistModal isOpen onClose={() => setResolveShortlistFor(null)} programId={resolveShortlistFor} />
       )}
 
-      {selectWinnersFor && (
-        <SelectWinnersForProgram
-          program={selectWinnersFor}
-          onClose={() => setSelectWinnersFor(null)}
-        />
+      {selectWinnersFor !== null && (
+        <SelectWinnersModal isOpen onClose={() => setSelectWinnersFor(null)} programId={selectWinnersFor} />
+      )}
+
+      {settingsFor !== null && (
+        <ProgramSettingsModal isOpen onClose={() => setSettingsFor(null)} programId={settingsFor} />
       )}
     </section>
-  );
-}
-
-function ResolveShortlistForProgram({
-  program,
-  onClose,
-}: {
-  program: Program;
-  onClose: () => void;
-}) {
-  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
-  return (
-    <ResolveShortlistModal
-      isOpen
-      onClose={onClose}
-      programId={program.pid}
-      applicants={applicants}
-    />
-  );
-}
-
-function SelectWinnersForProgram({ program, onClose }: { program: Program; onClose: () => void }) {
-  const { data: applicants = [] } = useProgramApplicants(String(program.pid));
-  const shortlisted = applicants.filter((a) => a.status === 'SHORTLISTED');
-  return (
-    <SelectWinnersModal
-      isOpen
-      onClose={onClose}
-      programId={program.pid}
-      shortlisted={shortlisted}
-      targetWinners={program.targetWinners}
-    />
   );
 }
 
@@ -152,16 +121,17 @@ function InitiatorProgramCard({
   onManageCommittee,
   onResolveShortlist,
   onSelectWinners,
+  onSettings,
 }: {
   program: Program;
   onManageCommittee: () => void;
   onResolveShortlist: () => void;
   onSelectWinners: () => void;
+  onSettings: () => void;
 }) {
   const { t } = useT();
   const fmt = useFormatMoney();
   const { openApplications, isPending: openingApps } = useOpenApplications();
-  const { openScreening, isPending: openingScreen } = useOpenScreening();
   const { cancelProgram, isPending: cancelling } = useCancelProgram();
   const { claimYield, isPending: claiming } = useClaimYield();
 
@@ -176,6 +146,12 @@ function InitiatorProgramCard({
   });
 
   const isFinal = ['COMPLETED', 'CANCELLED'].includes(program.status);
+  // Stages move by the clock now: these only decide whether a button has anything to do yet.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const startReached = nowSec >= (toEpochSec(program.applicationStart) ?? Infinity);
+  const applicationsClosed = nowSec >= (toEpochSec(program.applicationEnd) ?? Infinity);
+  const votingEnded = nowSec >= (toEpochSec(program.votingEnd) ?? Infinity);
+  const canConfigure = ['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status);
   const canClaim = program.status === 'COMPLETED' && BigInt(program.yieldAccrued) > 0n;
   const nextHintKey = `panel.next.${program.status}` as TranslationKey;
 
@@ -232,6 +208,14 @@ function InitiatorProgramCard({
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.nextStep')}</p>
           <p className="text-sm font-bold mt-0.5">{t(nextHintKey)}</p>
+          {program.openDonation && (
+            <p className="text-xs text-gray-600 mt-1 font-data">
+              {t('settings.current', {
+                votes: (program.voteWeightBps ?? 3000) / 100,
+                count: program.milestonePlanCount ?? 1,
+              })}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -241,28 +225,29 @@ function InitiatorProgramCard({
               variant="primary"
               className="!rounded-xl"
               loading={openingApps}
-              disabled={openingApps}
+              disabled={openingApps || !startReached}
               onClick={() => openApplications(BigInt(program.pid))}
             />
           )}
 
-          {program.status === 'APPLICATION_OPEN' && (
+          {(program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING') && (
             <NeoButton
-              label={openingScreen ? t('panel.opening') : t('panel.screening')}
+              label={t('panel.resolve')}
               variant="primary"
               className="!rounded-xl"
-              loading={openingScreen}
-              disabled={openingScreen}
-              onClick={() => openScreening(BigInt(program.pid))}
+              disabled={!applicationsClosed}
+              onClick={onResolveShortlist}
             />
           )}
 
-          {program.status === 'SCREENING' && (
-            <NeoButton label={t('panel.resolve')} variant="primary" className="!rounded-xl" onClick={onResolveShortlist} />
-          )}
-
           {program.status === 'VOTING' && (
-            <NeoButton label={t('panel.selectWinners')} variant="success" className="!rounded-xl" onClick={onSelectWinners} />
+            <NeoButton
+              label={t('panel.selectWinners')}
+              variant="success"
+              className="!rounded-xl"
+              disabled={program.openDonation && !votingEnded}
+              onClick={onSelectWinners}
+            />
           )}
 
           {canClaim && (
@@ -278,6 +263,10 @@ function InitiatorProgramCard({
 
           {(program.status === 'APPLICATION_OPEN' || program.status === 'VOTING') && (
             <NeoButton label={t('panel.extend')} variant="secondary" className="!rounded-xl" onClick={() => setIsExtending(true)} />
+          )}
+
+          {canConfigure && (
+            <NeoButton label={t('settings.open')} variant="secondary" className="!rounded-xl" onClick={onSettings} />
           )}
 
           {!isFinal && (

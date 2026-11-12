@@ -52,6 +52,8 @@ services:
       CONTRACT_COMMITTEE: ${CONTRACT_COMMITTEE}
       CONTRACT_MILESTONE_MANAGER: ${CONTRACT_MILESTONE_MANAGER}
       CONTRACT_PRICE_ORACLE: ${CONTRACT_PRICE_ORACLE}
+      # Optional: unset (or the zero address) just means the Selection events are not indexed.
+      CONTRACT_SELECTION: ${CONTRACT_SELECTION:-0x0000000000000000000000000000000000000000}
       NODE_ENV: production
     networks:
       - nawasena-network

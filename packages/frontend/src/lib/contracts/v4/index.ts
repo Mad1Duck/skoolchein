@@ -1,4 +1,5 @@
 export * from "./hooks/core";
+export * from "./hooks/selection";
 export * from "./hooks/milestones";
 export * from "./hooks/bounty";
 export * from "./hooks/governance";

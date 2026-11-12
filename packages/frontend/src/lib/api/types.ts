@@ -58,6 +58,10 @@ export interface Program {
   votingStart: string | null;
   votingEnd: string | null;
   openDonation: boolean;
+  /** Vote share of the final score the creator chose; null = never set (the admin default applies). */
+  voteWeightBps?: number | null;
+  /** Mandatory milestones in the creator's plan; null = never set (one milestone per winner). */
+  milestonePlanCount?: number | null;
   createdAt: string;
   updatedAt: string;
 }

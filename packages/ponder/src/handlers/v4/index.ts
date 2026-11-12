@@ -4,6 +4,7 @@ import { scholarshipBountyHandlers } from "./bounty";
 import { committeeGovernanceHandlers } from "./governance";
 import { scholarshipTreasuryHandlers, scholarshipReputationHandlers } from "./treasury";
 import { scholarshipPriceOracleHandlers } from "./oracle";
+import { scholarshipSelectionHandlers } from "./selection";
 
 export const registerV4Handlers = () => {
   scholarshipCoreHandlers();
@@ -17,4 +18,7 @@ export const registerV4Handlers = () => {
   // points this contract at the zero address, so these handlers simply never
   // fire — no need to branch here.
   scholarshipPriceOracleHandlers();
+
+  // Same: optional address, so an unset CONTRACT_SELECTION just means these never fire.
+  scholarshipSelectionHandlers();
 };
