@@ -83,6 +83,8 @@ export const v4Programs = onchainTable("v4_programs", (t) => ({
   // never did, so the admin's default vote weight and a single-milestone plan apply.
   voteWeightBps: t.integer("vote_weight_bps"),
   milestonePlanCount: t.integer("milestone_plan_count"),
+  // The creator limits who may recommend applicants (ScholarshipSelection.configureRecommenders).
+  recommendersRestricted: t.boolean("recommenders_restricted").default(false),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
   updatedAt: t.timestamp("updated_at", { withTimezone: true }).$defaultFn(() => new Date()),
 }), (table) => ({
@@ -162,6 +164,22 @@ export const v4Milestones = onchainTable("v4_milestones", (t) => ({
 // ══════════════════════════════════════════════════════════════════════════════
 // V4 TABLES — Voting & Confidence Stakes
 // ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * A verified recommendation — PK (pid, student, recommender). Created on RecommendationSubmitted.
+ * The applicant's recommendation score is the average of these, and Core recomputes their screening
+ * score from it (ScoreSubmitted), so this table is only for showing who recommended whom.
+ */
+export const v4Recommendations = onchainTable("v4_recommendations", (t) => ({
+  chainId: t.integer("chain_id").notNull(),
+  pid: t.integer("pid").notNull(),
+  student: t.text("student").notNull(),
+  recommender: t.text("recommender").notNull(),
+  score: t.integer("score").notNull(),
+  createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),
+}), (table) => ({
+  pk: primaryKey({ columns: [table.chainId, table.pid, table.student, table.recommender] }),
+}));
 
 /** Donor vote — PK (pid, voterAddress). Created on VoteCast */
 export const v4Votes = onchainTable("v4_votes", (t) => ({

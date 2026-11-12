@@ -289,7 +289,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
     function applyToProgram(
         uint256 pid,
         string calldata pCID, string calldata dCID, string calldata eCID, string calldata rCID,
-        uint256 academicScore, uint256 incomeScore, uint256 recommendScore
+        uint256 academicScore, uint256 incomeScore, uint256 /* recommendScore: ignored, see below */
     ) external nonReentrant programExists(pid) inApplicationWindow(pid) {
         _requireStudentEligible(msg.sender);
         ScholarshipTypes.Program storage prog = programs[pid];
@@ -311,7 +311,10 @@ contract ScholarshipCore is ScholarshipCoreBase {
             prog.applicantCount++; 
         }
         if (prog.screeningMode == ScholarshipTypes.ScreeningMode.BY_STUDENT)
-            _setScore(pid, msg.sender, academicScore, incomeScore, recommendScore, msg.sender);
+            // Academic and income stay self-reported. The recommendation is NOT: it comes only from
+            // signed recommendations (ScholarshipSelection), so a value typed by the applicant is
+            // ignored. A re-application keeps the score the recommenders already gave.
+            _setScore(pid, msg.sender, academicScore, incomeScore, scoreComponents[pid][msg.sender].recommendScore, msg.sender);
         emit StudentApplied(pid, msg.sender, retry);
     }
 
@@ -381,6 +384,14 @@ contract ScholarshipCore is ScholarshipCoreBase {
             prog.status = ScholarshipTypes.ProgramStatus.VOTING;
             emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.VOTING);
         }
+    }
+
+    /// @notice Set an applicant's recommendation score (the average of verified recommendations) and recompute their screening score.
+    function selectionSetRecommendScore(uint256 pid, address student, uint256 score, address by)
+        external onlyRole(SELECTION_ROLE)
+    {
+        ScholarshipTypes.ScoreComponents storage c = scoreComponents[pid][student];
+        _setScore(pid, student, c.academicScore, c.incomeScore, score, by);
     }
 
     function _markScreenedOut(uint256 pid, address student) internal {

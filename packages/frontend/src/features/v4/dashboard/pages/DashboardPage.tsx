@@ -181,6 +181,8 @@ export function DashboardPage() {
 
   const isProvider = programsCreated.length > 0;
   const isStudent = scholarships.length > 0;
+  // With only one role there is nothing to switch between, so that view is simply shown.
+  const view = isProvider && !isStudent ? 'provider' : isStudent && !isProvider ? 'student' : activeView;
 
   // Falls back to the first program until one is picked (or if the picked one disappears).
   const selectedProgram = programsCreated.find((p) => p.pid === selectedPid) ?? programsCreated[0];
@@ -248,14 +250,14 @@ export function DashboardPage() {
         </div>
 
         {/* Provider / Student switcher */}
-        {(isProvider || isStudent) && (
+        {isProvider && isStudent && (
           <div className="flex gap-2 mb-8">
             {isProvider && (
               <button
                 type="button"
                 onClick={() => setActiveView('provider')}
                 className={`px-4 py-2 rounded-lg border-2 border-black font-bold transition-all ${
-                  activeView === 'provider'
+                  view === 'provider'
                     ? 'bg-skpink shadow-[2px_2px_0_0_#000]'
                     : 'bg-white hover:bg-skpink/50'
                 }`}
@@ -268,7 +270,7 @@ export function DashboardPage() {
                 type="button"
                 onClick={() => setActiveView('student')}
                 className={`px-4 py-2 rounded-lg border-2 border-black font-bold transition-all ${
-                  activeView === 'student'
+                  view === 'student'
                     ? 'bg-skcyan shadow-[2px_2px_0_0_#000]'
                     : 'bg-white hover:bg-skcyan/50'
                 }`}
@@ -280,7 +282,7 @@ export function DashboardPage() {
         )}
 
         {/* Two-column layout */}
-        {activeView === 'provider' && isProvider && (
+        {view === 'provider' && isProvider && (
           <>
           <div className="mb-6">
             <ProgramSwitcher
@@ -340,7 +342,7 @@ export function DashboardPage() {
           </>
         )}
 
-        {activeView === 'student' && isStudent && (
+        {view === 'student' && isStudent && (
           <div className="flex flex-col lg:flex-row gap-8 mb-12">
             <div className="lg:w-[24rem] lg:shrink-0 min-w-0 space-y-6 w-full">
               <StudentProfileCard

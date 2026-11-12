@@ -3,7 +3,7 @@ import { eq, and, desc, asc, count } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
 import { onChain } from "@/config/chain-context";
 
-const { v4Programs, v4Applicants, v4Scholars, v4Milestones, v4Votes, v4Disputes } = ponderSchema;
+const { v4Programs, v4Applicants, v4Scholars, v4Milestones, v4Votes, v4Disputes, v4Recommendations } = ponderSchema;
 
 @Injectable()
 @Singleton()
@@ -69,6 +69,13 @@ export class ProgramsService {
     return ponderClient.db.select().from(v4Milestones)
       .where(onChain(v4Milestones, eq(v4Milestones.pid, pid)))
       .orderBy(asc(v4Milestones.blockchainId))
+      .limit(limit).offset(offset);
+  }
+
+  async recommendationsForProgram(pid: number, limit: number, offset: number) {
+    return ponderClient.db.select().from(v4Recommendations)
+      .where(onChain(v4Recommendations, eq(v4Recommendations.pid, pid)))
+      .orderBy(desc(v4Recommendations.createdAt))
       .limit(limit).offset(offset);
   }
 

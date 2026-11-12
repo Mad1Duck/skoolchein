@@ -2,17 +2,17 @@
   "chainId": 31338,
   "startBlock": 0,
   "addresses": {
-    "FraudNFT": "0xAdE429ba898c34722e722415D722A70a297cE3a2",
-    "MockUSDC": "0xcE0066b1008237625dDDBE4a751827de037E53D2",
-    "ScholarshipReputation": "0xD5724171C2b7f0AA717a324626050BD05767e2C6",
-    "ScholarshipTreasury": "0x70eE76691Bdd9696552AF8d4fd634b3cF79DD529",
-    "MilestoneManager": "0x8B190573374637f144AC8D37375d97fd84cBD3a0",
-    "ScholarshipCore": "0x9385556B571ab92bf6dC9a0DbD75429Dd4d56F91",
-    "ScholarshipAdmin": "0x162700d1613DfEC978032A909DE02643bC55df1A",
-    "ScholarshipBounty": "0x67aD6EA566BA6B0fC52e97Bc25CE46120fdAc04c",
-    "CommitteeGovernance": "0x114e375B6FCC6d6fCb68c7A1d407E652C54F25FB",
-    "ScholarshipPriceOracle": "0x976C214741b4657bd99DFD38a5c0E3ac5C99D903",
-    "ScholarshipSelection": "0x8bEe2037448F096900Fd9affc427d38aE6CC0350"
+    "FraudNFT": "0x5e6CB7E728E1C320855587E1D9C6F7972ebdD6D5",
+    "MockUSDC": "0x0Dd99d9f56A14E9D53b2DdC62D9f0bAbe806647A",
+    "ScholarshipReputation": "0xb932C8342106776E73E39D695F3FFC3A9624eCE0",
+    "ScholarshipTreasury": "0xE8F7d98bE6722d42F29b50500B0E318EF2be4fc8",
+    "MilestoneManager": "0xe38b6847E611e942E6c80eD89aE867F522402e80",
+    "ScholarshipCore": "0x2c8ED11fd7A058096F2e5828799c68BE88744E2F",
+    "ScholarshipAdmin": "0x7580708993de7CA120E957A62f26A5dDD4b3D8aC",
+    "ScholarshipBounty": "0x75c68e69775fA3E9DD38eA32E554f6BF259C1135",
+    "CommitteeGovernance": "0x572316aC11CB4bc5daf6BDae68f43EA3CCE3aE0e",
+    "ScholarshipPriceOracle": "0x4593ed9CbE6003e687e5e77368534bb04b162503",
+    "ScholarshipSelection": "0xCd7c00Ac6dc51e8dCc773971Ac9221cC582F3b1b"
   },
-  "syncedAt": "2026-11-12T16:47:50.989Z"
+  "syncedAt": "2026-11-12T18:08:17.824Z"
 }

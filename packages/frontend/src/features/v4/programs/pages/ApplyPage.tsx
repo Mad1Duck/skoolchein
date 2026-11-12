@@ -11,6 +11,7 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
+import { toDate } from '@/lib/time';
 import { statusLabel } from '@/lib/i18n/status';
 import { ApplyStepper } from '../components/apply/ApplyStepper';
 import { ProgramSummary } from '../components/apply/ProgramSummary';
@@ -188,7 +189,7 @@ export function ApplyPage() {
       case 'essay':
         return form.essay.trim().length >= ESSAY_MIN;
       case 'scores':
-        return isScore(form.academic) && isScore(form.income) && isScore(form.recommend);
+        return isScore(form.academic) && isScore(form.income);
       case 'review':
         return agree;
     }
@@ -246,7 +247,8 @@ export function ApplyPage() {
         // Committee-scored programs ignore self-declared scores on-chain.
         academicScore: committeeMode ? 0n : BigInt(form.academic),
         incomeScore: committeeMode ? 0n : BigInt(form.income),
-        recommendScore: committeeMode ? 0n : BigInt(form.recommend),
+        // Not self-reported any more: the contract ignores it. Recommendations are signed by the recommenders.
+        recommendScore: 0n,
       });
     } catch (err) {
       console.error(err);
@@ -285,7 +287,12 @@ export function ApplyPage() {
   );
 
   if (phase !== 'done') {
-    if (program.status !== 'APPLICATION_OPEN') {
+    // The window is decided by the clock (the contract opens it on the first application), so a program
+    // still stored as CREATED can already take applications, and one stored as APPLICATION_OPEN can be over.
+    const startsAt = toDate(program.applicationStart)?.getTime() ?? 0;
+    const endsAt = toDate(program.applicationEnd)?.getTime() ?? Infinity;
+    const windowOpen = ['CREATED', 'APPLICATION_OPEN'].includes(program.status) && Date.now() >= startsAt && Date.now() < endsAt;
+    if (!windowOpen) {
       return <Notice title={t('apply.closed.title')} body={t('apply.closed.body')} action={backToProgram} />;
     }
     if (address && address.toLowerCase() === program.initiator.toLowerCase()) {
@@ -427,10 +434,13 @@ export function ApplyPage() {
             <p className="text-xs text-gray-700 bg-skyellow-light p-3 border-2 border-black shadow-[2px_2px_0_0_#000]">
               {t('apply.scoresWarning')}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {scoreInput('academic', t('apply.scoreAcademic'), t('apply.scoreAcademicHint'))}
               {scoreInput('income', t('apply.scoreIncome'), t('apply.scoreIncomeHint'))}
-              {scoreInput('recommend', t('apply.scoreRecommend'), t('apply.scoreRecommendHint'))}
+            </div>
+            <div className="rounded-xl border-2 border-black bg-skpurple-light p-4 space-y-1">
+              <p className="font-bold text-sm">{t('apply.recommendInfoTitle')}</p>
+              <p className="text-xs text-gray-700">{t('apply.recommendInfoBody')}</p>
             </div>
           </div>
         );
@@ -454,7 +464,7 @@ export function ApplyPage() {
               ) : (
                 reviewRow(
                   t('apply.scores.title'),
-                  `${t('apply.scoreAcademic')}: ${form.academic}\n${t('apply.scoreIncome')}: ${form.income}\n${t('apply.scoreRecommend')}: ${form.recommend}`,
+                  `${t('apply.scoreAcademic')}: ${form.academic}\n${t('apply.scoreIncome')}: ${form.income}`,
                   'scores',
                 )
               )}
@@ -529,6 +539,7 @@ export function ApplyPage() {
                     </div>
                     <h2 className="font-paytone text-3xl">{t('apply.success.title')}</h2>
                     <p className="text-gray-600 max-w-md mx-auto">{t('apply.success.body')}</p>
+                    {!committeeMode && <p className="text-sm font-bold max-w-md mx-auto">{t('apply.success.recommend')}</p>}
                     <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
                       <Link to="/programs/$id" params={{ id }}>
                         <NeoButton label={t('apply.viewProgram')} variant="secondary" size="md" />

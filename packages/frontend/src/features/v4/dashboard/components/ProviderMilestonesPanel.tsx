@@ -4,8 +4,9 @@ import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { DashboardCard } from "./DashboardCard";
 import { useExecuteMilestone } from "@/lib/contracts/write-hooks";
 import type { Milestone, Program } from "@/lib/api/types";
-import { ProposeMilestoneModal } from "./ProposeMilestoneModal";
+import { ProgramSettingsModal } from "../../programs/components/ProgramSettingsModal";
 import { useT } from '@/lib/i18n';
+import { useMilestonePlan } from '@/lib/contracts/v4/hooks/selection';
 import { statusLabel } from '@/lib/i18n/status';
 import { useFormatMoney } from '@/lib/money';
 
@@ -37,11 +38,60 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+/**
+ * Before winners are chosen there are no real milestones, only the creator's plan (saved in
+ * Selection settings), which every winner will receive. Show that plan, with the amount each
+ * milestone will be worth, instead of an empty state that says nothing has been set up.
+ */
+function PlannedMilestones({ program }: { program: Program }) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
+  const { plan } = useMilestonePlan(program.pid);
+
+  // Same split as ScholarshipSelection: one winner's portion, each share rounded down, the last takes the remainder.
+  const portion = BigInt(program.totalFund || '0') / BigInt(Math.max(1, program.targetWinners));
+  const saved = !!plan && plan.shareBps.length > 0;
+  const shares = saved ? plan.shareBps : [10_000];
+  const amounts: bigint[] = [];
+  let assigned = 0n;
+  shares.forEach((bps, i) => {
+    if (i < shares.length - 1) {
+      const a = (portion * BigInt(bps)) / 10_000n;
+      amounts.push(a);
+      assigned += a;
+    } else {
+      amounts.push(portion - assigned);
+    }
+  });
+
+  return (
+    <div className="rounded-2xl border-2 border-black bg-white p-4 space-y-3">
+      <div>
+        <p className="font-paytone text-lg">{t('plan.title')}</p>
+        <p className="text-sm text-gray-600">{saved ? t('plan.hint') : t('plan.default')}</p>
+      </div>
+      <ol className="rounded-xl border-2 border-black divide-y divide-black/10 overflow-hidden">
+        {shares.map((bps, i) => (
+          <li key={i} className="flex items-center gap-3 px-3 py-2.5">
+            <span className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+            <span className="flex-1 min-w-0 text-sm font-bold truncate">
+              {(saved && plan.descriptions[i]) || t('plan.item', { n: i + 1 })}
+            </span>
+            <span className="font-data text-xs text-gray-500">{bps / 100}%</span>
+            <span className="font-data text-sm font-bold">{fmt(amounts[i], program.token)}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs font-bold text-gray-500">{t('plan.perWinner', { amount: fmt(portion, program.token) })}</p>
+    </div>
+  );
+}
+
 export function ProviderMilestonesPanel({ program, milestones, isLoading }: ProviderMilestonesPanelProps) {
   const { t } = useT();
   const fmt = useFormatMoney();
   const { executeMilestone, isPending: isExecuting } = useExecuteMilestone();
-  const [proposeOpen, setProposeOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (isLoading || !program) {
     return (
@@ -62,19 +112,28 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
             {t('pm.hint')}
           </p>
         </div>
-        <NeoButton
-          label={t('panel.propose')}
-          variant="secondary"
-          size="sm"
-          onClick={() => setProposeOpen(true)}
-        />
+        {/* Proposing a milestone is the scholar's action (the contract only accepts it from an active
+            scholar). What the creator controls is the plan every winner receives, until screening ends. */}
+        {['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status) && (
+          <NeoButton
+            label={t('settings.open')}
+            variant="secondary"
+            size="sm"
+            className="!rounded-xl"
+            onClick={() => setSettingsOpen(true)}
+          />
+        )}
       </div>
 
       {programMilestones.length === 0 ? (
-        <div className="text-center py-10 border-2 border-dashed border-black rounded-2xl bg-white/50">
-          <p className="font-paytone text-lg">{t('pm.empty')}</p>
-          <p className="text-sm text-gray-500">{t('pm.emptyHint')}</p>
-        </div>
+        ['CREATED', 'APPLICATION_OPEN', 'SCREENING', 'VOTING'].includes(program.status) ? (
+          <PlannedMilestones program={program} />
+        ) : (
+          <div className="text-center py-10 border-2 border-dashed border-black rounded-2xl bg-white/50">
+            <p className="font-paytone text-lg">{t('pm.empty')}</p>
+            <p className="text-sm text-gray-500">{t('pm.emptyHint')}</p>
+          </div>
+        )
       ) : (
         <div className="space-y-3">
           {programMilestones.map((m) => {
@@ -118,12 +177,8 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
         </div>
       )}
 
-      {proposeOpen && program && (
-        <ProposeMilestoneModal
-          isOpen
-          onClose={() => setProposeOpen(false)}
-          programId={program.pid}
-        />
+      {settingsOpen && (
+        <ProgramSettingsModal isOpen onClose={() => setSettingsOpen(false)} programId={program.pid} />
       )}
     </div>
   );
