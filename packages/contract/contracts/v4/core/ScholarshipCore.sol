@@ -90,11 +90,6 @@ contract ScholarshipCore is ScholarshipCoreBase {
         }
     }
 
-    function setFraudNFT(address _fraudNFT) external {
-        if (msg.sender != admin) revert NotAdmin();
-        fraudNFT = ICredentialNFT(_fraudNFT);
-    }
-
     function setBounty(address _bounty) external {
         if (msg.sender != admin) revert NotAdmin();
         bountyHunter = _bounty;
@@ -429,6 +424,29 @@ contract ScholarshipCore is ScholarshipCoreBase {
             });
             emit ScholarSelected(pid, s);
             unchecked { ++i; }
+        }
+    }
+
+    // ── Logic module ─────────────────────────────────────────────────────────
+
+    function setLogic(address module) external {
+        if (msg.sender != admin) revert NotAdmin();
+        logic = module;
+    }
+
+    /// @dev Anything Core does not define itself (onMilestoneCompleted, onOptionalApproved,
+    ///      slashScholar) is handled by the logic module, running against Core's storage.
+    fallback() external {
+        address module = logic;
+        if (module == address(0)) revert();
+        // memory-safe: this block always ends in return or revert, so nothing reads the memory it overwrites.
+        assembly ("memory-safe") {
+            calldatacopy(0, 0, calldatasize())
+            let ok := delegatecall(gas(), module, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch ok
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
         }
     }
 

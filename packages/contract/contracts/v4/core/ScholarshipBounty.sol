@@ -124,6 +124,7 @@ contract ScholarshipBounty is
     error DefenseWindowExpired();
     error NotScholar();
     error CounterEvidenceRequired();
+    error MilestoneManagerNotSet();
 
     // ── Constructor / Initializer ────────────────────────────────────────────
 
@@ -155,6 +156,19 @@ contract ScholarshipBounty is
         usdc     = IERC20(_usdc);
         core     = IScholarshipCore(_core);
         treasury = IScholarshipTreasury(_treasury);
+    }
+
+    event MilestoneManagerSet(address indexed manager);
+
+    /**
+     * @notice Point the Bounty at MilestoneManager.
+     * @dev    `initialize` takes no milestone manager and nothing else ever set it, so every report
+     *         that names a milestone (and resolving one) hit a call to the zero address and reverted
+     *         with no reason. Must be called once after deployment.
+     */
+    function setMilestoneManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        milestone = IMilestoneManager(manager);
+        emit MilestoneManagerSet(manager);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -189,6 +203,9 @@ contract ScholarshipBounty is
         // Anti-spam / cooldown checks
         if (bh.activeDisputeId != 0)               revert BHHasActiveDispute();
         if (block.timestamp < bh.cooldownUntil)     revert BHOnCooldown(bh.cooldownUntil);
+
+        // A milestone-level report needs the MilestoneManager; fail loudly if it was never wired.
+        if (milestoneId != 0 && address(milestone) == address(0)) revert MilestoneManagerNotSet();
 
         // Scholar must be active
         ScholarshipTypes.Scholar memory scholarData = core.getScholar(scholar, pid);

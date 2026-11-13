@@ -1,38 +1,43 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { NeoButton } from "@/components/ui/NeoButton";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { DashboardCard } from "./DashboardCard";
+import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
+import { EvidenceView } from "@/components/ui/EvidenceView";
+import { WalletAvatar } from "@/components/ui/WalletAvatar";
+import { useProgramMilestones } from "@/lib/api/hooks";
 import { useExecuteMilestone } from "@/lib/contracts/write-hooks";
+import { useApproveSubmission } from "@/lib/contracts/v4";
+import { RequestRevisionModal } from "./RequestRevisionModal";
 import type { Milestone, Program } from "@/lib/api/types";
 import { ProgramSettingsModal } from "../../programs/components/ProgramSettingsModal";
+import { useVotingClock } from "@/features/v4/vote/useVotingClock";
 import { useT } from '@/lib/i18n';
 import { useMilestonePlan } from '@/lib/contracts/v4/hooks/selection';
 import { statusLabel } from '@/lib/i18n/status';
 import { useFormatMoney } from '@/lib/money';
+import { toDate } from "@/lib/time";
 
 interface ProviderMilestonesPanelProps {
   program: Program | undefined;
-  milestones: Milestone[];
   isLoading: boolean;
 }
 
+const PILL: Record<string, string> = {
+  PENDING: "bg-skyellow text-black",
+  SUBMITTED: "bg-skpurple text-white",
+  COMPLETED: "bg-skgreen text-black",
+  FROZEN: "bg-skred text-white",
+  DISPUTED: "bg-skorange text-black",
+  PROPOSED: "bg-skpurple-light text-black",
+  REJECTED: "bg-gray-300 text-black",
+};
+
 function StatusPill({ status }: { status: string }) {
   const { t } = useT();
-  const colors: Record<string, string> = {
-    PENDING: "bg-skyellow text-black",
-    SUBMITTED: "bg-skpurple text-white",
-    COMPLETED: "bg-skgreen text-black",
-    FROZEN: "bg-skred text-white",
-    DISPUTED: "bg-skorange text-black",
-    PROPOSED: "bg-skpurple-light text-black",
-    REJECTED: "bg-gray-300 text-black",
-  };
   return (
-    <span
-      className={`px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black ${
-        colors[status] ?? "bg-gray-100 text-black"
-      }`}
-    >
+    <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider border-2 border-black rounded-full ${PILL[status] ?? "bg-gray-100 text-black"}`}>
       {statusLabel(t, status)}
     </span>
   );
@@ -87,13 +92,15 @@ function PlannedMilestones({ program }: { program: Program }) {
   );
 }
 
-export function ProviderMilestonesPanel({ program, milestones, isLoading }: ProviderMilestonesPanelProps) {
+export function ProviderMilestonesPanel({ program, isLoading }: ProviderMilestonesPanelProps) {
   const { t } = useT();
   const fmt = useFormatMoney();
-  const { executeMilestone, isPending: isExecuting } = useExecuteMilestone();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The milestones of the creator's PROGRAM. They used to come from the dashboard payload, which only
+  // lists milestones where the viewer is the scholar, so a creator never saw a single one.
+  const { data: programMilestones = [], isLoading: loadingMilestones } = useProgramMilestones(program ? String(program.pid) : '');
 
-  if (isLoading || !program) {
+  if (isLoading || loadingMilestones || !program) {
     return (
       <DashboardCard>
         <NeoSkeleton lines={4} />
@@ -101,16 +108,24 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
     );
   }
 
-  const programMilestones = milestones.filter((m) => m.pid === program.pid);
+  // Group by scholar, in the order they appear.
+  const groups = new Map<string, Milestone[]>();
+  for (const m of programMilestones) {
+    const key = (m.scholarWallet ?? "").toLowerCase();
+    groups.set(key, [...(groups.get(key) ?? []), m]);
+  }
+
+  const count = (s: string) => programMilestones.filter((m) => m.status === s).length;
+  const released = programMilestones
+    .filter((m) => m.status === "COMPLETED")
+    .reduce((sum, m) => sum + BigInt(m.amount || "0"), 0n);
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-5 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="font-paytone text-xl">{t('pm.title', { id: program.pid })}</h3>
-          <p className="text-sm text-gray-600">
-            {t('pm.hint')}
-          </p>
+          <p className="text-sm text-gray-600">{t('pm.hint')}</p>
         </div>
         {/* Proposing a milestone is the scholar's action (the contract only accepts it from an active
             scholar). What the creator controls is the plan every winner receives, until screening ends. */}
@@ -135,51 +150,178 @@ export function ProviderMilestonesPanel({ program, milestones, isLoading }: Prov
           </div>
         )
       ) : (
-        <div className="space-y-3">
-          {programMilestones.map((m) => {
-            const disputeDeadline = m.disputeDeadline ? new Date(m.disputeDeadline).getTime() : null;
-            const canExecute =
-              m.status === "SUBMITTED" && disputeDeadline !== null && disputeDeadline < Date.now();
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Tile label={t('pm.statWaiting')} value={String(count("PENDING"))} tone="bg-skyellow" />
+            <Tile label={t('pm.statReview')} value={String(count("SUBMITTED"))} tone="bg-skpurple-light" />
+            <Tile label={t('pm.statDone')} value={String(count("COMPLETED"))} tone="bg-skgreen" />
+            <Tile label={t('pm.statReleased')} value={fmt(released, program.token)} tone="bg-white" />
+          </div>
 
-            return (
-              <DashboardCard key={m.blockchainId} className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="grow space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">#{m.blockchainId}</span>
-                    <StatusPill status={m.status} />
-                    <span className="text-xs font-bold uppercase px-1.5 py-0.5 border border-black rounded bg-white">
-                      {statusLabel(t, m.kind)}
-                    </span>
-                  </div>
-                  <p className="text-sm font-data break-all line-clamp-1" title={m.proofCID}>
-                    {t('pm.proof', { cid: m.proofCID })}
-                  </p>
-                  <p className="font-bold text-skgreen">
-                    {fmt(m.amount, m.token)}
-                  </p>
-                </div>
-                {canExecute && (
-                  <NeoButton
-                    label={isExecuting ? t('panel.executing') : t('pm.release')}
-                    variant="success"
-                    size="sm"
-                    loading={isExecuting}
-                    disabled={isExecuting}
-                    onClick={() => executeMilestone(BigInt(m.blockchainId))}
-                  />
-                )}
-                {m.status === "SUBMITTED" && !canExecute && (
-                  <span className="text-xs font-bold text-gray-500">{t('pm.windowOpen')}</span>
-                )}
-              </DashboardCard>
-            );
-          })}
-        </div>
+          <p className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm">{t('pm.rule')}</p>
+
+          <div className="space-y-5">
+            {[...groups.entries()].map(([wallet, items]) => (
+              <ScholarGroup key={wallet} wallet={wallet} milestones={items} program={program} />
+            ))}
+          </div>
+        </>
       )}
 
       {settingsOpen && (
         <ProgramSettingsModal isOpen onClose={() => setSettingsOpen(false)} programId={program.pid} />
       )}
     </div>
+  );
+}
+
+function Tile({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className={`${tone} rounded-xl border-2 border-black p-3`}>
+      <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-600">{label}</p>
+      <p className="font-data text-lg font-bold mt-1 [overflow-wrap:anywhere]">{value}</p>
+    </div>
+  );
+}
+
+function ScholarGroup({ wallet, milestones, program }: { wallet: string; milestones: Milestone[]; program: Program }) {
+  const { t } = useT();
+  const done = milestones.filter((m) => m.status === "COMPLETED").length;
+
+  return (
+    <section className="rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0_0_#000]">
+      <header className="flex flex-wrap items-center gap-3 border-b-2 border-black bg-skbw/60 px-4 py-3 rounded-t-[14px]">
+        <WalletAvatar address={wallet} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('pm.scholar')}</p>
+          <CopyableText value={wallet} display={truncateMiddle(wallet, 8, 6)} />
+        </div>
+        <div className="w-40">
+          <div className="flex justify-between text-[11px] font-bold">
+            <span>{t('report.progress')}</span>
+            <span className="font-data">{done} / {milestones.length}</span>
+          </div>
+          <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full border-2 border-black bg-gray-200">
+            <div className="h-full bg-skpurple" style={{ width: `${(done / Math.max(1, milestones.length)) * 100}%` }} />
+          </div>
+        </div>
+      </header>
+
+      <div className="divide-y-2 divide-black/10">
+        {milestones.map((m) => (
+          <MilestoneRowCard key={m.blockchainId} milestone={m} program={program} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MilestoneRowCard({ milestone: m, program }: { milestone: Milestone; program: Program }) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
+  const { executeMilestone, isPending } = useExecuteMilestone();
+  const { approve, isPending: approving } = useApproveSubmission();
+  const [revising, setRevising] = useState(false);
+  const clock = useVotingClock(m.disputeDeadline, m.submittedAt);
+
+  const submitted = m.status === "SUBMITTED";
+  const canRelease = submitted && clock.ended;
+  const completedAt = toDate(m.completedAt);
+  const submittedAt = toDate(m.submittedAt);
+
+  return (
+    <article className="p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-black text-sm font-bold text-white">{m.blockchainId}</span>
+        <span className="rounded-full border-2 border-black bg-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+          {statusLabel(t, m.kind)}
+        </span>
+        <StatusPill status={m.status} />
+        <span className="ml-auto font-data text-base font-bold">{fmt(m.amount, m.token ?? program.token)}</span>
+      </div>
+
+      {m.status === "PENDING" && (
+        <p className="text-sm text-gray-600">{(m.revisionCount ?? 0) > 0 ? t('pm.sentBack') : t('pm.notSubmitted')}</p>
+      )}
+
+      {submitted && (
+        <div className="space-y-2 rounded-xl border-2 border-black bg-skpurple-light p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="font-bold">
+              {clock.ended ? t('pm.reviewOver') : t('pm.reviewLeft')}
+              {!clock.ended && <span className="ml-2 font-data">{clock.text}</span>}
+            </span>
+            {submittedAt && <span className="text-xs text-gray-600">{t('pm.submittedOn', { date: submittedAt.toLocaleString() })}</span>}
+          </div>
+          {clock.progress !== null && (
+            <div className="h-2.5 w-full overflow-hidden rounded-full border-2 border-black bg-white">
+              <div className="h-full bg-skpurple transition-all duration-1000" style={{ width: `${clock.progress * 100}%` }} />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {/* Review is the creator's call. Approving releases the money right now; asking for a fix sends it
+                back (only while the review period is open). Doing nothing also pays: it releases on its own. */}
+            {!canRelease && (
+              <>
+                <NeoButton
+                  label={approving ? t('pm.approving') : t('pm.approve')}
+                  variant="success"
+                  size="sm"
+                  className="!rounded-xl"
+                  loading={approving}
+                  disabled={approving}
+                  onClick={() => approve(BigInt(m.blockchainId))}
+                />
+                {(m.revisionCount ?? 0) < 2 && (
+                  <NeoButton
+                    label={t('pm.requestFix')}
+                    variant="danger"
+                    size="sm"
+                    className="!rounded-xl"
+                    onClick={() => setRevising(true)}
+                  />
+                )}
+              </>
+            )}
+            {canRelease && (
+              <NeoButton
+                label={isPending ? t('panel.executing') : t('pm.release')}
+                variant="success"
+                size="sm"
+                className="!rounded-xl"
+                loading={isPending}
+                disabled={isPending}
+                onClick={() => executeMilestone(BigInt(m.blockchainId))}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {(m.revisionCount ?? 0) > 0 && (
+        <p className="text-xs font-bold text-gray-600">{t('pm.revisions', { n: m.revisionCount ?? 0 })}</p>
+      )}
+      {revising && <RequestRevisionModal milestone={m} onClose={() => setRevising(false)} />}
+
+      {m.status === "COMPLETED" && completedAt && (
+        <p className="text-sm text-gray-600">{t('pm.releasedOn', { date: completedAt.toLocaleString() })}</p>
+      )}
+
+      {(m.status === "FROZEN" || m.status === "DISPUTED") && (
+        <p className="text-sm">
+          <span className="font-bold text-skred">{t('pm.frozen')}</span>{" "}
+          <Link to="/disputes" className="underline font-bold">{t('pm.seeReport')}</Link>
+        </p>
+      )}
+
+      {m.proofCID && m.status !== "PENDING" && (
+        <details className="rounded-xl border-2 border-black bg-white p-3 text-sm">
+          <summary className="cursor-pointer text-xs font-extrabold uppercase tracking-wider">{t('pm.viewProof')}</summary>
+          <div className="mt-2">
+            {/^AUTO_VERIFIED/.test(m.proofCID) ? <p>{t('report.proofAuto')}</p> : <EvidenceView cid={m.proofCID} empty={t('report.proofNone')} />}
+          </div>
+        </details>
+      )}
+    </article>
   );
 }

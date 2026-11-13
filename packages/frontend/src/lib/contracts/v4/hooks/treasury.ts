@@ -89,6 +89,40 @@ export function useClaimYield() {
   return { claimYield, isPending, isSuccess, error, hash, reset };
 }
 
+/** Settle a confidence stake: the deposit (plus bonus, or minus the penalty) goes back to `voter`. */
+export function useClaimConfidenceStake() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const claim = (pid: bigint, voter: `0x${string}`) => {
+    writeContract({
+      address: addr("ScholarshipTreasury"),
+      abi: scholarshipTreasuryAbi,
+      functionName: "claimConfidenceStake",
+      args: [pid, voter],
+    });
+  };
+
+  return { claim, isPending, isSuccess, error, hash, reset };
+}
+
+export function useFundBonusPool() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  /** Native programs carry the amount as msg.value; ERC20 ones need the approve() from `useBonusPoolFlow`. */
+  const fund = (pid: bigint, amountStr: string, token?: `0x${string}`) => {
+    const amount = parseTokenAmount(amountStr, token);
+    writeContract({
+      address: addr("ScholarshipTreasury"),
+      abi: scholarshipTreasuryAbi,
+      functionName: "fundBonusPool",
+      args: [pid, amount],
+      value: nativeValueFor(amount, token),
+    });
+  };
+
+  return { fund, isPending, isSuccess, error, hash, reset };
+}
+
 export function useClaimRefund() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
 

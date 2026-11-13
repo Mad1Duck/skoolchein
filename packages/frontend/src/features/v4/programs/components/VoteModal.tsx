@@ -6,6 +6,7 @@ import { useVoteForCandidate } from '@/lib/contracts/v4';
 import { useReputation } from '@/lib/api/hooks';
 import { useAccount } from 'wagmi';
 import { useT } from '@/lib/i18n';
+import { formatTokenWithSymbol } from '@/lib/contracts/v4/token';
 
 interface Props {
   isOpen: boolean;
@@ -13,11 +14,13 @@ interface Props {
   programId: bigint;
   candidateAddress: `0x${string}`;
   candidateName?: string;
+  /** Program payment token (`program.token`); voting weight is shown in it. Zero address = native. */
+  token?: `0x${string}`;
 }
 
 type Step = 'choose' | 'confirm' | 'voting' | 'done';
 
-export function VoteModal({ isOpen, onClose, programId, candidateAddress, candidateName }: Props) {
+export function VoteModal({ isOpen, onClose, programId, candidateAddress, candidateName, token }: Props) {
   const { t } = useT();
   const { address } = useAccount();
   const [step, setStep] = useState<Step>('choose');
@@ -108,7 +111,8 @@ export function VoteModal({ isOpen, onClose, programId, candidateAddress, candid
                   {!useReputationMode && <span className="text-xs font-black">{t('vote.selected')}</span>}
                 </div>
                 <p className="text-xs text-gray-600 mt-1">{t('vote.optDonationBody')}</p>
-                <p className="text-lg font-black mt-2">{donationPower} USDC</p>
+                {/* The API gives the raw on-chain amount (6 decimals for USDC), so format it. */}
+                <p className="text-lg font-black mt-2">{formatTokenWithSymbol(donationPower, token)}</p>
               </button>
 
               <button

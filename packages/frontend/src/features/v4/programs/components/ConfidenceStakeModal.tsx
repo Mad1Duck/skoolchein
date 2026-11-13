@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useBonusPoolFlow } from '@/lib/contracts/v4/hooks/bonus-flow';
+import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -6,10 +8,127 @@ import { useConfidenceStakeFlow } from '@/lib/contracts/v4';
 import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
 import { useReputation } from '@/lib/api/hooks';
 import { useAccount } from 'wagmi';
-import { getTokenMeta, formatTokenAmount } from '@/lib/contracts/v4/token';
+import { useReadContract } from 'wagmi';
+import { scholarshipTreasuryAbi } from '@/constants/contractsV4';
+import { getV4Addresses } from '@/lib/chain/chains';
+import { useActiveChain } from '@/lib/chain/useActiveChain';
+import { getTokenMeta, formatTokenAmount, formatTokenWithSymbol, parseTokenAmount } from '@/lib/contracts/v4/token';
 import { formatToIDR } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
+
+/**
+ * What a deposit of `amount` pays out in each outcome, so the donor can see it before signing.
+ * Rates are the admin's (confidenceBonusPct / confidenceSlashPct). The bonus is paid from the
+ * program's bonus pool, which the penalties of failed scholars and anyone's top-ups fill.
+ */
+function StakeOutcome({ amount, token, programId }: { amount: string; token?: `0x${string}`; programId: bigint }) {
+  const { t } = useT();
+  const { chainId } = useActiveChain();
+  const { confidenceBonusPct, confidenceSlashPct } = useProtocolLimits();
+  const BONUS_PCT = BigInt(confidenceBonusPct);
+  const SLASH_PCT = BigInt(confidenceSlashPct);
+  const { data: pool } = useReadContract({
+    chainId,
+    address: getV4Addresses(chainId).ScholarshipTreasury,
+    abi: scholarshipTreasuryAbi,
+    functionName: 'bonusPool',
+    args: [programId],
+  });
+
+  let stake = 0n;
+  try {
+    stake = parseTokenAmount(amount, token);
+  } catch {
+    stake = 0n;
+  }
+  if (stake <= 0n) return null;
+
+  const wanted = (stake * BONUS_PCT) / 100n;
+  const available = pool === undefined ? undefined : (pool as bigint);
+  // The bonus can never exceed what the program's yield pool holds.
+  const bonus = available === undefined ? wanted : wanted < available ? wanted : available;
+  const lost = (stake * SLASH_PCT) / 100n;
+  const fmt = (v: bigint) => formatTokenWithSymbol(v, token);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-bold">{t('stake.calcTitle')}</p>
+
+      <div className="rounded-xl border-2 border-black bg-skgreen p-3 text-sm space-y-1">
+        <p className="font-extrabold">{t('stake.calcWin')}</p>
+        <Row label={t('stake.calcDeposit')} value={fmt(stake)} />
+        <Row label={t('stake.calcBonus', { pct: String(BONUS_PCT) })} value={`+ ${fmt(bonus)}`} />
+        <Row label={t('stake.calcGet')} value={fmt(stake + bonus)} strong />
+      </div>
+
+      <div className="rounded-xl border-2 border-black bg-skred-light p-3 text-sm space-y-1">
+        <p className="font-extrabold">{t('stake.calcLose')}</p>
+        <Row label={t('stake.calcDeposit')} value={fmt(stake)} />
+        <Row label={t('stake.calcSlash', { pct: String(SLASH_PCT) })} value={`− ${fmt(lost)}`} />
+        <Row label={t('stake.calcGet')} value={fmt(stake - lost)} strong />
+      </div>
+
+      <p className="text-xs text-gray-500">
+        {t('stake.poolNow', { pool: fmt(available ?? 0n) })}{' '}
+        {available !== undefined && bonus < wanted ? t('stake.calcPoolShort') : t('stake.calcNote')}
+      </p>
+    </div>
+  );
+}
+
+/** Anyone can add to the bonus pool; it can only leave as bonuses to supporters of a scholar who succeeds. */
+function BonusPoolFunder({ programId, token }: { programId: bigint; token?: `0x${string}` }) {
+  const { t } = useT();
+  const tokenMeta = getTokenMeta(token);
+  const [amount, setAmount] = useState('');
+  const flow = useBonusPoolFlow(token);
+  const { hasEnough } = useTokenBalance(token, amount || '0');
+
+  useEffect(() => {
+    if (flow.isSuccess) {
+      setAmount('');
+      flow.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow.isSuccess]);
+
+  return (
+    <details className="rounded-xl border-2 border-black bg-white p-3 text-sm">
+      <summary className="cursor-pointer font-bold">{t('stake.poolFund')}</summary>
+      <p className="text-xs text-gray-600 mt-2">{t('stake.poolFundHint')}</p>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="number"
+          min="0"
+          step="1"
+          placeholder={tokenMeta.symbol}
+          className="min-w-0 flex-1 rounded-lg border-2 border-black p-2 font-data"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <NeoButton
+          label={flow.isPending ? t('stake.poolFunding') : t('stake.poolFundBtn')}
+          variant="secondary"
+          className="!rounded-xl"
+          loading={flow.isPending}
+          disabled={flow.isPending || !amount || Number(amount) <= 0 || !hasEnough}
+          onClick={() => flow.start(programId, amount)}
+        />
+      </div>
+      {flow.error && <ErrorNotice error={flow.error} />}
+    </details>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between gap-3 ${strong ? 'border-t-2 border-black pt-1 font-extrabold' : ''}`}>
+      <span>{label}</span>
+      <span className="font-data">{value}</span>
+    </div>
+  );
+}
 
 interface Props {
   isOpen: boolean;
@@ -109,6 +228,9 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
                 </p>
               )}
             </div>
+
+            <StakeOutcome amount={amount} token={token} programId={programId} />
+            <BonusPoolFunder programId={programId} token={token} />
           </>
         )}
 

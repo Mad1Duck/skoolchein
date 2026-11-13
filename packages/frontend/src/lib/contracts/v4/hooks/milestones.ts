@@ -36,6 +36,38 @@ export function useExecuteMilestone() {
   return { executeMilestone, isPending, isSuccess, error, hash, reset };
 }
 
+/** The creator accepts a submitted milestone now: the funds are released in the same transaction. */
+export function useApproveSubmission() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const approve = (milestoneId: bigint) => {
+    writeContract({
+      address: addr("MilestoneManager"),
+      abi: milestoneManagerAbi,
+      functionName: "approveSubmission",
+      args: [milestoneId],
+    });
+  };
+
+  return { approve, isPending, isSuccess, error, hash, reset };
+}
+
+/** The creator sends a submitted milestone back to the scholar, with an IPFS document explaining why. */
+export function useRequestRevision() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const requestRevision = (milestoneId: bigint, reasonCID: string) => {
+    writeContract({
+      address: addr("MilestoneManager"),
+      abi: milestoneManagerAbi,
+      functionName: "requestRevision",
+      args: [milestoneId, reasonCID],
+    });
+  };
+
+  return { requestRevision, isPending, isSuccess, error, hash, reset };
+}
+
 export function useProposeMilestone() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
 

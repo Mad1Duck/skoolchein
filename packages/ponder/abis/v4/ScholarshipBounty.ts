@@ -106,6 +106,11 @@ export const scholarshipBountyAbi = [
   },
   {
     "inputs": [],
+    "name": "MilestoneManagerNotSet",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotInitializing",
     "type": "error"
   },
@@ -329,6 +334,19 @@ export const scholarshipBountyAbi = [
       }
     ],
     "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "manager",
+        "type": "address"
+      }
+    ],
+    "name": "MilestoneManagerSet",
     "type": "event"
   },
   {
@@ -1079,6 +1097,19 @@ export const scholarshipBountyAbi = [
       }
     ],
     "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "manager",
+        "type": "address"
+      }
+    ],
+    "name": "setMilestoneManager",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

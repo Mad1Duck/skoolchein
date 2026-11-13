@@ -1013,6 +1013,10 @@ export const scholarshipCoreAbi = [
     "type": "event"
   },
   {
+    "stateMutability": "nonpayable",
+    "type": "fallback"
+  },
+  {
     "inputs": [],
     "name": "BOUNTY_ROLE",
     "outputs": [
@@ -2178,6 +2182,19 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "logic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "milestoneManager",
     "outputs": [
       {
@@ -2491,24 +2508,11 @@ export const scholarshipCoreAbi = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "_fraudNFT",
+        "name": "module",
         "type": "address"
       }
     ],
-    "name": "setFraudNFT",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "boundary",
-        "type": "uint256"
-      }
-    ],
-    "name": "setLegacyTokenBoundary",
+    "name": "setLogic",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

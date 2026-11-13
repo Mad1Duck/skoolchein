@@ -111,6 +111,66 @@ export async function fetchApplicantProfile(cid: string): Promise<ApplicantProfi
   return fetchIPFS<ApplicantProfile>(cid);
 }
 
+/** A document or image attached to a proof, report or defense. The bytes live on IPFS under `cid`. */
+export interface EvidenceFile {
+  name: string;
+  type: string;
+  size: number;
+  cid: string;
+}
+
+/** What an evidence document stores: the written explanation plus any attached files. */
+export interface EvidenceDoc {
+  content?: string;
+  files?: EvidenceFile[];
+}
+
+export function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export const EVIDENCE_MAX_FILES = 5;
+export const EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** Pin one file. Resolves to its CID, or throws so the caller can tell the user which file failed. */
+async function pinFile(file: File): Promise<EvidenceFile> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("type", "evidence-file");
+  form.append("name", file.name);
+  const { data } = await rawApi.post<{ imageCID?: string }>("/ipfs/upload", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  if (!data?.imageCID) throw new Error(`Upload failed for ${file.name}`);
+  return { name: file.name, type: file.type || "application/octet-stream", size: file.size, cid: data.imageCID };
+}
+
+/**
+ * Store an evidence document: the text and any files. Every file is pinned first, then one JSON
+ * document that lists them is pinned and its CID is returned (that is what goes on-chain).
+ * Throws when a file cannot be uploaded, instead of silently dropping it from the evidence.
+ */
+export async function uploadEvidence(input: {
+  content: string;
+  files?: File[];
+  type: string;
+  name: string;
+}): Promise<{ metaCID: string; files: EvidenceFile[] }> {
+  const files: EvidenceFile[] = [];
+  for (const file of input.files ?? []) files.push(await pinFile(file));
+
+  const res = await uploadToIPFS({
+    meta: { content: input.content, files },
+    type: input.type,
+    name: input.name,
+  });
+  if (!res?.metaCID) throw new Error("Upload failed");
+  rememberIPFSJson(res.metaCID, { content: input.content, files } satisfies EvidenceDoc);
+  return { metaCID: res.metaCID, files };
+}
+
 /** Upload data to IPFS via the Ponder backend proxy */
 export async function uploadToIPFS(payload: {
   meta: unknown;

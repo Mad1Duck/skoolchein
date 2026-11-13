@@ -156,6 +156,13 @@ abstract contract ScholarshipCoreBase is Initializable {
     // as a single slot to spare Core's bytecode (EIP-170 limit).
     uint16 public voterCapBps;
 
+    // ── Logic module ─────────────────────────────────────────────────────────
+    // APPENDED DELIBERATELY, after every existing variable. ScholarshipCore sits at the EIP-170 size
+    // limit, so the callbacks MilestoneManager and Bounty make (milestone completed, optional approved,
+    // scholar slashed) live in ScholarshipCoreLogic, which Core reaches with a delegatecall from its
+    // fallback. The module is built from this same base, so it reads and writes Core's own storage.
+    address public logic;
+
     /// @notice Cap one donor's counted vote power at this share of the program fund (basis points, 0 = no cap).
     function setVoterCapBps(uint16 bps) external onlyRole(SELECTION_ROLE) {
         if (bps > 10_000) revert InvalidConfig();
@@ -185,11 +192,6 @@ abstract contract ScholarshipCoreBase is Initializable {
         emit TokenConfigUpdated(token, enabled, minDonation, transactionFee);
     }
 
-    /// @notice One-time (or as-needed) boundary set for legacy USDC-only programs.
-    function setLegacyTokenBoundary(uint256 boundary) external onlyRole(GOVERNANCE_ROLE) {
-        legacyTokenBoundary = boundary;
-        emit LegacyTokenBoundarySet(boundary);
-    }
 
     uint8   public constant MAX_EXTENSIONS        = 2;
     uint256 public constant MAX_EXTENSION_DURATION = 30 days;
@@ -387,7 +389,8 @@ abstract contract ScholarshipCoreBase is Initializable {
      */
     function _programToken(uint256 pid) internal view returns (address) {
         address t = programToken[pid];
-        if (t == address(0) && pid <= legacyTokenBoundary) return address(usdc);
+        // The legacy-USDC boundary was removed to make room in this contract; a fresh deployment never
+        // had legacy programs (the boundary was always 0), so an unset entry is simply the native token.
         return t;
     }
 

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VoteRouteImport } from './routes/vote'
 import { Route as ScholarshipsRouteImport } from './routes/scholarships'
+import { Route as ReportRouteImport } from './routes/report'
 import { Route as DisputesRouteImport } from './routes/disputes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -29,6 +30,11 @@ const VoteRoute = VoteRouteImport.update({
 const ScholarshipsRoute = ScholarshipsRouteImport.update({
   id: '/scholarships',
   path: '/scholarships',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DisputesRoute = DisputesRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/disputes': typeof DisputesRoute
+  '/report': typeof ReportRoute
   '/scholarships': typeof ScholarshipsRoute
   '/vote': typeof VoteRoute
   '/apply/$id': typeof ApplyIdRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/disputes': typeof DisputesRoute
+  '/report': typeof ReportRoute
   '/scholarships': typeof ScholarshipsRoute
   '/vote': typeof VoteRoute
   '/apply/$id': typeof ApplyIdRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/disputes': typeof DisputesRoute
+  '/report': typeof ReportRoute
   '/scholarships': typeof ScholarshipsRoute
   '/vote': typeof VoteRoute
   '/apply/$id': typeof ApplyIdRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/disputes'
+    | '/report'
     | '/scholarships'
     | '/vote'
     | '/apply/$id'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/disputes'
+    | '/report'
     | '/scholarships'
     | '/vote'
     | '/apply/$id'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/disputes'
+    | '/report'
     | '/scholarships'
     | '/vote'
     | '/apply/$id'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   DisputesRoute: typeof DisputesRoute
+  ReportRoute: typeof ReportRoute
   ScholarshipsRoute: typeof ScholarshipsRoute
   VoteRoute: typeof VoteRoute
   ApplyIdRoute: typeof ApplyIdRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/scholarships'
       fullPath: '/scholarships'
       preLoaderRoute: typeof ScholarshipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disputes': {
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   DisputesRoute: DisputesRoute,
+  ReportRoute: ReportRoute,
   ScholarshipsRoute: ScholarshipsRoute,
   VoteRoute: VoteRoute,
   ApplyIdRoute: ApplyIdRoute,

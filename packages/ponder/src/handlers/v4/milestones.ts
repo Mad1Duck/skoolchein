@@ -35,6 +35,31 @@ async function readMilestoneAmount(
   }
 }
 
+/**
+ * The review period (`disputeDeadline`) is computed by the contract from the program's own setting and is
+ * not in any event. Nothing ever stored it, so the dashboards had no countdown and the Release button never
+ * came on. Read it from the contract.
+ */
+async function readDisputeDeadline(
+  context: { client: { readContract: (args: any) => Promise<any> } },
+  managerAddress: `0x${string}`,
+  id: bigint,
+): Promise<Date | null> {
+  try {
+    const m: any = await context.client.readContract({
+      abi: milestoneManagerAbi,
+      address: managerAddress,
+      functionName: "getMilestone",
+      args: [id],
+    });
+    const secs = Number(m.disputeDeadline ?? 0);
+    return secs > 0 ? new Date(secs * 1000) : null;
+  } catch (err) {
+    logger.warn({ err, id: String(id) }, "could not read milestone dispute deadline");
+    return null;
+  }
+}
+
 export const milestoneManagerHandlers = () => {
 
   // ── MilestoneCreated — Core calls createMandatoryBatch() at selectWinners ─
@@ -212,11 +237,13 @@ export const milestoneManagerHandlers = () => {
       const mId = Number(id);
       const submittedAt = new Date(Number(event.block.timestamp) * 1000);
 
+      const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
       await db.update(v4Milestones, { chainId, blockchainId: mId })
         .set({
           proofCID: String(proofCID),
           status: "SUBMITTED",
           submittedAt,
+          disputeDeadline,
           updatedAt: new Date(),
         });
 
@@ -318,8 +345,10 @@ export const milestoneManagerHandlers = () => {
       const chainId = context.chain.id;
       const { db } = context;
       const { id } = event.args;
+      // Released from a dispute: the contract restarts the review period, so read the new deadline.
+      const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
       await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({ status: "SUBMITTED", updatedAt: new Date() });
+        .set({ status: "SUBMITTED", disputeDeadline, updatedAt: new Date() });
 
       await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneReleased" });
       await sendSseToAll("main", {
@@ -330,6 +359,36 @@ export const milestoneManagerHandlers = () => {
       });
     } catch (err) {
       logger.error({ err }, "MilestoneManager:MilestoneReleased handler error");
+    }
+  });
+
+  // ── MilestoneRevisionRequested — the creator sent a submitted milestone back for a fix ─
+
+  ponder.on("MilestoneManager:MilestoneRevisionRequested", async ({ event, context }) => {
+    try {
+      const chainId = context.chain.id;
+      const { db } = context;
+      const { id, reasonCID, count } = event.args;
+      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+        .set({
+          status: "PENDING",
+          proofCID: "",
+          submittedAt: null,
+          disputeDeadline: null,
+          revisionCount: Number(count),
+          revisionReasonCID: String(reasonCID),
+          updatedAt: new Date(),
+        });
+
+      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRevisionRequested" });
+      await sendSseToAll("main", {
+        chainId,
+        step: "MilestoneRevisionRequested",
+        data: { milestoneId: Number(id) },
+        status: true, blockHash: event.block.hash,
+      });
+    } catch (err) {
+      logger.error({ err }, "MilestoneManager:MilestoneRevisionRequested handler error");
     }
   });
 };

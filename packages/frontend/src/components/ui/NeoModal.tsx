@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface NeoModalProps {
   isOpen: boolean;
@@ -18,7 +19,9 @@ const sizeMap = {
 export function NeoModal({ isOpen, onClose, title, children, size = "md" }: NeoModalProps) {
   if (!isOpen) return null;
 
-  return (
+  // Rendered into <body>: inside a card that has a transform (hover lift), `fixed` is measured
+  // against that card instead of the screen, which squeezed the modal into a strip.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
@@ -55,6 +58,7 @@ export function NeoModal({ isOpen, onClose, title, children, size = "md" }: NeoM
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -109,6 +109,14 @@ export function explainError(error: unknown, lang: Lang, ctx: Vars = {}): Explai
       : { kind: 'rejected', reason: 'You cancelled the request in your wallet.', fix: 'Nothing was charged. Press the button again to continue.', technical };
   }
 
+  // The wallet was never connected, or its session dropped (switching network, reloading, a locked
+  // wallet). This is not a contract problem, so say so instead of calling it an unknown error.
+  if (lower.includes('connector not connected') || lower.includes('connectornotconnected') || lower.includes('wallet not connected')) {
+    return lang === 'id'
+      ? { kind: 'known', reason: 'Wallet belum terhubung, atau koneksinya terputus.', fix: 'Hubungkan wallet lewat tombol Connect Wallet di pojok kanan atas (atau hubungkan ulang), lalu coba lagi.', technical }
+      : { kind: 'known', reason: 'Your wallet is not connected, or the connection dropped.', fix: 'Connect your wallet with the Connect Wallet button at the top right (or reconnect), then try again.', technical };
+  }
+
   const messages: Record<string, Msg> = lang === 'id' ? MESSAGES_ID : MESSAGES_EN;
   let name: string | undefined;
   let args: Record<string, unknown> = {};

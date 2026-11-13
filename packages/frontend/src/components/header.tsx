@@ -13,6 +13,7 @@ const navItems = [
   { href: "/",          labelKey: "nav.home" },
   { href: "/programs",  labelKey: "nav.programs" },
   { href: "/vote",      labelKey: "nav.vote" },
+  { href: "/report",    labelKey: "nav.report" },
   { href: "/dashboard", labelKey: "nav.dashboard" },
 ] as const;
 
