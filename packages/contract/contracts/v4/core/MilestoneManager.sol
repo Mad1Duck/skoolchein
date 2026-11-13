@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ScholarshipTypes} from "../libraries/ScholarshipTypes.sol";
 
 /**
@@ -32,7 +33,7 @@ import {ScholarshipTypes} from "../libraries/ScholarshipTypes.sol";
  *           vs uint256 each.
  *         • Scholar optional counters use uint128 pair (one slot).
  */
-contract MilestoneManager is Initializable {
+contract MilestoneManager is Initializable, UUPSUpgradeable {
 
     // ── Reentrancy (inline, no import needed) ───────────────────────────────
     uint256 private _status;
@@ -82,6 +83,11 @@ contract MilestoneManager is Initializable {
     /// ScholarshipSelection: creates a winner's mandatory milestones when winners are chosen.
     address public selection;
 
+    // APPENDED DELIBERATELY (live UUPS proxy): how many times the creator sent a milestone back for a fix.
+    mapping(uint256 => uint8) public revisionCount;
+    /// A creator may send the same milestone back at most this many times.
+    uint8 public constant MAX_REVISIONS = 2;
+
     // ── Events ───────────────────────────────────────────────────────────────
     event MilestoneCreated(uint256 indexed id, uint256 indexed pid, address indexed scholar, ScholarshipTypes.MilestoneKind kind, bytes32 provider, bytes32 externalId);
     event MilestoneProposed(uint256 indexed id, uint256 indexed pid, address indexed scholar, ScholarshipTypes.MilestoneKind kind, bytes32 provider, bytes32 externalId);
@@ -91,6 +97,7 @@ contract MilestoneManager is Initializable {
     event MilestoneCompleted(uint256 indexed id, address indexed scholar, uint256 amount);
     event MilestoneFrozen(uint256 indexed id);
     event MilestoneReleased(uint256 indexed id);
+    event MilestoneRevisionRequested(uint256 indexed id, address indexed by, string reasonCID, uint8 count);
 
     // ── Errors ───────────────────────────────────────────────────────────────
     error NotCore();
@@ -107,6 +114,16 @@ contract MilestoneManager is Initializable {
     error CommitteeNotSet();
     error AlreadyActed();
     error InsufficientProgramFund();
+    error NotProgramInitiator();
+    error TooManyRevisions();
+    error ReviewWindowClosed();
+
+    // ── Upgrades ─────────────────────────────────────────────────────────────
+    // MilestoneManager was deployed behind a proxy but had no way to be upgraded, so any change to it meant a
+    // brand new deployment (and losing every milestone). It is UUPS now; only the admin may upgrade it.
+    function _authorizeUpgrade(address) internal view override {
+        if (msg.sender != admin) revert NotCore();
+    }
 
     // ── Init ─────────────────────────────────────────────────────────────────
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -360,6 +377,50 @@ contract MilestoneManager is Initializable {
         if (block.timestamp < m.disputeDeadline) revert DisputeWindowOpen();
 
         _completeMilestone(milestoneId, m);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CREATOR'S REVIEW OF A SUBMITTED MILESTONE
+    // ═══════════════════════════════════════════════════════════════════
+    // The review period is the creator's chance to look at the proof. Doing nothing changes nothing:
+    // once it ends, anyone can still release the funds (`executeMilestone`), so a silent creator
+    // can never keep a scholar from being paid.
+
+    /**
+     * @notice The program creator accepts a submitted milestone now, without waiting for the review
+     *         period to run out: the funds are released to the scholar in this same transaction.
+     */
+    function approveSubmission(uint256 milestoneId) external nonReentrant {
+        ScholarshipTypes.Milestone storage m = milestones[milestoneId];
+        if (m.id == 0) revert NotFound();
+        if (m.status != ScholarshipTypes.MilestoneStatus.SUBMITTED) revert WrongStatus(m.status);
+        if (msg.sender != _coreContract.getProgram(m.pid).initiator) revert NotProgramInitiator();
+
+        _completeMilestone(milestoneId, m);
+    }
+
+    /**
+     * @notice The program creator sends a submitted milestone back to the scholar to fix, with a
+     *         written reason (an IPFS document). Only while the review period is still open, and at
+     *         most MAX_REVISIONS times per milestone, so it cannot be used to hold money back forever.
+     *         The scholar then submits again, which starts a fresh review period.
+     */
+    function requestRevision(uint256 milestoneId, string calldata reasonCID) external nonReentrant {
+        ScholarshipTypes.Milestone storage m = milestones[milestoneId];
+        if (m.id == 0) revert NotFound();
+        if (m.status != ScholarshipTypes.MilestoneStatus.SUBMITTED) revert WrongStatus(m.status);
+        if (msg.sender != _coreContract.getProgram(m.pid).initiator) revert NotProgramInitiator();
+        if (block.timestamp >= m.disputeDeadline) revert ReviewWindowClosed();
+        uint8 used = revisionCount[milestoneId];
+        if (used >= MAX_REVISIONS) revert TooManyRevisions();
+
+        revisionCount[milestoneId] = used + 1;
+        m.status          = ScholarshipTypes.MilestoneStatus.PENDING;
+        m.proofCID        = "";
+        m.submittedAt     = 0;
+        m.disputeDeadline = 0;
+
+        emit MilestoneRevisionRequested(milestoneId, msg.sender, reasonCID, used + 1);
     }
 
     // ── Internal: complete ────────────────────────────────────────────────────

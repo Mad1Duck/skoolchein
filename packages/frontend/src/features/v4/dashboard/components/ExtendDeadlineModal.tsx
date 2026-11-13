@@ -1,4 +1,4 @@
-import { toEpochSec } from '@/lib/time';
+import { toEpochSec, toLocalInput } from '@/lib/time';
 import { useState, useEffect } from 'react';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -29,9 +29,7 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
   // Start with default next day
   const [newEndStr, setNewEndStr] = useState(() => {
     if (!currentEnd) return '';
-    const d = new Date(ensureMs(currentEnd) + 86400000);
-    // Format YYYY-MM-DDThh:mm
-    return d.toISOString().slice(0, 16);
+    return toLocalInput(ensureMs(currentEnd) + 86400000);
   });
 
   const { extendApplicationDeadline, isPending: appPending, isSuccess: appSuccess } = useExtendApplicationDeadline();
@@ -95,7 +93,7 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
           <input
             type="datetime-local"
             required
-            min={new Date(ensureMs(currentEnd) + 60000).toISOString().slice(0, 16)}
+            min={toLocalInput(ensureMs(currentEnd) + 60000)}
             value={newEndStr}
             onChange={(e) => setNewEndStr(e.target.value)}
             className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple"

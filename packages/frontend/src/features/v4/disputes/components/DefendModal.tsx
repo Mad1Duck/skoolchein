@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { uploadToIPFS } from "@/lib/ipfs";
+import { uploadEvidence } from "@/lib/ipfs";
+import { EvidenceFilesInput } from "@/components/ui/EvidenceFilesInput";
+import { EvidenceView } from "@/components/ui/EvidenceView";
 import { useDefendDispute } from "@/lib/contracts/write-hooks";
 import { NeoModal } from "@/components/ui/NeoModal";
 import { NeoButton } from "@/components/ui/NeoButton";
@@ -14,6 +16,8 @@ export function DefendModal({
 }) {
   const { t } = useT();
   const [evidenceText, setEvidenceText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [step, setStep] = useState<"form" | "uploading" | "tx">("form");
 
   const { submitDefense, isPending, isSuccess, error } = useDefendDispute();
@@ -21,14 +25,15 @@ export function DefendModal({
   const handleNext = async () => {
     if (step === "form") {
       setStep("uploading");
+      setUploadError(null);
       try {
         const suffix = `${dispute.blockchainId}-${Date.now()}`;
-        const res = await uploadToIPFS({ meta: { content: evidenceText }, type: 'dispute-defense', name: suffix });
-        const cid = res?.metaCID || "QmDefenseFallbackCID123";
+        const { metaCID } = await uploadEvidence({ content: evidenceText.trim(), files, type: 'dispute-defense', name: suffix });
         setStep("tx");
-        submitDefense(BigInt(dispute.blockchainId), cid);
+        submitDefense(BigInt(dispute.blockchainId), metaCID);
       } catch (err) {
         console.error(err);
+        setUploadError(err instanceof Error ? err.message : t("evidence.uploadFailed"));
         setStep("form");
       }
     }
@@ -54,14 +59,12 @@ export function DefendModal({
             <p className="text-sm text-gray-700 bg-skyellow-light p-3 border-2 border-black rounded-lg">
               {t("defend.intro")}
             </p>
-            <details className="text-xs">
-              <summary className="cursor-pointer font-bold">{t("common.advanced")}</summary>
-              <div className="mt-2 bg-red-50 p-3 rounded border border-red-200 font-mono break-all line-clamp-2">
-                <span className="font-bold text-red-800">{t("defend.accusation")}</span> {dispute.evidenceCID}
-              </div>
-            </details>
-            <div>
-              <label className="block text-sm font-bold mb-1">{t("defend.label")}</label>
+            <div className="rounded-xl border-2 border-black bg-skred-light p-3 space-y-1">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-skred">{t("defend.accusation")}</p>
+              <EvidenceView cid={dispute.evidenceCID} />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-bold">{t("defend.label")}</label>
               <textarea
                 className="w-full border-2 border-black p-2 rounded-lg neo-shadow-sm focus:outline-skblue"
                 rows={4}
@@ -69,6 +72,8 @@ export function DefendModal({
                 value={evidenceText}
                 onChange={(e) => setEvidenceText(e.target.value)}
               />
+              <EvidenceFilesInput files={files} onChange={setFiles} />
+              {uploadError && <p className="text-xs font-bold text-skred">{uploadError}</p>}
             </div>
           </>
         )}
@@ -92,7 +97,12 @@ export function DefendModal({
         <div className="pt-4 border-t-2 border-gray-100 flex justify-end gap-2">
           <NeoButton label={t("common.cancel")} variant="ghost" onClick={onClose} disabled={isPending || step === "uploading"} />
           {step === "form" && (
-            <NeoButton label={t("defend.submit")} variant="primary" onClick={handleNext} disabled={!evidenceText || evidenceText.length < 10} />
+            <NeoButton
+              label={t("defend.submit")}
+              variant="primary"
+              onClick={handleNext}
+              disabled={evidenceText.trim().length < 10 && files.length === 0}
+            />
           )}
           {step === "tx" && (
             <NeoButton label={t("dispute.waiting")} variant="primary" disabled loading={isPending} />

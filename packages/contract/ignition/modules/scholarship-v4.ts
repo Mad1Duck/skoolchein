@@ -119,6 +119,16 @@ export default buildModule("ScholarshipV4", (m) => {
   m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, adminProxy], { id: "core_grantGovernanceRole", ...afterAll });
   const deployerGovernanceRole = m.call(core, "grantRole", [ROLES.GOVERNANCE_ROLE, deployer], { id: "core_grantGovernanceRoleDeployer", ...afterAll });
   m.call(core, "setBounty", [bountyProxy], { id: "core_setBounty", ...afterAll });
+  // The callbacks MilestoneManager and Bounty make into Core (milestone completed, optional approved,
+  // scholar slashed) live in this module, reached through Core's fallback. Without it releasing any
+  // milestone reverts. It needs no initialization and no roles of its own: it runs as Core.
+  const coreLogic = m.contract("ScholarshipCoreLogic", [], { id: "ScholarshipCoreLogic" });
+  m.call(core, "setLogic", [coreLogic], { id: "core_setLogic", ...afterAll });
+  // Committee rulings reach Bounty.resolveDispute through Core, so Core is the caller that needs the role.
+  m.call(bounty, "grantRole", [ROLES.RESOLVER_ROLE, coreProxy], { id: "bounty_grantResolverRoleCore", ...afterAll });
+  // Without this, any report that names a milestone reverts with no reason (the Bounty would call
+  // the zero address), and a milestone dispute could never be resolved.
+  m.call(bounty, "setMilestoneManager", [milestoneManagerProxy], { id: "bounty_setMilestoneManager", ...afterAll });
   m.call(core, "grantRole", [ROLES.COMMITTEE_ROLE, committeeProxy], { id: "core_grantCommitteeRole", ...afterAll });
   // ScholarshipAdmin forwards setProtocolConfig / extend*Deadline to Core, which only accepts
   // CONFIG_ADMIN_ROLE. Without this grant those calls revert on a fresh deployment.
@@ -149,15 +159,6 @@ export default buildModule("ScholarshipV4", (m) => {
     after: [deployerGovernanceRole],
   });
 
-  // Pins every pre-existing program to USDC. Their `programToken` entry is
-  // unset (zero), which is indistinguishable from the native sentinel — this
-  // boundary is what stops their payouts being routed as ETH. Fresh deploys
-  // have no prior programs, hence 0.
-  m.call(core, "setLegacyTokenBoundary", [0n], {
-    id: "core_setLegacyTokenBoundary",
-    after: [deployerGovernanceRole],
-  });
-
   // ── STEP 13 — ScholarshipPriceOracle (UUPS) ────────────────────────────────
   // Standalone by design: ScholarshipCore is already at the EIP-170 bytecode
   // limit, and admin-mutable rates are kept out of fund-moving contracts.
@@ -182,6 +183,12 @@ export default buildModule("ScholarshipV4", (m) => {
   // Treasury Access
   m.call(treasury, "grantRole", [ROLES.CORE_ROLE, coreProxy], { id: "treasury_grantCoreRole", ...afterAll });
   m.call(treasury, "grantRole", [ROLES.BOUNTY_ROLE, bountyProxy], { id: "treasury_grantBountyRole", ...afterAll });
+  // MilestoneManager is the one that calls Treasury.disburseMilestone when a milestone is released
+  // (executeMilestone / approveSubmission). Without this role every release reverts and no scholar can
+  // ever be paid.
+  m.call(treasury, "grantRole", [ROLES.CORE_ROLE, milestoneManagerProxy], { id: "treasury_grantCoreRoleMilestones", ...afterAll });
+  // Lets the Treasury read a staked scholar's outcome and the admin's bonus/penalty rates.
+  m.call(treasury, "setStakeCore", [coreProxy], { id: "treasury_setStakeCore", ...afterAll });
 
   // Reputation Access
   m.call(reputation, "grantRole", [ROLES.MINTER_ROLE, coreProxy], { id: "rep_grantMinterRole", ...afterAll });

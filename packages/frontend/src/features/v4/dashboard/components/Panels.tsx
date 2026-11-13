@@ -39,9 +39,10 @@ import { ProgramSettingsModal } from '../../programs/components/ProgramSettingsM
 import { toEpochSec } from '@/lib/time';
 import { ProposeMilestoneModal } from './ProposeMilestoneModal';
 import { CommitteeScoreModal } from './CommitteeScoreModal';
+import { StakeClaimButton } from './StakeClaimButton';
+import { EvidenceView } from '@/components/ui/EvidenceView';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
 import { ExtendDeadlineModal } from './ExtendDeadlineModal';
-import { BountyHunterRaiseDisputeModal } from './BountyHunterRaiseDisputeModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Initiator Panel
@@ -432,6 +433,12 @@ function ScholarCard({
               </div>
             ) : nextPending ? (
               <div className="flex flex-col gap-2">
+                {(nextPending.revisionCount ?? 0) > 0 && nextPending.revisionReasonCID && (
+                  <div className="rounded-xl border-2 border-black bg-skred-light p-3 text-sm space-y-1">
+                    <p className="font-bold text-skred">{t('pm.fixRequested', { n: nextPending.revisionCount ?? 0 })}</p>
+                    <EvidenceView cid={nextPending.revisionReasonCID} />
+                  </div>
+                )}
                 {nextPending.provider && (
                   <NeoButton
                     label={syncing ? t('panel.syncing') : t('panel.syncWith', { provider: providerLabel ?? '' })}
@@ -454,6 +461,8 @@ function ScholarCard({
                   />
                 ) : (
                   nextPending.kind === 'MANDATORY' && !nextPending.requiresProof ? (
+                    // Opens the same dialog as a proof submission, so the scholar sees what the
+                    // milestone is worth and what happens next before anything is sent.
                     <NeoButton
                       label={
                         isSubmitting ? t('panel.triggering') : t('panel.triggerDelivery', { id: nextPending.blockchainId })
@@ -462,7 +471,7 @@ function ScholarCard({
                       fullWidth
                       loading={isSubmitting}
                       disabled={isSubmitting}
-                      onClick={() => submitMilestone(BigInt(nextPending.blockchainId), 'NO_PROOF_REQUIRED')}
+                      onClick={() => setSubmitMilestoneFor(nextPending)}
                     />
                   ) : (
                     <NeoButton
@@ -618,17 +627,20 @@ export function VoterPanel({
             ) : (
               <ul className="space-y-2 text-sm">
                 {stakes.map((s) => (
-                  <li key={`${s.pid}-${s.voterAddress}`} className="flex justify-between border-b border-gray-200 pb-1">
+                  <li key={`${s.pid}-${s.voterAddress}`} className="flex items-center justify-between gap-2 border-b border-gray-200 pb-1">
                     <span>{t('panel.progShort', { id: s.pid })}</span>
-                    <span
-                      className={
-                        s.isResolved
-                          ? s.wasSlashed
-                            ? 'text-skred'
-                            : 'text-skgreen'
-                          : 'text-skyellow'
-                      }>
-                      {fmt(s.amount, s.token)}
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={
+                          s.isResolved
+                            ? s.wasSlashed
+                              ? 'text-skred'
+                              : 'text-skgreen'
+                            : 'text-skyellow'
+                        }>
+                        {fmt(s.amount, s.token)}
+                      </span>
+                      {!s.isResolved && <StakeClaimButton pid={s.pid} voter={s.voterAddress} />}
                     </span>
                   </li>
                 ))}
@@ -653,7 +665,6 @@ export function BountyHunterPanel({
 }) {
   const { t } = useT();
   const { rate } = useTokenRate();
-  const [raiseDisputeOpen, setRaiseDisputeOpen] = useState(false);
 
   const wonCount = disputes.filter(d => d.status.includes('WON') || d.status.includes('GUILTY') || d.status.includes('CONCEDED')).length;
   const lostCount = disputes.filter(d => d.status.includes('LOST') || d.status.includes('REJECTED')).length;
@@ -666,7 +677,9 @@ export function BountyHunterPanel({
         <h2 className="font-paytone text-3xl border-l-8 border-skgreen pl-4 leading-none">
           {t('panel.reporterActivity')}
         </h2>
-        <NeoButton label={t('panel.raise')} variant="danger" size="sm" onClick={() => setRaiseDisputeOpen(true)} />
+        <Link to="/report">
+          <NeoButton label={t('panel.raise')} variant="danger" size="sm" />
+        </Link>
       </div>
 
       {disputes.length === 0 ? (
@@ -674,7 +687,9 @@ export function BountyHunterPanel({
           <NeoCardBody className="py-12 text-center">
             <h3 className="font-paytone text-2xl mb-2 text-skgreen-dark">{t('panel.guardTitle')}</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('panel.guardBody')}</p>
-            <NeoButton label={t('panel.startReporting')} variant="primary" size="lg" onClick={() => setRaiseDisputeOpen(true)} />
+            <Link to="/report">
+              <NeoButton label={t('panel.startReporting')} variant="primary" size="lg" />
+            </Link>
           </NeoCardBody>
         </NeoCard>
       ) : (
@@ -714,12 +729,6 @@ export function BountyHunterPanel({
         </>
       )}
 
-      {raiseDisputeOpen && (
-        <BountyHunterRaiseDisputeModal
-          isOpen
-          onClose={() => setRaiseDisputeOpen(false)}
-        />
-      )}
     </section>
   );
 }
@@ -836,6 +845,10 @@ function CommitteeProgramSection({
   const { data: allApplicants = [] } = useProgramApplicants(String(programId));
   const { data: allMilestones = [] } = useProgramMilestones(String(programId));
 
+  // Only a BY_COMMITTEE program takes committee scores; in BY_STUDENT mode the contract is expected
+  // to reject them. The button stays available so the transaction can still be tried and inspected.
+  const committeeScores =
+    dashboardData.committeePrograms.find((p) => p.pid === programId)?.screeningMode === 0;
   const pendingApplicants = allApplicants.filter((a) => a.status === 'PENDING_REVIEW');
   const proposedMilestones = allMilestones.filter((m) => m.status === 'PROPOSED');
   const activeDisputes = dashboardData.disputes.filter((d) => d.status === 'ACTIVE');
@@ -868,6 +881,10 @@ function CommitteeProgramSection({
               ))}
             </div>
           </div>
+        )}
+
+        {!committeeScores && (
+          <p className="mb-4 rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm">{t('panel.studentMode')}</p>
         )}
 
         {proposedMilestones.length > 0 && (
@@ -959,13 +976,26 @@ function CommitteeDisputeVoteRow({ dispute, programId }: { dispute: Dispute; pro
   const { t } = useT();
   const { voteOnDispute, isPending } = useVoteOnDispute();
   return (
-    <div className="flex items-center justify-between bg-skred-light border-2 border-black p-3">
-      <div>
-        <span className="font-bold text-sm">{t('panel.report', { id: dispute.blockchainId })}</span>
-        <span className="text-xs text-skred ml-2 font-bold">
-          {statusLabel(t, dispute.disputeType)}
-        </span>
+    <div className="bg-skred-light border-2 border-black p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <span className="font-bold text-sm">{t('panel.report', { id: dispute.blockchainId })}</span>
+          <span className="text-xs text-skred ml-2 font-bold">
+            {statusLabel(t, dispute.disputeType)}
+          </span>
+        </div>
       </div>
+
+      {/* The committee decides on this, so it reads the report and the defense before voting. */}
+      <details className="bg-white border-2 border-black p-2 text-sm">
+        <summary className="cursor-pointer text-xs font-extrabold uppercase tracking-wider text-skred">{t('evidence.report')}</summary>
+        <div className="mt-2"><EvidenceView cid={dispute.evidenceCID} /></div>
+      </details>
+      <details className="bg-white border-2 border-black p-2 text-sm">
+        <summary className="cursor-pointer text-xs font-extrabold uppercase tracking-wider">{t('evidence.defense')}</summary>
+        <div className="mt-2"><EvidenceView cid={dispute.counterEvidenceCID} empty={t('evidence.noDefense')} /></div>
+      </details>
+
       <div className="flex gap-1">
         <NeoButton
           label={t('panel.uphold')}

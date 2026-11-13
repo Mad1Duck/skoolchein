@@ -114,6 +114,9 @@ export interface Milestone {
   scholarWallet: string | null;
   kind: "MANDATORY" | "OPTIONAL" | "NEGOTIATED";
   requiresProof: boolean;
+  /** Times the creator sent this milestone back for a fix, and the document that says why (last time). */
+  revisionCount?: number;
+  revisionReasonCID?: string;
   amount: string;
   proofCID: string;
   status: MilestoneStatus;

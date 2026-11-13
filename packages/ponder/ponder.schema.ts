@@ -153,6 +153,9 @@ export const v4Milestones = onchainTable("v4_milestones", (t) => ({
   submittedAt: t.timestamp("submitted_at", { withTimezone: true }),
   disputeDeadline: t.timestamp("dispute_deadline", { withTimezone: true }),
   completedAt: t.timestamp("completed_at", { withTimezone: true }),
+  // How many times the creator sent this milestone back for a fix, and why (an IPFS document) the last time.
+  revisionCount: t.integer("revision_count").default(0),
+  revisionReasonCID: t.text("revision_reason_cid").default(""),
   provider: t.text("provider"),
   externalId: t.text("external_id"),
   createdAt: t.timestamp("created_at", { withTimezone: true }).$defaultFn(() => new Date()),

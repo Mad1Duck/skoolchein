@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useApplicationText, type TextDoc } from './useApplicationText';
 import { NeoBadge } from '@/components/ui/NeoBadge';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WalletAvatar } from '@/components/ui/WalletAvatar';
 import { CopyableText, truncateMiddle } from '@/components/ui/CopyableText';
 import type { Applicant, Recommendation } from '@/lib/api/types';
-import { loadIPFSJson } from '@/lib/ipfs';
 import { toDate } from '@/lib/time';
 import { useT } from '@/lib/i18n';
 
@@ -20,18 +19,6 @@ interface Props {
   votePct: number;
   votingOpen: boolean;
   onVote: () => void;
-}
-
-interface TextDoc { content?: string; hackquestId?: string }
-
-/** The text an applicant stored on IPFS (bio, essay, documents). Fetched only when the row is open. */
-function useApplicationText(cid: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ['ipfs-json', cid],
-    queryFn: () => loadIPFSJson<TextDoc>(cid),
-    enabled: enabled && !!cid,
-    staleTime: Infinity,
-  });
 }
 
 /**

@@ -13,6 +13,18 @@ export function toDate(value: string | number | bigint | null | undefined): Date
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/**
+ * Value for <input type="datetime-local">, in the viewer's LOCAL time ("2026-11-19T18:29").
+ * toISOString() gives UTC instead, so the field showed a time hours off from the real deadline
+ * and a resubmitted value silently moved the date.
+ */
+export function toLocalInput(value: string | number | bigint | Date | null | undefined): string {
+  const d = value instanceof Date ? value : toDate(value);
+  if (!d) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Epoch seconds, or null when the value is empty or unparseable. */
 export function toEpochSec(value: string | number | bigint | null | undefined): number | null {
   const d = toDate(value);

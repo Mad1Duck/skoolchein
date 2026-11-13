@@ -17,7 +17,7 @@ export function useProtocolLimits() {
     abi: scholarshipCoreAbi,
     functionName: "getProtocolConfig",
   });
-  const cfg = data as { minCandidates: number; maxCandidates: number; maxOptionalMilestones: number; screeningThreshold: bigint; maxMandatoryMilestones: number } | undefined;
+  const cfg = data as { minCandidates: number; maxCandidates: number; maxOptionalMilestones: number; screeningThreshold: bigint; scoreMax: bigint; maxMandatoryMilestones: number; confidenceBonusPct: number; confidenceSlashPct: number } | undefined;
   return {
     minCandidates: Number(cfg?.minCandidates ?? 5),
     maxCandidates: Number(cfg?.maxCandidates ?? 20),
@@ -25,6 +25,12 @@ export function useProtocolLimits() {
     maxMandatory: Number(cfg?.maxMandatoryMilestones ?? 10),
     /** Minimum screening score to be shortlisted (admin-set; contract default 600). */
     screeningThreshold: Number(cfg?.screeningThreshold ?? 600),
+    /** Bonus a supporter earns when their scholar succeeds, as a % of the deposit (admin-set; default 20). */
+    confidenceBonusPct: Number(cfg?.confidenceBonusPct ?? 20),
+    /** Share of the deposit lost when their scholar is penalized (admin-set; default 50). */
+    confidenceSlashPct: Number(cfg?.confidenceSlashPct ?? 50),
+    /** The top of the screening scale (contract default 1000). */
+    scoreMax: Number(cfg?.scoreMax ?? 1000),
     loaded: Boolean(cfg),
   };
 }

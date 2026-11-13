@@ -11,6 +11,13 @@ import {IScholarshipTreasury} from "../interfaces/IScholarship.sol";
 import {ScholarshipTypes}     from "../libraries/ScholarshipTypes.sol";
 import {TokenTransfer}        from "../libraries/TokenTransfer.sol";
 
+/// @dev The slice of ScholarshipCore the Treasury reads to settle a confidence stake.
+interface IStakeCore {
+    function getProgram(uint256 pid) external view returns (ScholarshipTypes.Program memory);
+    function getScholar(address wallet, uint256 pid) external view returns (ScholarshipTypes.Scholar memory);
+    function getProtocolConfig() external view returns (ScholarshipTypes.ProtocolConfig memory);
+}
+
 /**
  * @title  ScholarshipTreasury
  * @author Scholarship Protocol
@@ -101,6 +108,22 @@ contract ScholarshipTreasury is
     // -- Admin-configurable cap for push-refund ---------------------------
     uint8   public maxPushRefundDonors;
 
+    // -- Confidence-stake settlement -------------------------------------------
+    // Appended after the original layout so an upgrade of a live proxy stays safe.
+
+    /// @notice ScholarshipCore, read to learn a staked scholar's outcome and the admin's rates.
+    IStakeCore public stakeCore;
+
+    /**
+     * @notice Per-program pool the confidence-stake bonus is paid from.
+     * @dev    Filled by the penalties of stakes on penalized scholars and by `fundBonusPool`. Kept
+     *         apart from `programYield`, which belongs to the donor yield share, so the two never
+     *         spend the same tokens.
+     */
+    mapping(uint256 => uint256) public bonusPool;
+
+    enum StakeOutcome { REFUND, SUCCESS, SLASH }
+
     // ── Events ───────────────────────────────────────────────────────────────
 
     event FundDeposited(uint256 indexed pid, address depositor, uint256 amount);
@@ -122,6 +145,8 @@ contract ScholarshipTreasury is
         uint256 bonus,
         bool    slashed
     );
+    event BonusPoolFunded(uint256 indexed pid, address indexed from, uint256 amount);
+    event StakeCoreSet(address indexed core);
     event YieldAdded(uint256 indexed pid, uint256 amount);
     event YieldDistributed(uint256 indexed pid, uint256 totalYield);
     event YieldClaimed(uint256 indexed pid, address voter, uint256 amount);
@@ -137,6 +162,9 @@ contract ScholarshipTreasury is
     error NothingToRefund();
     error NothingToWithdraw();
     error TooManyDonorsForPushRefund();
+    error StakeNotSettled();
+    error StakeCoreNotSet();
+    error UnknownProgram();
 
     // ── Native token support ────────────────────────────────────────────────
     // Required so TokenTransfer.payOut's low-level call can forward native
@@ -305,41 +333,121 @@ contract ScholarshipTreasury is
     }
 
     /**
-     * @notice Resolve a voter's confidence stake on programme end.
-     *
-     *         Scholar SUCCEEDED → return principal + 20% yield bonus.
-     *         Scholar SLASHED   → slash 50% of stake (rest returned).
-     *
-     * @dev    CEI: zero stake before transfer.
+     * @notice Resolve a voter's confidence stake, driven by Core.
+     * @dev    Kept for the existing interface. Nothing in Core calls it today, so voters settle
+     *         with `claimConfidenceStake` below instead.
      */
     function resolveConfidenceStake(
         uint256 pid,
         address voter,
         bool    scholarSucceeded
     ) external override nonReentrant onlyRole(CORE_ROLE) {
+        if (confidenceStakes[pid][voter] == 0) return;
+        _settleStake(pid, voter, scholarSucceeded ? StakeOutcome.SUCCESS : StakeOutcome.SLASH);
+    }
+
+    /**
+     * @notice Settle a confidence stake once the staked candidate's outcome is known.
+     *         Anyone may call it; the money always goes to `voter`.
+     *
+     *         Candidate was not chosen, or the program was cancelled → the deposit comes back whole.
+     *         Scholar COMPLETED   → deposit + bonus (`confidenceBonusPct`, capped by the bonus pool).
+     *         Scholar FROZEN or BLACKLISTED → `confidenceSlashPct` of the deposit goes to the
+     *                                         program's bonus pool, the rest comes back.
+     *         Scholar still ACTIVE, or the vote not decided → reverts with StakeNotSettled.
+     */
+    function claimConfidenceStake(uint256 pid, address voter) external nonReentrant {
+        if (confidenceStakes[pid][voter] == 0) revert NothingToRefund();
+        (bool settled, StakeOutcome outcome) = _outcomeFor(pid, confidenceStakeFor[pid][voter]);
+        if (!settled) revert StakeNotSettled();
+        _settleStake(pid, voter, outcome);
+    }
+
+    /// @notice Whether `voter`'s stake can be settled now, and how it would settle.
+    function stakeStatus(uint256 pid, address voter)
+        external view returns (bool settled, StakeOutcome outcome)
+    {
+        if (confidenceStakes[pid][voter] == 0) return (false, StakeOutcome.REFUND);
+        return _outcomeFor(pid, confidenceStakeFor[pid][voter]);
+    }
+
+    /// @dev Bonus and penalty rates come from the admin's protocol config; the old fixed
+    ///      20% / 50% apply only until `setStakeCore` has been called.
+    function _stakeRates() internal view returns (uint256 bonusPct, uint256 slashPct) {
+        if (address(stakeCore) == address(0)) return (20, 50);
+        ScholarshipTypes.ProtocolConfig memory c = stakeCore.getProtocolConfig();
+        return (c.confidenceBonusPct, c.confidenceSlashPct);
+    }
+
+    function _outcomeFor(uint256 pid, address scholar)
+        internal view returns (bool settled, StakeOutcome outcome)
+    {
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
+
+        ScholarshipTypes.ProgramStatus st = stakeCore.getProgram(pid).status;
+        if (st == ScholarshipTypes.ProgramStatus.CANCELLED) return (true, StakeOutcome.REFUND);
+        if (st != ScholarshipTypes.ProgramStatus.ACTIVE && st != ScholarshipTypes.ProgramStatus.COMPLETED)
+            return (false, StakeOutcome.REFUND);
+
+        ScholarshipTypes.Scholar memory s = stakeCore.getScholar(scholar, pid);
+        // Winners are chosen: someone who never became a scholar simply lost, so the deposit is returned.
+        if (s.wallet == address(0)) return (true, StakeOutcome.REFUND);
+        if (s.status == ScholarshipTypes.StudentStatus.COMPLETED) return (true, StakeOutcome.SUCCESS);
+        if (s.status == ScholarshipTypes.StudentStatus.FROZEN || s.status == ScholarshipTypes.StudentStatus.BLACKLISTED)
+            return (true, StakeOutcome.SLASH);
+        return (false, StakeOutcome.REFUND);
+    }
+
+    /// @dev CEI: the stake is zeroed before any transfer.
+    function _settleStake(uint256 pid, address voter, StakeOutcome outcome) internal {
         uint256 stake = confidenceStakes[pid][voter];
-        if (stake == 0) return;
-
-        // CEI
         confidenceStakes[pid][voter] = 0;
+        totalConfidenceStake[pid]   -= stake;
 
-        if (scholarSucceeded) {
-            // 20% bonus from yield pool, capped by available yield
-            uint256 bonus         = (stake * 20) / 100;
-            uint256 yieldAvail    = programYield[pid];
-            uint256 actualBonus   = bonus <= yieldAvail ? bonus : yieldAvail;
-            programYield[pid] -= actualBonus;
+        (uint256 bonusPct, uint256 slashPct) = _stakeRates();
+        address token = programToken[pid];
 
-            uint256 total = stake + actualBonus;
-            programToken[pid].payOut(voter, total);
-            emit ConfidenceStakeResolved(pid, voter, stake, actualBonus, false);
+        if (outcome == StakeOutcome.SUCCESS) {
+            uint256 wanted = (stake * bonusPct) / 100;
+            uint256 pool   = bonusPool[pid];
+            uint256 bonus  = wanted <= pool ? wanted : pool;
+            bonusPool[pid] = pool - bonus;
+            token.payOut(voter, stake + bonus);
+            emit ConfidenceStakeResolved(pid, voter, stake, bonus, false);
+        } else if (outcome == StakeOutcome.SLASH) {
+            uint256 cut = (stake * slashPct) / 100;
+            bonusPool[pid] += cut;
+            emit BonusPoolFunded(pid, voter, cut);
+            token.payOut(voter, stake - cut);
+            emit ConfidenceStakeResolved(pid, voter, stake - cut, 0, true);
         } else {
-            // 50% slashed — stays in treasury, rest returned
-            uint256 slashAmt = stake / 2;
-            uint256 returned = stake - slashAmt;
-            programToken[pid].payOut(voter, returned);
-            emit ConfidenceStakeResolved(pid, voter, returned, 0, true);
+            token.payOut(voter, stake);
+            emit ConfidenceStakeResolved(pid, voter, stake, 0, false);
         }
+    }
+
+    /**
+     * @notice Add to a program's bonus pool, which pays the bonus to supporters of a scholar
+     *         who completes the program. Open to anyone; the funds can only leave as such bonuses.
+     * @dev    The program's own payment token. For a native-currency program, send `amount` as value.
+     */
+    function fundBonusPool(uint256 pid, uint256 amount) external payable nonReentrant {
+        address token = programToken[pid];
+        // programToken is set when the program is created; a native program stores address(0), so
+        // an unknown pid is recognised by having no balance entry at all.
+        if (token == address(0) && programBalance[pid] == 0 && programTotalDonated[pid] == 0)
+            revert UnknownProgram();
+        if (amount == 0) revert NothingToWithdraw();
+
+        token.pullIn(msg.sender, address(this), amount);
+        bonusPool[pid] += amount;
+        emit BonusPoolFunded(pid, msg.sender, amount);
+    }
+
+    /// @notice Point the Treasury at ScholarshipCore. Required before stakes can be settled.
+    function setStakeCore(address core) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        stakeCore = IStakeCore(core);
+        emit StakeCoreSet(core);
     }
 
     // ═══════════════════════════════════════════════════════════════════

@@ -8,6 +8,7 @@
     "deploy-v4-reset": "bun scripts/clean-deployments.ts 31337 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network localhost --reset && bun scripts/sync-deployments.ts 31337",
     "deploy-v4-lisk": "bun scripts/clean-deployments.ts 4202 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network liskSepolia --verify && bun scripts/sync-deployments.ts 4202",
     "deploy-v4-nawasena": "bun scripts/clean-deployments.ts 31338 && bun hardhat ignition deploy ignition/modules/scholarship-v4.ts --network nawasena && bun scripts/sync-deployments.ts 31338",
+    "upgrade-v4-nawasena": "bun scripts/upgrade-v4.ts --chain 31338",
     "compile": "hardhat compile",
     "compile:sync": "hardhat compile && bun scripts/sync-deployments.ts --abi-only",
     "test": "hardhat test"

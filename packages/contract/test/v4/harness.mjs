@@ -24,6 +24,8 @@ export const ROLE = {
   GOVERNANCE: "0x71840dc4906352362b0cdaf79870196c8e42acafade72d5d5a6d59291253ceb1",
   COMMITTEE: "0x794daa56950487582951e8db2fdbcbee68c2223c65641d0aa02a3afc64f9a86f",
   CONFIG_ADMIN: keccak256(toHex("CONFIG_ADMIN_ROLE")),
+  BOUNTY: keccak256(toHex("BOUNTY_ROLE")),
+  RESOLVER: keccak256(toHex("RESOLVER_ROLE")),
   SELECTION: keccak256(toHex("SELECTION_ROLE")),
 };
 
@@ -34,6 +36,7 @@ export { zeroAddress, parseEther };
 const provider = hre.network.provider;
 export const publicClient = createPublicClient({ chain: hardhat, transport: custom(provider) });
 const walletFor = (account) => createWalletClient({ account, chain: hardhat, transport: custom(provider) });
+export const walletClientFor = walletFor;
 
 // ── time ─────────────────────────────────────────────────────────────────────
 export async function now() {
@@ -96,6 +99,8 @@ export async function deploySystem() {
     core: artifact("contracts/v4/core/ScholarshipCore.sol/ScholarshipCore.json"),
     admin: artifact("contracts/v4/core/ScholarshipAdmin.sol/ScholarshipAdmin.json"),
     selection: artifact("contracts/v4/core/ScholarshipSelection.sol/ScholarshipSelection.json"),
+    bounty: artifact("contracts/v4/core/ScholarshipBounty.sol/ScholarshipBounty.json"),
+    coreLogic: artifact("contracts/v4/core/ScholarshipCoreLogic.sol/ScholarshipCoreLogic.json"),
   };
 
   const usdc = await deploy(deployer, art.usdc);
@@ -110,6 +115,7 @@ export async function deploySystem() {
   ]);
   const admin = await deployProxy(deployer, art.admin, [deployer, core]);
   const selection = await deployProxy(deployer, art.selection, [deployer, core]);
+  const bounty = await deployProxy(deployer, art.bounty, [deployer, usdc, core, treasury]);
 
   const send = async (address, abi, functionName, args = [], value) => {
     const hash = await walletFor(deployer).writeContract({ address, abi, functionName, args, value });
@@ -125,6 +131,16 @@ export async function deploySystem() {
   await send(core, art.core.abi, "grantRole", [ROLE.SELECTION, selection]);
   await send(core, art.core.abi, "grantRole", [ROLE.COMMITTEE, deployer]);
   await send(treasury, art.treasury.abi, "grantRole", [ROLE.CORE, core]);
+  // The MilestoneManager releases milestone payments through the Treasury, so it needs the same role.
+  await send(treasury, art.treasury.abi, "grantRole", [ROLE.CORE, milestones]);
+  await send(treasury, art.treasury.abi, "setStakeCore", [core]);
+  await send(core, art.core.abi, "setBounty", [bounty]);
+  // Core's callbacks from MilestoneManager / Bounty are served by this module through its fallback.
+  const coreLogic = await deploy(deployer, art.coreLogic);
+  await send(core, art.core.abi, "setLogic", [coreLogic]);
+  await send(bounty, art.bounty.abi, "grantRole", [ROLE.RESOLVER, core]);
+  await send(treasury, art.treasury.abi, "grantRole", [ROLE.BOUNTY, bounty]);
+  await send(bounty, art.bounty.abi, "setMilestoneManager", [milestones]);
   await send(reputation, art.reputation.abi, "grantRole", [ROLE.MINTER, core]);
   await send(reputation, art.reputation.abi, "grantRole", [ROLE.BURNER, core]);
   await send(reputation, art.reputation.abi, "grantRole", [ROLE.LOCKER, core]);
@@ -144,6 +160,8 @@ export async function deploySystem() {
     selection: { address: selection, abi: abiOf(art.selection.abi) },
     admin: { address: admin, abi: abiOf(art.admin.abi) },
     milestones: { address: milestones, abi: abiOf(art.milestones.abi) },
+    treasury: { address: treasury, abi: abiOf(art.treasury.abi) },
+    bounty: { address: bounty, abi: abiOf(art.bounty.abi) },
   };
 
   const as = (account) => {
@@ -207,6 +225,8 @@ export async function setupProgram(sys, opts = {}) {
     // Recommendations are no longer self-reported, so by default one recommender vouches for every
     // applicant with the score the old tests typed in themselves. Set false to start from zero.
     autoRecommend = true,
+    // A reporter's hunter share is what sets the report deposit; 0 means no deposit (no USDC needed).
+    slashDist = { bountyHunterPercent: 40, treasuryPercent: 40, protocolPercent: 20 },
   } = opts;
   const { core } = sys.contracts;
   const t = await now();
@@ -215,7 +235,7 @@ export async function setupProgram(sys, opts = {}) {
   await sys.as(initiator).write(core, "createProgram", [
     "ipfs://program", 3, screeningMode,
     { academicWeight: 40, incomeWeight: 40, essayWeight: 0, recommendWeight: 20, extracurricWeight: 0 },
-    { bountyHunterPercent: 40, treasuryPercent: 40, protocolPercent: 20 },
+    slashDist,
     maxCandidates, targetWinners, timeline, 7 * 86400, totalFund, 0, zeroAddress, zeroAddress,
   ], totalFund);
   const pid = ++sys.nextPid; // pids are sequential from 1; sys.nextPid is reset together with the chain snapshot

@@ -9,6 +9,7 @@ import { SelectWinnersModal } from '../components/SelectWinnersModal';
 import { ResolveShortlistModal } from '../components/ResolveShortlistModal';
 import { MyRecommendationsCard } from '../components/MyRecommendationsCard';
 import { ApplicantRow } from '../components/ApplicantRow';
+import { VotingBoard } from '../components/VotingBoard';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -262,6 +263,7 @@ export function ProgramDetailPage() {
           programId={BigInt(program.pid)}
           candidateAddress={selectedCandidate.address}
           candidateName={selectedCandidate.name}
+          token={program.token as `0x${string}` | undefined}
         />
       )}
 
@@ -349,6 +351,20 @@ export function ProgramDetailPage() {
       {/* Tab content */}
       <div>
         {activeTab === 'overview' && <OverviewTab program={program} meta={meta ?? undefined} />}
+        {activeTab === 'applicants' && program.status === 'VOTING' && program.openDonation && (
+          <div className="mb-8">
+            <VotingBoard
+              candidates={rankedApplicants.filter((a) => a.status === 'SHORTLISTED')}
+              votes={votesQ.data ?? []}
+              recommendations={recsQ.data ?? []}
+              me={userAddress}
+              onVote={(wallet) => {
+                setSelectedCandidate({ address: wallet as `0x${string}` });
+                setIsVoteOpen(true);
+              }}
+            />
+          </div>
+        )}
         {activeTab === 'applicants' && (
           <ListTab
             data={rankedApplicants}

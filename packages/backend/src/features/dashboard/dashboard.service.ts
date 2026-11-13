@@ -21,8 +21,8 @@ export class DashboardService {
   async forWallet(wallet: string) {
     const [
       programsCreated,
-      applications,
-      scholarships,
+      applicantRows,
+      scholarRows,
       milestones,
       votes,
       stakes,
@@ -34,33 +34,14 @@ export class DashboardService {
         .where(onChain(v4Programs, eq(v4Programs.initiator, wallet)))
         .orderBy(desc(v4Programs.createdAt)),
 
-      ponderClient.db.select({
-        applicant: v4Applicants,
-        program: {
-          pid: v4Programs.pid,
-          metadataCID: v4Programs.metadataCID,
-          token: v4Programs.token,
-          status: v4Programs.status,
-          totalFund: v4Programs.totalFund,
-        },
-      })
-        .from(v4Applicants)
-        .leftJoin(v4Programs, and(eq(v4Applicants.chainId, v4Programs.chainId), eq(v4Applicants.pid, v4Programs.pid)))
+      // Plain selects. Joining programs onto these returned program columns that came back null or
+      // shifted through the Ponder client (the dashboard showed "No Program" for an active scholar),
+      // so the programs are fetched once below and attached here.
+      ponderClient.db.select().from(v4Applicants)
         .where(onChain(v4Applicants, eq(v4Applicants.wallet, wallet)))
         .orderBy(desc(v4Applicants.createdAt)),
 
-      ponderClient.db.select({
-        scholar: v4Scholars,
-        program: {
-          pid: v4Programs.pid,
-          metadataCID: v4Programs.metadataCID,
-          token: v4Programs.token,
-          status: v4Programs.status,
-          totalFund: v4Programs.totalFund,
-        },
-      })
-        .from(v4Scholars)
-        .leftJoin(v4Programs, and(eq(v4Scholars.chainId, v4Programs.chainId), eq(v4Scholars.pid, v4Programs.pid)))
+      ponderClient.db.select().from(v4Scholars)
         .where(onChain(v4Scholars, eq(v4Scholars.wallet, wallet)))
         .orderBy(desc(v4Scholars.createdAt)),
 
@@ -99,11 +80,23 @@ export class DashboardService {
     ]);
 
     const committeePids = [...new Set(committeeMemberships.map((m) => m.pid))];
-    const committeePrograms = committeePids.length === 0
+
+    // Every program this wallet touches, in one query.
+    const wantedPids = [...new Set([
+      ...applicantRows.map((a) => a.pid),
+      ...scholarRows.map((s) => s.pid),
+      ...committeePids,
+    ])];
+    const programRows = wantedPids.length === 0
       ? []
       : await ponderClient.db.select().from(v4Programs)
-          .where(onChain(v4Programs, or(...committeePids.map((pid) => eq(v4Programs.pid, pid)))))
+          .where(onChain(v4Programs, or(...wantedPids.map((pid) => eq(v4Programs.pid, pid)))))
           .orderBy(desc(v4Programs.createdAt));
+    const programOf = (pid: number) => programRows.find((p) => p.pid === pid) ?? null;
+
+    const applications = applicantRows.map((applicant) => ({ applicant, program: programOf(applicant.pid) }));
+    const scholarships = scholarRows.map((scholar) => ({ scholar, program: programOf(scholar.pid) }));
+    const committeePrograms = programRows.filter((p) => committeePids.includes(p.pid));
 
     const totalReceived = scholarships.reduce(
       (sum, s) => sum + BigInt(s.scholar.totalReceived ?? "0"), 0n

@@ -95,6 +95,22 @@ export const scholarshipTreasuryAbi = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "expected",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "received",
+        "type": "uint256"
+      }
+    ],
+    "name": "NativeValueMismatch",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "NotInitializing",
     "type": "error"
@@ -127,6 +143,16 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "StakeCoreNotSet",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StakeNotSettled",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "TooManyDonorsForPushRefund",
     "type": "error"
   },
@@ -148,8 +174,43 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "UnexpectedNativeValue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownProgram",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "YieldNotYetDistributed",
     "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "BonusPoolFunded",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -462,6 +523,19 @@ export const scholarshipTreasuryAbi = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "core",
+        "type": "address"
+      }
+    ],
+    "name": "StakeCoreSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "token",
         "type": "address"
       },
@@ -649,6 +723,43 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "addYield",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "bonusPool",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "voter",
+        "type": "address"
+      }
+    ],
+    "name": "claimConfidenceStake",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -851,6 +962,24 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "fundBonusPool",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -1246,6 +1375,19 @@ export const scholarshipTreasuryAbi = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "core",
+        "type": "address"
+      }
+    ],
+    "name": "setStakeCore",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "pid",
         "type": "uint256"
@@ -1285,6 +1427,48 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "stakeCore",
+    "outputs": [
+      {
+        "internalType": "contract IStakeCore",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "voter",
+        "type": "address"
+      }
+    ],
+    "name": "stakeStatus",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "settled",
+        "type": "bool"
+      },
+      {
+        "internalType": "enum ScholarshipTreasury.StakeOutcome",
+        "name": "outcome",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

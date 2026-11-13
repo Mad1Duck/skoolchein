@@ -317,7 +317,6 @@ export function DashboardPage() {
               <DashboardTabsContent value="milestones">
                 <ProviderMilestonesPanel
                   program={selectedProgram}
-                  milestones={dashboard.milestones}
                   isLoading={false}
                 />
               </DashboardTabsContent>

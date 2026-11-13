@@ -4,6 +4,7 @@ import { useAdminForceStatus, useAdminUpdateDates } from '@/lib/contracts/write-
 import { type Program } from '@/lib/api';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoModal } from '@/components/ui/NeoModal';
+import { toLocalInput } from '@/lib/time';
 
 // Simplified enum map matching the smart contract
 const PROGRAM_STATUSES = [
@@ -28,12 +29,7 @@ export function AdminControlModal({
   const [activeTab, setActiveTab] = useState<'status' | 'dates'>('status');
   const [selectedStatus, setSelectedStatus] = useState<number>(0);
 
-  const formatEpoch = (dateStr: string) => {
-    if (!dateStr || dateStr === '0') return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '';
-    return date.toISOString().slice(0, 16);
-  };
+  const formatEpoch = (dateStr: string) => (!dateStr || dateStr === '0' ? '' : toLocalInput(dateStr));
 
   const [dates, setDates] = useState({
     appStart: formatEpoch(program.applicationStart || ''),
