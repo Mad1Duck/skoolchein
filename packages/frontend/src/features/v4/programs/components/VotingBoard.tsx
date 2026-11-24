@@ -57,6 +57,7 @@ export function VotingBoard({ candidates, votes, recommendations, me, onVote, on
       mine: me && s.voterAddress.toLowerCase() === me.toLowerCase() ? cur.mine + amount : cur.mine,
     });
   }
+  const hasStaked = [...stakes.values()].some((s) => s.mine > 0n);
   const money = (v: bigint) => formatTokenWithSymbol(v, token);
   const myWeight = new Map<string, bigint>();
   for (const v of votes) {
@@ -116,6 +117,7 @@ export function VotingBoard({ candidates, votes, recommendations, me, onVote, on
               isMe={!!me && wallet.toLowerCase() === me.toLowerCase()}
               voted={myVotes.has(wallet.toLowerCase())}
               usedVote={myVotes.size > 0}
+              hasStaked={hasStaked}
               weightText={pid !== undefined ? money(tl.weight) : undefined}
               myWeightText={myWeight.has(wallet.toLowerCase()) ? money(myWeight.get(wallet.toLowerCase())!) : undefined}
               stakeInfo={pid !== undefined ? stakes.get(wallet.toLowerCase()) : undefined}
@@ -142,6 +144,7 @@ function CandidateCard({
   isMe,
   voted,
   usedVote,
+  hasStaked,
   weightText,
   myWeightText,
   stakeInfo,
@@ -149,6 +152,8 @@ function CandidateCard({
   onVote,
   onBack,
 }: {
+  /** This wallet already put a backing deposit on someone in this program (one per program). */
+  hasStaked: boolean;
   /** This wallet has already voted for someone in the program. */
   usedVote: boolean;
   weightText?: string;
@@ -287,13 +292,23 @@ function CandidateCard({
             </button>
           )}
           {onBack && !isMe && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="rounded-xl border-2 border-black bg-white px-4 py-2.5 text-sm font-extrabold uppercase tracking-wider shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skbw active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-            >
-              {t('candidate.back')}
-            </button>
+            // The contract allows a backing deposit only for the candidate you voted for, once per program.
+            voted && !hasStaked ? (
+              <button
+                type="button"
+                onClick={onBack}
+                className="rounded-xl border-2 border-black bg-white px-4 py-2.5 text-sm font-extrabold uppercase tracking-wider shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skbw active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              >
+                {t('candidate.back')}
+              </button>
+            ) : (
+              <div
+                title={voted ? t('board.backDone') : t('board.backNeedVote')}
+                className="rounded-xl border-2 border-black bg-gray-100 px-4 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500"
+              >
+                {voted ? `${t('board.backedShort')} ✓` : t('candidate.back')}
+              </div>
+            )
           )}
         </div>
       </div>
