@@ -53,6 +53,22 @@ async function winnersChosen(p) {
   await sys.as(stranger()).write(selection, "selectWinners", [BigInt(p.pid), await rankShortlist(p.pid)]);
 }
 
+describe("donations fund the winners", () => {
+  it("the program fund is the creator's deposit plus donations, and the winners' milestones are divided from all of it", async () => {
+    const p = await staked(); // initial fund 100, one donor gave 10 (minus the fee), two winners
+    const prog = await sys.read(core, "getProgram", [BigInt(p.pid)]);
+    const held = await sys.read(treasury, "getProgramBalance", [BigInt(p.pid)]);
+    assert.ok(prog.totalFund > ETH("100"), "the donation is part of the program fund");
+    assert.equal(prog.totalFund, held, "Core and Treasury agree on the fund");
+
+    await winnersChosen(p);
+    // Two winners, one milestone each (no plan saved): each gets half of the whole fund.
+    const { milestones } = sys.contracts;
+    const m = await sys.read(milestones, "getMilestone", [1n]);
+    assert.equal(m.amount, prog.totalFund / 2n);
+  });
+});
+
 describe("one vote per wallet", () => {
   it("a second vote, for the same or another candidate, is refused", async () => {
     const p = await staked();

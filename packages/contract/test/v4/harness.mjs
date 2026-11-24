@@ -162,6 +162,7 @@ export async function deploySystem() {
     milestones: { address: milestones, abi: abiOf(art.milestones.abi) },
     treasury: { address: treasury, abi: abiOf(art.treasury.abi) },
     bounty: { address: bounty, abi: abiOf(art.bounty.abi) },
+    usdc: { address: usdc, abi: abiOf(art.usdc.abi) },
   };
 
   const as = (account) => {

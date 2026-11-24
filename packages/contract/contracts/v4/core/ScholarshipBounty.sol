@@ -34,13 +34,14 @@ import {IMilestoneManager} from "../interfaces/IScholarship.sol";
  *         Stake = BH_STAKE_PERCENT (10%) of potential reward.
  *         Potential reward = bountyHunterPercent (default 20%) of remaining fund.
  *         Example: remaining = 1000 USDC → reward = 200 USDC → stake = 20 USDC.
- *         Win: receive 200 USDC (+10x return).  Lose: forfeit 20 USDC.
+ *         Win: receive 200 USDC (+10x return).  Lose: the 20 USDC goes to the accused scholar.
  *
  *         ANTI-SPAM
  *         • 1 active dispute per BH address at a time
  *         • 30-day cooldown after a lost dispute
  *         • 90-day cooldown if flagged as BAD_ACTOR (≥3 consecutive losses)
- *         • Forfeited stakes accumulate here; admin can sweep to protocol
+ *         • A lost report pays its deposit to the accused scholar; only a deposit that could not
+ *           be paid out stays here for the admin to sweep to the protocol
  *
  *         FRAUD TYPE → PENALTY
  *         • LIGHT_FRAUD     → 6-month freeze
@@ -110,6 +111,8 @@ contract ScholarshipBounty is
     );
     event BHFlagged(address indexed bountyHunter, uint256 cooldownUntil);
     event ForfeitedStakesWithdrawn(address recipient, uint256 amount);
+    /// @notice A rejected report: the reporter's deposit was paid to the scholar they accused.
+    event ScholarCompensated(uint256 indexed disputeId, address indexed scholar, uint256 amount);
     event GriefingStakeApplied(uint256 indexed disputeId, uint256 originalStake, uint256 appliedStake);
 
     // ── Errors ───────────────────────────────────────────────────────────────
@@ -444,7 +447,8 @@ contract ScholarshipBounty is
      * @dev BH loses path:
      *      1. Release frozen milestone (if milestone-specific dispute)
      *      2. Apply cooldown to BH; escalate to BAD_ACTOR if ≥3 in a row
-     *      3. BH stake forfeited — stays in this contract (swept to protocol by admin)
+     *      3. BH stake goes 100% to the wrongly accused scholar, as compensation for the freeze
+     *         and for having to defend themselves
      */
     function _executeBHLoss(uint256 disputeId) internal {
         ScholarshipTypes.Dispute storage d  = disputes[disputeId];
@@ -454,8 +458,6 @@ contract ScholarshipBounty is
         if (d.milestoneId != 0) {
             milestone.releaseMilestone(d.milestoneId);
         }
-
-        // Stake stays in contract — no transfer needed
 
         // Update BH record
         bh.activeDisputeId    = 0;
@@ -473,6 +475,16 @@ contract ScholarshipBounty is
 
         bh.cooldownUntil = block.timestamp + cooldown;
         activeDisputeForScholar[d.scholar][d.pid] = 0;
+
+        // The reporter's deposit goes to the person they wrongly accused (state is final above).
+        // A transfer that fails (for example a recipient the token blocks) must not stop the ruling,
+        // so the deposit then simply stays here, as it used to, for the admin to sweep.
+        if (d.stake > 0) {
+            (bool ok, bytes memory ret) = address(usdc).call(abi.encodeCall(IERC20.transfer, (d.scholar, d.stake)));
+            if (ok && (ret.length == 0 || abi.decode(ret, (bool)))) {
+                emit ScholarCompensated(disputeId, d.scholar, d.stake);
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════

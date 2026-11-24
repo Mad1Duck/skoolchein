@@ -686,7 +686,8 @@ export function BountyHunterPanel({
         <NeoCard hoverable={false} className="bg-skgreen-light/30 border-dashed mb-6">
           <NeoCardBody className="py-12 text-center">
             <h3 className="font-paytone text-2xl mb-2 text-skgreen-dark">{t('panel.guardTitle')}</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('panel.guardBody')}</p>
+            <p className="text-gray-600 mb-3 max-w-md mx-auto">{t('panel.guardBody')}</p>
+            <p className="text-xs text-gray-500 mb-6 max-w-md mx-auto">{t('panel.guardRule')}</p>
             <Link to="/report">
               <NeoButton label={t('panel.startReporting')} variant="primary" size="lg" />
             </Link>
@@ -768,12 +769,21 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
           </span>
         </div>
 
-        <div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-200 mb-3">
-          <span className="text-gray-500">{t('panel.rewardPaid')}</span>
-          <span className="font-bold font-paytone">
-            {fmt(dispute.bhRewardPaid, dispute.token)}
-          </span>
-        </div>
+        <dl className="mt-2 pt-2 border-t border-gray-200 mb-3 space-y-1 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-gray-500">{t('panel.stakePaid')}</dt>
+            <dd className="font-data font-bold">{fmt(dispute.stake, dispute.token)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-gray-500">{t('panel.potentialReward')}</dt>
+            <dd className="font-data font-bold">{fmt(dispute.potentialReward, dispute.token)}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-gray-500">{t('panel.rewardPaid')}</dt>
+            <dd className="font-bold font-paytone">{fmt(dispute.bhRewardPaid, dispute.token)}</dd>
+          </div>
+        </dl>
+        {dispute.status === 'ACTIVE' && <p className="text-xs text-gray-600 mb-3">{t('panel.stakeRule')}</p>}
 
         {canAutoGuilty && (
           <NeoButton

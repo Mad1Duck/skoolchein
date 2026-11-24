@@ -1,7 +1,8 @@
 import { Injectable, Singleton } from "hono-forge";
-import { eq, or, and, desc } from "@ponder/client";
+import { eq, ilike, or, and, desc } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
 import { onChain } from "@/config/chain-context";
+import { withDefenseDeadline } from "@/features/disputes/defense";
 
 const {
   v4Programs, v4Applicants, v4Scholars,
@@ -19,6 +20,8 @@ export class DashboardService {
    * member. Source of truth is entirely Ponder-indexed on-chain state.
    */
   async forWallet(wallet: string) {
+    // Addresses are stored with different letter case by different handlers (votes lowercase, disputes
+    // checksummed), so every wallet match below ignores case. A wallet is hex and has no LIKE wildcards.
     const [
       programsCreated,
       applicantRows,
@@ -31,41 +34,41 @@ export class DashboardService {
       committeeMemberships,
     ] = await Promise.all([
       ponderClient.db.select().from(v4Programs)
-        .where(onChain(v4Programs, eq(v4Programs.initiator, wallet)))
+        .where(onChain(v4Programs, ilike(v4Programs.initiator, wallet)))
         .orderBy(desc(v4Programs.createdAt)),
 
       // Plain selects. Joining programs onto these returned program columns that came back null or
       // shifted through the Ponder client (the dashboard showed "No Program" for an active scholar),
       // so the programs are fetched once below and attached here.
       ponderClient.db.select().from(v4Applicants)
-        .where(onChain(v4Applicants, eq(v4Applicants.wallet, wallet)))
+        .where(onChain(v4Applicants, ilike(v4Applicants.wallet, wallet)))
         .orderBy(desc(v4Applicants.createdAt)),
 
       ponderClient.db.select().from(v4Scholars)
-        .where(onChain(v4Scholars, eq(v4Scholars.wallet, wallet)))
+        .where(onChain(v4Scholars, ilike(v4Scholars.wallet, wallet)))
         .orderBy(desc(v4Scholars.createdAt)),
 
       ponderClient.db.select().from(v4Milestones)
-        .where(onChain(v4Milestones, eq(v4Milestones.scholarWallet, wallet)))
+        .where(onChain(v4Milestones, ilike(v4Milestones.scholarWallet, wallet)))
         .orderBy(v4Milestones.blockchainId),
 
       ponderClient.db.select().from(v4Votes)
-        .where(onChain(v4Votes, eq(v4Votes.voterAddress, wallet)))
+        .where(onChain(v4Votes, ilike(v4Votes.voterAddress, wallet)))
         .orderBy(desc(v4Votes.createdAt)),
 
       ponderClient.db.select().from(v4ConfidenceStakes)
-        .where(onChain(v4ConfidenceStakes, eq(v4ConfidenceStakes.voterAddress, wallet)))
+        .where(onChain(v4ConfidenceStakes, ilike(v4ConfidenceStakes.voterAddress, wallet)))
         .orderBy(desc(v4ConfidenceStakes.createdAt)),
 
       ponderClient.db.select().from(v4Disputes)
         .where(onChain(v4Disputes, or(
-          eq(v4Disputes.bountyHunter, wallet),
-          eq(v4Disputes.scholarAddress, wallet),
+          ilike(v4Disputes.bountyHunter, wallet),
+          ilike(v4Disputes.scholarAddress, wallet),
         )))
         .orderBy(desc(v4Disputes.createdAt)),
 
       ponderClient.db.select().from(v4Reputation)
-        .where(onChain(v4Reputation, eq(v4Reputation.address, wallet)))
+        .where(onChain(v4Reputation, ilike(v4Reputation.address, wallet)))
         .limit(1),
 
       // Memberships only. Joining the two whole tables here returned program rows whose
@@ -73,7 +76,7 @@ export class DashboardService {
       // so the programs are fetched separately below.
       ponderClient.db.select().from(v4CommitteeMembers)
         .where(onChain(v4CommitteeMembers,
-          eq(v4CommitteeMembers.memberAddress, wallet),
+          ilike(v4CommitteeMembers.memberAddress, wallet),
           eq(v4CommitteeMembers.isActive, true),
         ))
         .orderBy(desc(v4CommitteeMembers.addedAt)),
@@ -125,7 +128,7 @@ export class DashboardService {
       milestones,
       votes,
       stakes,
-      disputes,
+      disputes: disputes.map(withDefenseDeadline),
       reputation: reputation ?? null,
       committeePrograms,
     };
