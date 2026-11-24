@@ -22,6 +22,11 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "AlreadyVoted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ApplicantCannotDonate",
     "type": "error"
   },

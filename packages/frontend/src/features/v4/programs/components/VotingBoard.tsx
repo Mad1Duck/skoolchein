@@ -4,6 +4,8 @@ import { WalletAvatar } from '@/components/ui/WalletAvatar';
 import { CopyableText, truncateMiddle } from '@/components/ui/CopyableText';
 import { useProtocolLimits } from '@/lib/contracts/v4/hooks/config';
 import { useT } from '@/lib/i18n';
+import { useConfidenceStakes } from '@/lib/api/hooks';
+import { formatTokenWithSymbol } from '@/lib/contracts/v4/token';
 import { useApplicationText } from './useApplicationText';
 
 interface Props {
@@ -18,6 +20,10 @@ interface Props {
   onBack?: (wallet: string) => void;
   /** Set to false when the page already has its own heading. */
   showHeader?: boolean;
+  /** With these, every card also shows the vote weight and the backing deposits collected for it. */
+  pid?: number;
+  /** Program payment token (zero address = native). */
+  token?: string;
 }
 
 /** Header colours, cycled by position so neighbouring cards never match. */
@@ -33,9 +39,29 @@ interface Tally {
  * vote count and share, and a "+1" pops up when a new vote arrives. The screening score and the
  * recommendations stay visible next to the votes, since the votes only add to that score.
  */
-export function VotingBoard({ candidates, votes, recommendations, me, onVote, onBack, showHeader = true }: Props) {
+export function VotingBoard({ candidates, votes, recommendations, me, onVote, onBack, showHeader = true, pid, token }: Props) {
   const { t } = useT();
   const { scoreMax } = useProtocolLimits();
+  const stakesQ = useConfidenceStakes();
+
+  // Backing deposits per candidate (only for this program).
+  const stakes = new Map<string, { backers: number; amount: bigint; mine: bigint }>();
+  for (const s of stakesQ.data ?? []) {
+    if (pid === undefined || s.pid !== pid) continue;
+    const key = s.scholarAddress.toLowerCase();
+    const cur = stakes.get(key) ?? { backers: 0, amount: 0n, mine: 0n };
+    const amount = BigInt(s.amount || '0');
+    stakes.set(key, {
+      backers: cur.backers + 1,
+      amount: cur.amount + amount,
+      mine: me && s.voterAddress.toLowerCase() === me.toLowerCase() ? cur.mine + amount : cur.mine,
+    });
+  }
+  const money = (v: bigint) => formatTokenWithSymbol(v, token);
+  const myWeight = new Map<string, bigint>();
+  for (const v of votes) {
+    if (me && v.voterAddress.toLowerCase() === me.toLowerCase()) myWeight.set(v.candidateAddress.toLowerCase(), BigInt(v.votingWeight || '0'));
+  }
 
   const tally = new Map<string, Tally>();
   let totalWeight = 0n;
@@ -89,6 +115,11 @@ export function VotingBoard({ candidates, votes, recommendations, me, onVote, on
               scoreMax={scoreMax}
               isMe={!!me && wallet.toLowerCase() === me.toLowerCase()}
               voted={myVotes.has(wallet.toLowerCase())}
+              usedVote={myVotes.size > 0}
+              weightText={pid !== undefined ? money(tl.weight) : undefined}
+              myWeightText={myWeight.has(wallet.toLowerCase()) ? money(myWeight.get(wallet.toLowerCase())!) : undefined}
+              stakeInfo={pid !== undefined ? stakes.get(wallet.toLowerCase()) : undefined}
+              money={money}
               onVote={() => onVote(wallet)}
               onBack={onBack ? () => onBack(wallet) : undefined}
             />
@@ -110,9 +141,20 @@ function CandidateCard({
   scoreMax,
   isMe,
   voted,
+  usedVote,
+  weightText,
+  myWeightText,
+  stakeInfo,
+  money,
   onVote,
   onBack,
 }: {
+  /** This wallet has already voted for someone in the program. */
+  usedVote: boolean;
+  weightText?: string;
+  myWeightText?: string;
+  stakeInfo?: { backers: number; amount: bigint; mine: bigint };
+  money: (v: bigint) => string;
   applicant: Applicant;
   header: string;
   leading: boolean;
@@ -189,6 +231,33 @@ function CandidateCard({
           <div className="h-full bg-skpurple transition-all duration-500" style={{ width: `${Math.min(100, share)}%` }} />
         </div>
 
+        {weightText !== undefined && (
+          <dl className="rounded-xl border-2 border-black bg-skyellow-light p-2.5 space-y-1 text-xs">
+            <div className="flex justify-between gap-2">
+              <dt className="text-gray-600">{t('board.weight')}</dt>
+              <dd className="font-data font-bold text-right">{weightText}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-gray-600">{t('board.backing')}</dt>
+              <dd className="font-data font-bold text-right">
+                {stakeInfo ? `${money(stakeInfo.amount)} · ${t('board.backers', { n: stakeInfo.backers })}` : '—'}
+              </dd>
+            </div>
+            {myWeightText !== undefined && (
+              <div className="flex justify-between gap-2 border-t-2 border-black/10 pt-1">
+                <dt className="font-bold">{t('board.myVote')}</dt>
+                <dd className="font-data font-bold text-right">{myWeightText}</dd>
+              </div>
+            )}
+            {stakeInfo && stakeInfo.mine > 0n && (
+              <div className="flex justify-between gap-2">
+                <dt className="font-bold">{t('board.myBacking')}</dt>
+                <dd className="font-data font-bold text-right">{money(stakeInfo.mine)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+
         <p className="text-xs text-gray-600">
           {t('board.recs')}:{' '}
           <span className="font-bold font-data">{recCount > 0 ? `${recCount} · ${recAvg}` : t('appl.recNone')}</span>
@@ -202,6 +271,11 @@ function CandidateCard({
           ) : voted ? (
             <div className="flex-1 rounded-xl border-2 border-black bg-skgreen-dark py-2.5 text-center text-sm font-extrabold uppercase tracking-wider text-white shadow-[3px_3px_0_0_#000]">
               {t('board.voted')} ✓
+            </div>
+          ) : usedVote ? (
+            // One vote per wallet per program: it is already spent on another candidate.
+            <div title={t('board.oneVote')} className="flex-1 rounded-xl border-2 border-black bg-gray-100 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500">
+              {t('board.oneVoteShort')}
             </div>
           ) : (
             <button

@@ -15,6 +15,7 @@ import { ProgramSettingsModal } from "../../programs/components/ProgramSettingsM
 import { useVotingClock } from "@/features/v4/vote/useVotingClock";
 import { useT } from '@/lib/i18n';
 import { useMilestonePlan } from '@/lib/contracts/v4/hooks/selection';
+import { decodeSpec } from '@/lib/milestoneSpec';
 import { statusLabel } from '@/lib/i18n/status';
 import { useFormatMoney } from '@/lib/money';
 import { toDate } from "@/lib/time";
@@ -80,8 +81,11 @@ function PlannedMilestones({ program }: { program: Program }) {
           <li key={i} className="flex items-center gap-3 px-3 py-2.5">
             <span className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
             <span className="flex-1 min-w-0 text-sm font-bold truncate">
-              {(saved && plan.descriptions[i]) || t('plan.item', { n: i + 1 })}
+              {(saved && decodeSpec(plan.descriptions[i]).text) || t('plan.item', { n: i + 1 })}
             </span>
+            {saved && decodeSpec(plan.descriptions[i]).proof && (
+              <span className="rounded-md border-2 border-black bg-skyellow px-1.5 text-[10px] font-extrabold uppercase shrink-0">{t('spec.badge')}</span>
+            )}
             <span className="font-data text-xs text-gray-500">{bps / 100}%</span>
             <span className="font-data text-sm font-bold">{fmt(amounts[i], program.token)}</span>
           </li>

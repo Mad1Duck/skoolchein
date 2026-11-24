@@ -1,7 +1,25 @@
 import { addr } from "@/lib/chain/addr";
 import { milestoneManagerAbi } from "@/constants/contractsV4";
 import { stringToHex } from "viem";
+import { useReadContract } from "wagmi";
+import { useActiveChain } from "@/lib/chain/useActiveChain";
+import { decodeSpec, type MilestoneSpec } from "@/lib/milestoneSpec";
 import { useTxHook } from "./use-tx-base";
+
+/** What the creator asked of the scholar for this milestone (proof required? instruction), read from the chain. */
+export function useMilestoneSpec(milestoneId: number | bigint, enabled = true): { spec: MilestoneSpec | undefined; isLoading: boolean } {
+  const { chainId } = useActiveChain();
+  const { data, isLoading } = useReadContract({
+    chainId,
+    address: addr("MilestoneManager"),
+    abi: milestoneManagerAbi,
+    functionName: "getMilestone",
+    args: [BigInt(milestoneId)],
+    query: { enabled },
+  });
+  const raw = (data as { descriptionCID?: string } | undefined)?.descriptionCID;
+  return { spec: data ? decodeSpec(raw) : undefined, isLoading };
+}
 
 
 // ── MilestoneManager — Scholar & Committee Actions ──────────────────────────

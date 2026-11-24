@@ -51,6 +51,8 @@ export function CandidateList({ program }: CandidateListProps) {
 
       <VotingBoard
         showHeader={false}
+        pid={program.pid}
+        token={program.token}
         candidates={shortlisted}
         votes={votesQ.data ?? []}
         recommendations={recsQ.data ?? []}

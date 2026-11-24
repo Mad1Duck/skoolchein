@@ -11,6 +11,7 @@ import { MyRecommendationsCard } from '../components/MyRecommendationsCard';
 import { ApplicantRow } from '../components/ApplicantRow';
 import { VotingBoard } from '../components/VotingBoard';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
+import { MilestonePlanCard } from '../components/MilestonePlanCard';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -214,17 +215,6 @@ export function ProgramDetailPage() {
               onClick={() => setActiveTab('applicants')}
             />
           )}
-          {program.openDonation && !myApplication && (
-            <NeoButton
-              label={t('detail.donate')}
-              variant="success"
-              size="md"
-              onClick={() => {
-                setDonateAmount(undefined);
-                setIsDonateOpen(true);
-              }}
-            />
-          )}
           {(program.status === 'SCREENING' || (program.status === 'APPLICATION_OPEN' && applicationsClosed)) &&
             (program.openDonation || userAddress === program.initiator) && (
               <NeoButton
@@ -294,6 +284,8 @@ export function ProgramDetailPage() {
           <MyRecommendationsCard programId={program.pid} student={userAddress} />
         )}
 
+      <MilestonePlanCard programId={program.pid} />
+
       <ProgramFundingCard
         program={program}
         donateBlockedReason={myApplication ? t('detail.applicantCannotDonate') : undefined}
@@ -306,7 +298,7 @@ export function ProgramDetailPage() {
 
       {/* Phase timeline */}
       <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-5 md:p-6">
-        <PhaseTimeline currentStatus={effectiveStatus(program)} />
+        <PhaseTimeline currentStatus={effectiveStatus(program)} window={program} />
       </div>
 
       {/* Stats */}
@@ -354,6 +346,8 @@ export function ProgramDetailPage() {
         {activeTab === 'applicants' && program.status === 'VOTING' && program.openDonation && (
           <div className="mb-8">
             <VotingBoard
+              pid={program.pid}
+              token={program.token}
               candidates={rankedApplicants.filter((a) => a.status === 'SHORTLISTED')}
               votes={votesQ.data ?? []}
               recommendations={recsQ.data ?? []}

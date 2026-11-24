@@ -5,6 +5,7 @@ import { EvidenceFilesInput } from '@/components/ui/EvidenceFilesInput';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSubmitMilestone } from '@/lib/contracts/write-hooks';
+import { useMilestoneSpec } from '@/lib/contracts/v4/hooks/milestones';
 import { scholarshipCoreAbi } from '@/constants/contractsV4';
 import { getV4Addresses } from '@/lib/chain/chains';
 import { useActiveChain } from '@/lib/chain/useActiveChain';
@@ -52,7 +53,10 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
         ? t('submit.durDays', { n: Math.round(windowSec / 86400) })
         : t('submit.durHours', { n: Math.max(1, Math.round(windowSec / 3600)) });
 
-  const needsProof = milestone.kind !== 'MANDATORY' || milestone.requiresProof;
+  // For a mandatory milestone the creator decides, in the plan, whether proof is required.
+  const { spec, isLoading: specLoading } = useMilestoneSpec(milestone.blockchainId, isOpen);
+  const needsProof = milestone.kind !== 'MANDATORY' || milestone.requiresProof || !!spec?.proof;
+  const instruction = spec?.text.trim() ?? '';
 
   useEffect(() => {
     if (isSuccess) {
@@ -122,6 +126,12 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
 
             <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm space-y-2">
               <p className="font-bold">{t('submit.what')}</p>
+              {instruction && (
+                <div className="rounded-lg border-2 border-black bg-white p-2">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('spec.fromCreator')}</p>
+                  <p className="text-sm font-bold [overflow-wrap:anywhere]">{instruction}</p>
+                </div>
+              )}
               {needsProof ? (
                 <p className="text-gray-700 text-xs">{t('submit.proofHelp')}</p>
               ) : (
@@ -171,7 +181,7 @@ export function SubmitMilestoneModal({ isOpen, onClose, milestone }: Props) {
                 variant="primary"
                 className="!rounded-xl"
                 loading={isPending}
-                disabled={isPending || (needsProof && !proofDescription.trim() && files.length === 0)}
+                disabled={isPending || specLoading || (needsProof && !proofDescription.trim() && files.length === 0)}
                 fullWidth
               />
             </div>
