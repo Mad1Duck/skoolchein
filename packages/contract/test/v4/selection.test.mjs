@@ -263,11 +263,13 @@ describe("winners: screening score plus votes as a bonus", () => {
   });
 
   it("caps one donor's counted votes at a share of the fund", async () => {
-    // 100 ETH fund, 25% cap = 25 ETH. This donor gives 60 ETH.
+    // 100 ETH fund + this donor's 60 ETH (less the fee) = the program fund; the cap is 25% of ALL of it.
     const p = await votingReady({ weight: 5000, donations: [{ account: donor(0), amount: parseEther("60") }] });
     const [s1] = p.students;
     await sys.as(donor(0)).write(core, "voteForCandidate", [BigInt(p.pid), s1, false]);
-    assert.equal((await applicant(p.pid, s1)).votes, parseEther("25"));
+    const fund = (await sys.read(core, "getProgram", [BigInt(p.pid)])).totalFund;
+    assert.ok(fund > parseEther("100"), "the donation is part of the fund");
+    assert.equal((await applicant(p.pid, s1)).votes, (fund * 2_500n) / 10_000n);
   });
 
   it("only the Selection contract can change the voter cap on Core", async () => {
@@ -292,9 +294,11 @@ describe("milestone plan applied to every winner", () => {
     const p = await votingReady({ weight: 0, shares: [3_000, 7_000] });
     await warpTo(p.timeline[3]);
     await selectWinners(stranger(), p.pid, await rankShortlist(p.pid));
-    // 100 ETH / 2 winners = 50 ETH each -> 15 + 35.
+    // The whole fund (deposit + donations) / 2 winners, split 30% / 70% (the last takes the remainder).
+    const share = (await sys.read(core, "getProgram", [BigInt(p.pid)])).totalFund / 2n;
+    const first = (share * 3_000n) / 10_000n;
     for (const w of p.students.slice(0, 2)) {
-      assert.deepEqual(await amountsOf(p.pid, w), [parseEther("15"), parseEther("35")]);
+      assert.deepEqual(await amountsOf(p.pid, w), [first, share - first]);
     }
   });
 
@@ -302,7 +306,8 @@ describe("milestone plan applied to every winner", () => {
     const p = await votingReady();
     await warpTo(p.timeline[3]);
     await selectWinners(stranger(), p.pid, await rankShortlist(p.pid));
-    assert.deepEqual(await amountsOf(p.pid, p.students[0]), [parseEther("50")]);
+    const share = (await sys.read(core, "getProgram", [BigInt(p.pid)])).totalFund / 2n;
+    assert.deepEqual(await amountsOf(p.pid, p.students[0]), [share]);
   });
 
   it("validates the creator's setup", async () => {

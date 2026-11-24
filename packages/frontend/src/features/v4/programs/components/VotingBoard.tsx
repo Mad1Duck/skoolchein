@@ -29,6 +29,9 @@ interface Props {
 /** Header colours, cycled by position so neighbouring cards never match. */
 const HEADERS = ['bg-skyellow', 'bg-skpink', 'bg-skgreen', 'bg-skcyan'] as const;
 
+/** Shared look of the card's two action buttons: same height, centred, one line of text. */
+const BTN = 'flex h-12 items-center justify-center gap-1.5 rounded-xl border-2 border-black px-2 text-center text-xs font-extrabold uppercase leading-tight tracking-wide';
+
 interface Tally {
   voters: number;
   weight: bigint;
@@ -240,12 +243,17 @@ function CandidateCard({
           <dl className="rounded-xl border-2 border-black bg-skyellow-light p-2.5 space-y-1 text-xs">
             <div className="flex justify-between gap-2">
               <dt className="text-gray-600">{t('board.weight')}</dt>
-              <dd className="font-data font-bold text-right">{weightText}</dd>
+              <dd className="font-data font-bold text-right whitespace-nowrap">{weightText}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-gray-600">{t('board.backing')}</dt>
-              <dd className="font-data font-bold text-right">
-                {stakeInfo ? `${money(stakeInfo.amount)} · ${t('board.backers', { n: stakeInfo.backers })}` : '—'}
+              <dd className="font-data font-bold text-right whitespace-nowrap">
+                {stakeInfo ? (
+                  <>
+                    {money(stakeInfo.amount)}
+                    <span className="block text-[10px] font-normal text-gray-600">{t('board.backers', { n: stakeInfo.backers })}</span>
+                  </>
+                ) : '—'}
               </dd>
             </div>
             {myWeightText !== undefined && (
@@ -268,27 +276,26 @@ function CandidateCard({
           <span className="font-bold font-data">{recCount > 0 ? `${recCount} · ${recAvg}` : t('appl.recNone')}</span>
         </p>
 
-        <div className="flex gap-2">
+        {/* Two equal buttons, same height: your vote, then your backing deposit. */}
+        <div className={`grid gap-2 ${onBack && !isMe ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {isMe ? (
-            <div className="flex-1 rounded-xl border-2 border-black bg-gray-100 py-2.5 text-center text-sm font-extrabold uppercase tracking-wider text-gray-500">
-              {t('board.you')}
-            </div>
+            <div className={`${BTN} bg-gray-100 text-gray-500`}>{t('board.you')}</div>
           ) : voted ? (
-            <div className="flex-1 rounded-xl border-2 border-black bg-skgreen-dark py-2.5 text-center text-sm font-extrabold uppercase tracking-wider text-white shadow-[3px_3px_0_0_#000]">
-              {t('board.voted')} ✓
+            <div className={`${BTN} bg-skgreen-dark text-white shadow-[3px_3px_0_0_#000]`}>
+              <span aria-hidden>✓</span> {t('board.voted')}
             </div>
           ) : usedVote ? (
             // One vote per wallet per program: it is already spent on another candidate.
-            <div title={t('board.oneVote')} className="flex-1 rounded-xl border-2 border-black bg-gray-100 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500">
+            <div title={t('board.oneVote')} className={`${BTN} bg-gray-100 text-gray-500`}>
               {t('board.oneVoteShort')}
             </div>
           ) : (
             <button
               type="button"
               onClick={onVote}
-              className="flex-1 rounded-xl border-2 border-black bg-skpurple py-2.5 text-sm font-extrabold uppercase tracking-wider text-white shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skpurple-hover active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              className={`${BTN} bg-skpurple text-white shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skpurple-hover active:translate-x-0.5 active:translate-y-0.5 active:shadow-none`}
             >
-              {t('board.vote')} ⚡
+              <span aria-hidden>⚡</span> {t('board.vote')}
             </button>
           )}
           {onBack && !isMe && (
@@ -297,16 +304,13 @@ function CandidateCard({
               <button
                 type="button"
                 onClick={onBack}
-                className="rounded-xl border-2 border-black bg-white px-4 py-2.5 text-sm font-extrabold uppercase tracking-wider shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skbw active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                className={`${BTN} bg-white shadow-[3px_3px_0_0_#000] transition-transform hover:bg-skbw active:translate-x-0.5 active:translate-y-0.5 active:shadow-none`}
               >
                 {t('candidate.back')}
               </button>
             ) : (
-              <div
-                title={voted ? t('board.backDone') : t('board.backNeedVote')}
-                className="rounded-xl border-2 border-black bg-gray-100 px-4 py-2.5 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500"
-              >
-                {voted ? `${t('board.backedShort')} ✓` : t('candidate.back')}
+              <div title={voted ? t('board.backDone') : t('board.backNeedVote')} className={`${BTN} bg-gray-100 text-gray-500`}>
+                {voted && <span aria-hidden>✓</span>} {voted ? t('board.backedShort') : t('candidate.back')}
               </div>
             )
           )}

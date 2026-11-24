@@ -1,7 +1,8 @@
 import { Injectable, Singleton } from "hono-forge";
-import { eq, and, desc, count } from "@ponder/client";
+import { eq, ilike, and, desc, count } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
 import { onChain } from "@/config/chain-context";
+import { withDefenseDeadline } from "./defense";
 
 const { v4Disputes, v4Programs } = ponderSchema;
 
@@ -11,8 +12,8 @@ export class DisputesService {
   async list(opts: { status?: string; bountyHunter?: string; scholar?: string; limit: number; offset: number }) {
     const conditions = [];
     if (opts.status) conditions.push(eq(v4Disputes.status, opts.status as any));
-    if (opts.bountyHunter) conditions.push(eq(v4Disputes.bountyHunter, opts.bountyHunter));
-    if (opts.scholar) conditions.push(eq(v4Disputes.scholarAddress, opts.scholar));
+    if (opts.bountyHunter) conditions.push(ilike(v4Disputes.bountyHunter, opts.bountyHunter));
+    if (opts.scholar) conditions.push(ilike(v4Disputes.scholarAddress, opts.scholar));
     const where = onChain(v4Disputes, ...conditions);
 
     const [data, [total]] = await Promise.all([
@@ -34,7 +35,10 @@ export class DisputesService {
       ponderClient.db.select({ value: count() }).from(v4Disputes).where(where),
     ]);
 
-    return { data, total: Number(total?.value ?? 0) };
+    return {
+      data: data.map((row) => ({ ...row, dispute: withDefenseDeadline(row.dispute) })),
+      total: Number(total?.value ?? 0),
+    };
   }
 
   async getByBlockchainId(blockchainId: number) {
@@ -52,6 +56,6 @@ export class DisputesService {
       .where(onChain(v4Disputes, eq(v4Disputes.blockchainId, blockchainId)))
       .limit(1);
 
-    return result ?? null;
+    return result ? { ...result, dispute: withDefenseDeadline(result.dispute) } : null;
   }
 }

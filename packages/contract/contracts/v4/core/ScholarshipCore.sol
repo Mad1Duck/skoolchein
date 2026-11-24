@@ -268,6 +268,9 @@ contract ScholarshipCore is ScholarshipCoreBase {
         token.pullIn(msg.sender, address(treasury), grossAmount);
         uint256 net = grossAmount - fee;
         voter.donatedAmount = net; voter.remainingVotingPower = net;
+        // A donation funds the scholars, so it counts toward the program's fund: that is what the
+        // winners' milestones are divided from (Selection) and what the Treasury actually holds.
+        programs[pid].totalFund += net;
         treasury.recordDonation(pid, msg.sender, net);
         donorNFT.mint(msg.sender, pid, nftMetadataURI);
         emit DonationReceived(pid, msg.sender, grossAmount, net);
