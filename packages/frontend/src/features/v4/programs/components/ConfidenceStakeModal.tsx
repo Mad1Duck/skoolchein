@@ -6,8 +6,7 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useConfidenceStakeFlow } from '@/lib/contracts/v4';
 import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
-import { useReputation } from '@/lib/api/hooks';
-import { useAccount } from 'wagmi';
+import { useProgram } from '@/lib/api/hooks';
 import { useReadContract } from 'wagmi';
 import { scholarshipTreasuryAbi } from '@/constants/contractsV4';
 import { getV4Addresses } from '@/lib/chain/chains';
@@ -16,6 +15,7 @@ import { getTokenMeta, formatTokenAmount, formatTokenWithSymbol, parseTokenAmoun
 import { formatToIDR } from '@/util/localCurrency';
 import { TopUpModal } from '@/components/ramp/TopUpModal';
 import { useT } from '@/lib/i18n';
+import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 
 /**
  * What a deposit of `amount` pays out in each outcome, so the donor can see it before signing.
@@ -150,17 +150,17 @@ interface Props {
 export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddress, scholarName, token }: Props) {
   const { t } = useT();
   const tokenMeta = getTokenMeta(token);
-  const { address } = useAccount();
   const [amount, setAmount] = useState('10');
   const [started, setStarted] = useState(false);
   const [topUpOpen, setTopUpOpen] = useState(false);
 
-  const { data: repData } = useReputation(address ?? '');
   const { start, phase, isPending, isSuccess, error, reset } = useConfidenceStakeFlow(token);
-  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(token, amount);
+  const { balance, hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(token, amount);
+  const { data: program } = useProgram(String(programId));
 
-  const donationPower = repData?.remainingVotingPower ?? '0';
-  const maxStake = Number(formatTokenAmount(donationPower, token));
+  // The deposit comes out of the wallet (not the voting weight). The contract only caps it at the
+  // program's total fund, so that is the limit shown.
+  const maxStake = Number(formatTokenAmount(program?.totalFund ?? '0', token));
   const name = scholarName ?? scholarAddress;
 
   const handleClose = () => {
@@ -188,35 +188,71 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
     );
   }
 
+  const amountNum = Number(amount);
+  const overMax = amountNum > maxStake && maxStake > 0;
+  const canSubmit = !!amount && amountNum > 0 && !overMax && hasEnough;
+  const quick = [10, 50, 100].filter((v) => maxStake === 0 || v <= maxStake);
+
   return (
     <NeoModal isOpen={isOpen} onClose={handleClose} title={t('stake.title')}>
       <div className="space-y-4">
         {!started && (
           <>
-            <p className="text-sm text-gray-700 bg-skyellow-light p-3 border-2 border-black rounded-lg">
-              {t('stake.intro')}
-            </p>
-
-            <div className="bg-white border-2 border-dashed border-black p-3 flex justify-between items-center shadow-[2px_2px_0_0_#000]">
-              <span className="text-xs font-bold text-gray-500 uppercase">{t('stake.available')}</span>
-              <span className="font-black">{formatTokenAmount(donationPower, token)} {tokenMeta.symbol}</span>
+            {/* Who you are backing */}
+            <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-skyellow-light p-3">
+              <WalletAvatar address={scholarAddress} size={40} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('vote.sumCandidate')}</p>
+                <p className="font-paytone text-lg leading-tight truncate">{scholarName ?? shortenAddress(scholarAddress)}</p>
+                <p className="font-data text-xs text-gray-600">{shortenAddress(scholarAddress)}</p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-bold mb-1">
-                {t('stake.amountLabel', { symbol: tokenMeta.symbol })}
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                className="w-full border-2 border-black p-4 font-black text-xl shadow-[3px_3px_0_0_#000]"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <p className="text-xs text-gray-500 mt-2">{t('stake.limit')}</p>
+            <p className="text-sm text-gray-700">{t('stake.intro')}</p>
+
+            {/* Amount */}
+            <div className="rounded-xl border-2 border-black bg-white p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="stake-amount" className="text-sm font-bold">
+                  {t('stake.amountLabel', { symbol: tokenMeta.symbol })}
+                </label>
+                <span className="text-xs text-gray-600">
+                  {t('stake.available')}: <span className="font-data font-bold">{formatTokenAmount(balance, token)} {tokenMeta.symbol}</span>
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  id="stake-amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  className="w-full !rounded-xl !py-3 !pr-16 font-data text-2xl font-bold"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-data text-sm font-bold text-gray-500">
+                  {tokenMeta.symbol}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {quick.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAmount(String(v))}
+                    className={`rounded-full border-2 border-black px-3 py-1 text-xs font-extrabold ${amount === String(v) ? 'bg-skyellow' : 'bg-white hover:bg-gray-50'}`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              {overMax && (
+                <p className="text-xs font-bold text-skred">
+                  {t('stake.overMax', { max: `${maxStake.toLocaleString()} ${tokenMeta.symbol}` })}
+                </p>
+              )}
               {!hasEnough && (
-                <p className="text-xs font-bold text-skred mt-2">
+                <p className="text-xs font-bold text-skred">
                   {t('stake.shortfall', {
                     amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${amount} ${tokenMeta.symbol}`,
                   })}{' '}
@@ -227,6 +263,7 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
                   )}
                 </p>
               )}
+              <p className="text-xs text-gray-500">{t('stake.limit', { max: `${maxStake.toLocaleString()} ${tokenMeta.symbol}` })}</p>
             </div>
 
             <StakeOutcome amount={amount} token={token} programId={programId} />
@@ -235,12 +272,21 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
         )}
 
         {started && (
-          <div className="text-center py-10 space-y-3">
-            <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-2" />
+          <div className="space-y-4 py-6 text-center">
+            {/* Two steps for an ERC20 program: allow the funds, then deposit. */}
+            {!tokenMeta.isNative && (
+              <div className="flex items-center justify-center gap-2 text-xs font-bold">
+                <span className={`rounded-full border-2 border-black px-3 py-1 ${phase === 'approving' ? 'bg-skyellow' : 'bg-skgreen'}`}>
+                  1 · {t('stake.stepAllow')}
+                </span>
+                <span aria-hidden>→</span>
+                <span className={`rounded-full border-2 border-black px-3 py-1 ${phase === 'approving' ? 'bg-white' : 'bg-skyellow'}`}>
+                  2 · {t('stake.stepDeposit')}
+                </span>
+              </div>
+            )}
             <p className="font-bold text-lg">
-              {phase === 'approving'
-                ? t('stake.approving', { symbol: tokenMeta.symbol })
-                : t('stake.confirming')}
+              {phase === 'approving' ? t('stake.approving', { symbol: tokenMeta.symbol }) : t('stake.confirming')}
             </p>
             <p className="text-sm text-gray-600">
               {phase === 'approving'
@@ -252,18 +298,13 @@ export function ConfidenceStakeModal({ isOpen, onClose, programId, scholarAddres
           </div>
         )}
 
-        <div className="pt-4 border-t-2 border-gray-100 flex justify-end gap-2">
-          <NeoButton label={t('common.cancel')} variant="ghost" onClick={handleClose} disabled={isPending} />
+        <div className="pt-3 border-t-2 border-gray-100 flex gap-2">
+          <NeoButton label={t('common.cancel')} variant="ghost" className="!rounded-xl" onClick={handleClose} disabled={isPending} fullWidth />
           {!started && (
-            <NeoButton
-              label={t('stake.submit')}
-              variant="primary"
-              onClick={handleStart}
-              disabled={!amount || Number(amount) <= 0 || Number(amount) > maxStake || !hasEnough}
-            />
+            <NeoButton label={t('stake.submit')} variant="primary" className="!rounded-xl" onClick={handleStart} disabled={!canSubmit} fullWidth />
           )}
           {started && error && (
-            <NeoButton label={t('common.retry')} variant="primary" onClick={handleStart} />
+            <NeoButton label={t('common.retry')} variant="primary" className="!rounded-xl" onClick={handleStart} fullWidth />
           )}
         </div>
       </div>

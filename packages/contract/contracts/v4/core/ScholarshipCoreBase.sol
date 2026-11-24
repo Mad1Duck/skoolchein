@@ -239,6 +239,7 @@ abstract contract ScholarshipCoreBase is Initializable {
     error StudentNotCompleted(uint256 pid, address scholar);
     error StudentNFTNotConfigured();
     error CannotVoteForSelf();
+    error AlreadyVoted();
 
     // ── Shared Helpers ───────────────────────────────────────────────────────
     function _requireProgramExists(uint256 pid) internal view { if (pid == 0 || pid > _nextProgramId) revert ProgramNotFound(); }
@@ -329,6 +330,9 @@ abstract contract ScholarshipCoreBase is Initializable {
         ScholarshipTypes.Program storage p = programs[pid];
         if (!p.openDonation) revert PublicParticipationDisabled();
         if (candidate == msg.sender) revert CannotVoteForSelf();
+        // One vote per wallet per program. Donation weight is spent by the first vote, but reputation
+        // weight is not, so without this a wallet could vote for every candidate and overwrite votedFor.
+        if (voterInfo[pid][msg.sender].votedFor != address(0)) revert AlreadyVoted();
         if (block.timestamp < uint256(p.votingStart) || block.timestamp > uint256(p.votingEnd)) revert TooEarly();
         if (applicants[pid][candidate].status != ScholarshipTypes.ApplicationStatus.SHORTLISTED) revert CandidateNotShortlisted();
         

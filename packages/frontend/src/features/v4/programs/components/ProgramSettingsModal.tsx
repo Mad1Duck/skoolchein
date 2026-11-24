@@ -14,6 +14,7 @@ import {
 } from '@/lib/contracts/v4/hooks/selection';
 import { useT } from '@/lib/i18n';
 import { toDate } from '@/lib/time';
+import { decodeSpec, encodeSpec } from '@/lib/milestoneSpec';
 import { isAddress } from 'viem';
 
 interface Props {
@@ -24,12 +25,14 @@ interface Props {
 
 interface Row {
   share: string; // percent, e.g. "30" or "33.33"
-  description: string;
+  description: string; // the creator's instruction to the scholar
+  proof: boolean; // the scholar must hand in evidence (only for Manual milestones)
   provider: string;
   externalId: string;
 }
 
-const emptyRow = (share = '100'): Row => ({ share, description: '', provider: '', externalId: '' });
+// A manual milestone asks for proof unless the creator switches it off.
+const emptyRow = (share = '100'): Row => ({ share, description: '', proof: true, provider: '', externalId: '' });
 
 /** Percent text -> basis points (two decimals of precision), NaN-safe. */
 const toBps = (percent: string) => Math.round((parseFloat(percent) || 0) * 100);
@@ -73,7 +76,8 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
       plan.shareBps.length > 0
         ? plan.shareBps.map((b, i) => ({
             share: String(b / 100),
-            description: plan.descriptions[i] ?? '',
+            description: decodeSpec(plan.descriptions[i]).text,
+            proof: decodeSpec(plan.descriptions[i]).proof,
             provider: plan.providers[i] ?? '',
             externalId: plan.externalIds[i] ?? '',
           }))
@@ -109,7 +113,8 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
   const handleSave = () =>
     configureProgram(BigInt(programId), Math.round(weight * 100), {
       shareBps: rows.map((r) => toBps(r.share)),
-      descriptions: rows.map((r) => r.description),
+      // Platform milestones are verified by the platform, so they never ask the scholar for proof.
+      descriptions: rows.map((r) => encodeSpec({ proof: !r.provider && r.proof, text: r.description })),
       providers: rows.map((r) => r.provider),
       externalIds: rows.map((r) => r.externalId),
     });
@@ -162,9 +167,9 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
                       onChange={(e) => update(i, { share: e.target.value })} />
                   </div>
                   <div className="col-span-12 sm:col-span-4">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.description')}</label>
+                    <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('spec.instruction')}</label>
                     <input type="text" className="w-full !py-1.5 !text-sm !rounded-lg" value={r.description} disabled={locked}
-                      placeholder={t('winners.descriptionPlaceholder')} onChange={(e) => update(i, { description: e.target.value })} />
+                      placeholder={t('spec.instructionPlaceholder')} onChange={(e) => update(i, { description: e.target.value })} />
                   </div>
                   <div className="col-span-6 sm:col-span-3">
                     <label className="text-[10px] font-bold uppercase text-gray-500 mb-1 block">{t('winners.platform')}</label>
@@ -186,6 +191,18 @@ export function ProgramSettingsModal({ isOpen, onClose, programId }: Props) {
                     )}
                   </div>
                 </div>
+                {r.provider ? (
+                  <p className="mt-2 text-xs text-gray-600">{t('spec.autoVerified')}</p>
+                ) : (
+                  <label className="mt-2 flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" className="size-4 mt-0.5 accent-skpurple !shadow-none" checked={r.proof} disabled={locked}
+                      onChange={(e) => update(i, { proof: e.target.checked })} />
+                    <span>
+                      <span className="font-bold">{t('spec.requireProof')}</span>
+                      <span className="block text-xs text-gray-600">{r.proof ? t('spec.requireProofOn') : t('spec.requireProofOff')}</span>
+                    </span>
+                  </label>
+                )}
               </div>
             ))}
           </div>

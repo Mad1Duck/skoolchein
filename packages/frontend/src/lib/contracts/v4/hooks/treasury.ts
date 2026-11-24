@@ -2,7 +2,8 @@ import { addr, usdcAddr } from "@/lib/chain/addr";
 import { scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi } from "@/constants/contractsV4";
 import { parseUnits } from "viem";
 import { useTxHook } from "./use-tx-base";
-import { parseTokenAmount, nativeValueFor, isNativeToken } from "../token";
+import { parseTokenAmount, nativeValueFor, isNativeToken, formatTokenWithSymbol } from "../token";
+import { describeNextTx } from "@/lib/tx/txStore";
 
 
 // ── USDC ──────────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ export function useDonate() {
     token?: `0x${string}`,
   ) => {
     const amount = parseTokenAmount(amountStr, token);
+    describeNextTx(formatTokenWithSymbol(amount, token));
     writeContract({
       address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
@@ -111,6 +113,7 @@ export function useFundBonusPool() {
   /** Native programs carry the amount as msg.value; ERC20 ones need the approve() from `useBonusPoolFlow`. */
   const fund = (pid: bigint, amountStr: string, token?: `0x${string}`) => {
     const amount = parseTokenAmount(amountStr, token);
+    describeNextTx(formatTokenWithSymbol(amount, token));
     writeContract({
       address: addr("ScholarshipTreasury"),
       abi: scholarshipTreasuryAbi,

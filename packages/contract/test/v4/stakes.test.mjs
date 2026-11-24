@@ -53,6 +53,16 @@ async function winnersChosen(p) {
   await sys.as(stranger()).write(selection, "selectWinners", [BigInt(p.pid), await rankShortlist(p.pid)]);
 }
 
+describe("one vote per wallet", () => {
+  it("a second vote, for the same or another candidate, is refused", async () => {
+    const p = await staked();
+    await expectRevert(sys.as(donor(0)).write(core, "voteForCandidate", [BigInt(p.pid), p.students[0], false]), "AlreadyVoted");
+    await expectRevert(sys.as(donor(0)).write(core, "voteForCandidate", [BigInt(p.pid), p.s3, false]), "AlreadyVoted");
+    // The deposit stays tied to the candidate the wallet voted for.
+    assert.equal(await stake(p.pid, donor(0)), p.amount);
+  });
+});
+
 describe("settling a stake after the vote", () => {
   it("holds the deposit while voting is still going on", async () => {
     const p = await staked();

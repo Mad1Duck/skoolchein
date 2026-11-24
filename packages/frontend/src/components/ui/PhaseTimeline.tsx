@@ -1,4 +1,5 @@
-import type { ProgramStatus } from "@/lib/api/types";
+import type { Program, ProgramStatus } from "@/lib/api/types";
+import { useVotingClock } from "@/features/v4/vote/useVotingClock";
 import { useT } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
 
@@ -16,14 +17,33 @@ const statusOrder: Record<string, number> = {
   VOTING: 3, ACTIVE: 4, COMPLETED: 5, CANCELLED: -1,
 };
 
+type Window = Pick<Program, "applicationStart" | "applicationEnd" | "votingStart" | "votingEnd">;
+
+/** The next moment that matters in each stage, and what to call it. */
+function nextMoment(status: ProgramStatus, w?: Window): { at: string | null | undefined; key: "applyOpens" | "applyEnds" | "votingOpens" | "votingEnds" } | null {
+  if (!w) return null;
+  switch (status) {
+    case "CREATED": return { at: w.applicationStart, key: "applyOpens" };
+    case "APPLICATION_OPEN": return { at: w.applicationEnd, key: "applyEnds" };
+    case "SCREENING": return { at: w.votingStart, key: "votingOpens" };
+    case "VOTING": return { at: w.votingEnd, key: "votingEnds" };
+    default: return null;
+  }
+}
+
 export function PhaseTimeline({
   currentStatus,
+  window: w,
   className = "",
 }: {
   currentStatus: ProgramStatus;
+  /** The program's dates; when given, the current stage shows a live countdown. */
+  window?: Window;
   className?: string;
 }) {
   const { t } = useT();
+  const moment = nextMoment(currentStatus, w);
+  const clock = useVotingClock(moment?.at ?? null);
   const currentIndex = statusOrder[currentStatus] ?? 0;
   const isCancelled = currentStatus === "CANCELLED";
 
@@ -79,6 +99,20 @@ export function PhaseTimeline({
         <span className="font-bold">{t(`phase.${currentStatus}.label` as TranslationKey)}: </span>
         {t(`phase.${currentStatus}.desc` as TranslationKey)}
       </p>
+
+      {/* Live countdown to the next moment of this stage. */}
+      {moment && clock.text !== null && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-black bg-skyellow-light px-3 py-2">
+          <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-600">
+            {t(`phase.clock.${moment.key}` as TranslationKey)}
+          </span>
+          {clock.ended ? (
+            <span className="text-sm font-bold">{t(`phase.clock.${moment.key}.over` as TranslationKey)}</span>
+          ) : (
+            <span className="font-data text-lg font-bold tabular-nums">{clock.text}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

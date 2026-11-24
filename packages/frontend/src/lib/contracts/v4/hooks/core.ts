@@ -1,7 +1,8 @@
 import { addr } from "@/lib/chain/addr";
 import { scholarshipCoreAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
-import { NATIVE_TOKEN, parseTokenAmount, nativeValueFor } from "../token";
+import { NATIVE_TOKEN, parseTokenAmount, nativeValueFor, formatTokenWithSymbol } from "../token";
+import { describeNextTx } from "@/lib/tx/txStore";
 
 
 // ── Program Lifecycle ─────────────────────────────────────────────────────────
@@ -209,6 +210,7 @@ export function usePlaceConfidenceStake() {
     token?: `0x${string}`,
   ) => {
     const amount = parseTokenAmount(amountStr, token);
+    describeNextTx(formatTokenWithSymbol(amount, token));
     writeContract({
       address: addr("ScholarshipCore"),
       abi: scholarshipCoreAbi,
