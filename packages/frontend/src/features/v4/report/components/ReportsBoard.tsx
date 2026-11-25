@@ -125,7 +125,7 @@ function ReportCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: strin
       : "bg-gray-200";
 
   return (
-    <article className={`rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] ${iAmScholar && isActive && !defended ? "ring-4 ring-skyellow" : ""}`}>
+    <article className={`overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] ${iAmScholar && isActive && !defended ? "ring-4 ring-skyellow" : ""}`}>
       {/* Which program, what kind of report, and where it stands */}
       <div className="border-b-2 border-black bg-skred-light px-4 py-3">
         <div className="flex items-start justify-between gap-3">
