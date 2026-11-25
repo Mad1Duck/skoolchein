@@ -81,6 +81,22 @@ export function useVoteOnDispute() {
   return { voteOnDispute, isPending, isSuccess, error, hash, reset };
 }
 
+/** The creator of a program rules on a report in that program (alongside the committee's vote). */
+export function useResolveDisputeAsCreator() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const resolveAsCreator = (disputeId: bigint, pid: bigint, upholdDispute: boolean) => {
+    writeContract({
+      address: addr("CommitteeGovernance"),
+      abi: committeeGovernanceAbi,
+      functionName: "resolveDisputeAsCreator",
+      args: [disputeId, pid, upholdDispute],
+    });
+  };
+
+  return { resolveAsCreator, isPending, isSuccess, error, hash, reset };
+}
+
 export function useVoteOnMilestone() {
   const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
 

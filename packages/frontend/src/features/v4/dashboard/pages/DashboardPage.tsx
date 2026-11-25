@@ -12,6 +12,8 @@ import {
   StudentPanel,
   VoterPanel,
   BountyHunterPanel,
+  AgainstMePanel,
+  CreatorRulingActions,
   ProgramReportsPanel,
   CommitteePanel,
 } from '../components/Panels';
@@ -169,7 +171,7 @@ export function DashboardPage() {
   if (programsCreated.length > 0) roles.push('INITIATOR');
   if (scholarships.length > 0) roles.push('SCHOLAR');
   if (votes.length > 0 || stakes.length > 0) roles.push('VOTER');
-  if (disputes.length > 0) roles.push('BOUNTY_HUNTER');
+  if (disputes.some((d) => d.bountyHunter?.toLowerCase() === address?.toLowerCase())) roles.push('BOUNTY_HUNTER');
   if (committeeProgramIds.length > 0) roles.push('COMMITTEE');
 
   const roleFills: Record<string, string> = {
@@ -189,8 +191,12 @@ export function DashboardPage() {
   const selectedProgram = programsCreated.find((p) => p.pid === selectedPid) ?? programsCreated[0];
   const selectedScholarship = scholarships[scholarshipIndex];
   // Open the activity tab that has something in it.
+  const me = address?.toLowerCase();
+  const againstMe = disputes.filter((d) => d.scholarAddress?.toLowerCase() === me);
+  const filedByMe = disputes.filter((d) => d.bountyHunter?.toLowerCase() === me);
+  const needsDefense = againstMe.some((d) => d.status === 'ACTIVE' && !d.counterEvidenceCID);
   const defaultActivityTab =
-    votes.length + stakes.length > 0 ? 'voter' : disputes.length > 0 ? 'reporter' : committeeProgramIds.length > 0 ? 'committee' : 'voter';
+    needsDefense ? 'against' : votes.length + stakes.length > 0 ? 'voter' : againstMe.length > 0 ? 'against' : filedByMe.length > 0 ? 'reporter' : committeeProgramIds.length > 0 ? 'committee' : 'voter';
   // Reports filed against the program being shown (the creator's own view of them).
   const selectedProgramReports = (dashboard.programDisputes ?? []).filter((d) => d.pid === selectedProgram?.pid);
 
@@ -324,7 +330,7 @@ export function DashboardPage() {
                 </DashboardTabsTrigger>
               </DashboardTabsList>
               <DashboardTabsContent value="reports">
-                <ProgramReportsPanel disputes={selectedProgramReports} />
+                <ProgramReportsPanel disputes={selectedProgramReports} renderActions={(d) => <CreatorRulingActions dispute={d} />} />
               </DashboardTabsContent>
               <DashboardTabsContent value="milestones">
                 <ProviderMilestonesPanel
@@ -399,7 +405,10 @@ export function DashboardPage() {
               {t('panel.voterActivity')}{votes.length + stakes.length > 0 ? ` (${votes.length + stakes.length})` : ''}
             </DashboardTabsTrigger>
             <DashboardTabsTrigger value="reporter" className="bg-skgreen">
-              {t('panel.reporterActivity')}{disputes.length > 0 ? ` (${disputes.length})` : ''}
+              {t('panel.reporterActivity')}{filedByMe.length > 0 ? ` (${filedByMe.length})` : ''}
+            </DashboardTabsTrigger>
+            <DashboardTabsTrigger value="against" className="bg-skyellow">
+              {t('panel.againstMe')}{againstMe.length > 0 ? ` (${againstMe.length})` : ''}
             </DashboardTabsTrigger>
             <DashboardTabsTrigger value="committee" className="bg-skcyan">
               {t('panel.committeeDuties')}{committeeProgramIds.length > 0 ? ` (${committeeProgramIds.length})` : ''}
@@ -410,8 +419,11 @@ export function DashboardPage() {
           </DashboardTabsContent>
           <DashboardTabsContent value="reporter" className="!min-h-0">
             <div className="w-full min-w-0">
-              <BountyHunterPanel disputes={disputes} bare hasProgramReports={(dashboard.programDisputes ?? []).length > 0} />
+              <BountyHunterPanel disputes={filedByMe} bare hasProgramReports={(dashboard.programDisputes ?? []).length > 0} />
             </div>
+          </DashboardTabsContent>
+          <DashboardTabsContent value="against" className="!min-h-0">
+            <div className="w-full min-w-0"><AgainstMePanel disputes={againstMe} /></div>
           </DashboardTabsContent>
           <DashboardTabsContent value="committee" className="!min-h-0">
             <div className="w-full min-w-0">

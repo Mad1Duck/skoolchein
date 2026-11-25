@@ -51,6 +51,7 @@ const addresses = {
   treasury: pick("CONTRACT_TREASURY"),
   milestoneManager: pick("CONTRACT_MILESTONE_MANAGER"),
   bounty: pick("CONTRACT_BOUNTY"),
+  committee: pick("CONTRACT_COMMITTEE"),
 };
 
 // ── compiled artifacts ──────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ const artifacts = {
   treasury: art("finance/ScholarshipTreasury.sol/ScholarshipTreasury.json"),
   milestoneManager: art("core/MilestoneManager.sol/MilestoneManager.json"),
   bounty: art("core/ScholarshipBounty.sol/ScholarshipBounty.json"),
+  committee: art("governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
 };
 
 const chain = defineChain({ id: chainId, name: `chain-${chainId}`, nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });

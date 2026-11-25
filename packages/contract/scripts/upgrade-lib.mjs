@@ -18,8 +18,10 @@ const KINDS = {
   treasury: { artifact: "treasury", call: "upgradeToAndCall", auth: "role" },
   milestoneManager: { artifact: "milestoneManager", call: "upgradeToAndCall", auth: "admin" },
   bounty: { artifact: "bounty", call: "upgradeToAndCall", auth: "role" },
+  committee: { artifact: "committee", call: "upgradeToAndCall", auth: "role" },
 };
-export const UPGRADABLE = Object.keys(KINDS);
+// Committee is opt-in (--only committee): the default upgrade leaves the governance contract alone.
+export const UPGRADABLE = Object.keys(KINDS).filter((k) => k !== "committee");
 
 /**
  * @param {object} o

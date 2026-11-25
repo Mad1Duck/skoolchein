@@ -53,6 +53,11 @@ export const committeeGovernanceAbi = [
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "DisputeNotInProgram",
+    "type": "error"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -715,6 +720,29 @@ export const committeeGovernanceAbi = [
       }
     ],
     "name": "renounceRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "disputeId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "upholdDispute",
+        "type": "bool"
+      }
+    ],
+    "name": "resolveDisputeAsCreator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
