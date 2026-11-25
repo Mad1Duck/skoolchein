@@ -650,6 +650,7 @@ export const id: Record<TranslationKey, string> = {
   'disputes.lead': 'Semua laporan di platform: buktinya, pembelaan penerima, dan langkah selanjutnya. Untuk melaporkan seseorang, pakai Laporan baru.',
   'disputes.newReport': 'Laporan baru',
   'disputes.tabActive': 'Aktif',
+  'disputes.tabProgram': 'Program saya',
   'disputes.tabAgainst': 'Tentang saya',
   'disputes.tabMine': 'Laporan saya',
   'disputes.tabResolved': 'Selesai',

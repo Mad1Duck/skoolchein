@@ -656,6 +656,7 @@ export const en = {
   'disputes.lead': 'Every report on the platform: the evidence, the scholar’s defense and what happens next. To report someone, use New report.',
   'disputes.newReport': 'New report',
   'disputes.tabActive': 'Active',
+  'disputes.tabProgram': 'My programs',
   'disputes.tabAgainst': 'Against me',
   'disputes.tabMine': 'My reports',
   'disputes.tabResolved': 'Resolved',
