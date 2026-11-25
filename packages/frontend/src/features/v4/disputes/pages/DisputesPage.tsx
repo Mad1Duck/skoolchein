@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
-import { useDisputes } from "@/lib/api/hooks";
+import { useDashboard, useDisputes } from "@/lib/api/hooks";
 import { useTriggerAutoGuilty } from "@/lib/contracts/write-hooks";
 import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 import { usdcAddress } from "@/lib/chain/chains";
@@ -17,7 +17,7 @@ import { DefendModal } from "../components/DefendModal";
 import type { Dispute } from "@/lib/api/types";
 import { useT } from "@/lib/i18n";
 
-type Tab = "active" | "against" | "mine" | "resolved";
+type Tab = "active" | "program" | "against" | "mine" | "resolved";
 
 const same = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
@@ -30,6 +30,8 @@ export function DisputesPage() {
   const { t } = useT();
   const { address } = useAccount();
   const { data, isLoading } = useDisputes();
+  // Reports in the programs this wallet created or sits on the committee of (the creator's and the committee's view).
+  const { data: dashboard } = useDashboard(address ?? "");
   const [tab, setTab] = useState<Tab>("active");
   const [defending, setDefending] = useState<Dispute | null>(null);
 
@@ -42,10 +44,13 @@ export function DisputesPage() {
   const against = all.filter((d) => same(d.scholarAddress, address));
   const mine = all.filter((d) => same(d.bountyHunter, address));
   const resolved = all.filter((d) => d.status !== "ACTIVE");
+  const programPids = new Set((dashboard?.programDisputes ?? []).map((d) => d.blockchainId));
+  const inMyPrograms = all.filter((d) => programPids.has(d.blockchainId));
   const needsMe = against.filter((d) => d.status === "ACTIVE" && !d.counterEvidenceCID);
 
   const tabs: Array<{ key: Tab; label: string; items: Dispute[]; tone: string }> = [
     { key: "active", label: t("disputes.tabActive"), items: active, tone: "bg-skred text-white" },
+    { key: "program", label: t("disputes.tabProgram"), items: inMyPrograms, tone: "bg-skgreen" },
     { key: "against", label: t("disputes.tabAgainst"), items: against, tone: "bg-skyellow" },
     { key: "mine", label: t("disputes.tabMine"), items: mine, tone: "bg-skcyan" },
     { key: "resolved", label: t("disputes.tabResolved"), items: resolved, tone: "bg-gray-200" },

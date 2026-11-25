@@ -449,7 +449,7 @@ function ScholarCard({
                     loading={syncing}
                   />
                 )}
-                
+
                 {isVerified ? (
                   <NeoButton
                     label={isSubmitting ? t('panel.verifying') : t('panel.claimMilestone', { id: nextPending.blockchainId })}
@@ -569,6 +569,19 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+/** A short, honest empty state: what this is, and where to start. Replaces the tall dashed hero boxes. */
+function CompactEmpty({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border-2 border-black bg-white p-4 shadow-[3px_3px_0_0_#000] sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="font-paytone text-lg leading-tight">{title}</p>
+        <p className="mt-1 max-w-2xl text-sm text-gray-600">{body}</p>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Voter Panel
 // ─────────────────────────────────────────────────────────────────────────────
@@ -576,29 +589,34 @@ function StatusPill({ status }: { status: string }) {
 export function VoterPanel({
   votes,
   stakes,
+  bare = false,
 }: {
   votes: DashboardData['votes'];
   stakes: DashboardData['stakes'];
   dashboardData: DashboardData;
+  /** Inside a tab: no heading of its own. */
+  bare?: boolean;
 }) {
   const { t } = useT();
   const fmt = useFormatMoney();
   return (
     <section>
-      <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpurple pl-4 leading-none">
-        {t('panel.voterActivity')}
-      </h2>
-      
+      {!bare && (
+        <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skpurple pl-4 leading-none">
+          {t('panel.voterActivity')}
+        </h2>
+      )}
+
       {votes.length === 0 && stakes.length === 0 ? (
-        <NeoCard hoverable={false} className="bg-skpurple-light/30 border-dashed">
-          <NeoCardBody className="py-12 text-center">
-            <h3 className="font-paytone text-2xl mb-2 text-skpurple-dark">{t('panel.shapeTitle')}</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('panel.shapeBody')}</p>
+        <CompactEmpty
+          title={t('panel.shapeTitle')}
+          body={t('panel.shapeBody')}
+          action={
             <Link to="/vote">
-              <NeoButton label={t('panel.discover')} variant="primary" size="lg" />
+              <NeoButton label={t('panel.discover')} variant="primary" size="md" className="!rounded-xl" />
             </Link>
-          </NeoCardBody>
-        </NeoCard>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <NeoCard>
@@ -660,8 +678,13 @@ export function VoterPanel({
 
 export function BountyHunterPanel({
   disputes,
+  bare = false,
+  hasProgramReports = false,
 }: {
   disputes: DashboardData['disputes'];
+  bare?: boolean;
+  /** This wallet runs or sits on a program that has reports (they are in the Reports tab above). */
+  hasProgramReports?: boolean;
 }) {
   const { t } = useT();
   const { rate } = useTokenRate();
@@ -673,26 +696,32 @@ export function BountyHunterPanel({
 
   return (
     <section>
-      <div className="flex justify-between items-end mb-4">
-        <h2 className="font-paytone text-3xl border-l-8 border-skgreen pl-4 leading-none">
-          {t('panel.reporterActivity')}
-        </h2>
-        <Link to="/report">
-          <NeoButton label={t('panel.raise')} variant="danger" size="sm" />
-        </Link>
-      </div>
+      {!bare && (
+        <div className="flex justify-between items-end mb-4">
+          <h2 className="font-paytone text-3xl border-l-8 border-skgreen pl-4 leading-none">
+            {t('panel.reporterActivity')}
+          </h2>
+          <Link to="/report">
+            <NeoButton label={t('panel.raise')} variant="danger" size="sm" />
+          </Link>
+        </div>
+      )}
 
       {disputes.length === 0 ? (
-        <NeoCard hoverable={false} className="bg-skgreen-light/30 border-dashed mb-6">
-          <NeoCardBody className="py-12 text-center">
-            <h3 className="font-paytone text-2xl mb-2 text-skgreen-dark">{t('panel.guardTitle')}</h3>
-            <p className="text-gray-600 mb-3 max-w-md mx-auto">{t('panel.guardBody')}</p>
-            <p className="text-xs text-gray-500 mb-6 max-w-md mx-auto">{t('panel.guardRule')}</p>
-            <Link to="/report">
-              <NeoButton label={t('panel.startReporting')} variant="primary" size="lg" />
-            </Link>
-          </NeoCardBody>
-        </NeoCard>
+        <div className="space-y-3">
+          <CompactEmpty
+            title={t('panel.guardTitle')}
+            body={`${t('panel.guardBody')} ${t('panel.guardRule')}`}
+            action={
+              <Link to="/report">
+                <NeoButton label={t('panel.startReporting')} variant="danger" size="md" className="!rounded-xl" />
+              </Link>
+            }
+          />
+          {hasProgramReports && (
+            <p className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm">{t('panel.reportsAbove')}</p>
+          )}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -814,25 +843,23 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
 export function CommitteePanel({
   programIds,
   dashboardData,
+  bare = false,
 }: {
   programIds: number[];
   dashboardData: DashboardData;
   address: string;
+  bare?: boolean;
 }) {
   const { t } = useT();
   return (
     <section>
-      <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skblue pl-4 leading-none">
-        {t('panel.committeeDuties')}
-      </h2>
+      {!bare && (
+        <h2 className="font-paytone text-3xl mb-4 border-l-8 border-skblue pl-4 leading-none">
+          {t('panel.committeeDuties')}
+        </h2>
+      )}
       {programIds.length === 0 ? (
-        <NeoCard hoverable={false} className="bg-skyellow-light/30 border-dashed">
-          <NeoCardBody className="py-12 text-center">
-            <h3 className="font-paytone text-2xl mb-2 text-skyellow-dark">{t('panel.seatTitle')}</h3>
-            <p className="text-gray-600 mb-4 max-w-md mx-auto">{t('panel.seatBody')}</p>
-            <p className="text-xs text-gray-500 uppercase font-black">{t('panel.waiting')}</p>
-          </NeoCardBody>
-        </NeoCard>
+        <CompactEmpty title={t('panel.seatTitle')} body={`${t('panel.seatBody')} ${t('panel.waiting')}`} />
       ) : (
         <div className="space-y-4">
           {programIds.map((pid) => (
