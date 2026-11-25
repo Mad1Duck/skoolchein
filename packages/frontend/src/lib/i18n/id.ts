@@ -805,6 +805,7 @@ export const id: Record<TranslationKey, string> = {
   'dash.tabPrograms': 'Aksi Program',
   'dash.tabAchievements': 'Pencapaian Saya',
   'dash.tabReports': 'Laporan',
+  'panel.reportsAbove': 'Laporan tentang program yang kamu kelola ada di tab “Laporan” di atas.',
   'progReports.emptyTitle': 'Belum ada laporan untuk program ini',
   'progReports.emptyBody': 'Saat seseorang melaporkan penerima program ini, laporannya muncul di sini lengkap dengan bukti dan batas waktu penerima untuk menjawab.',
   'progReports.intro': 'Laporan yang diajukan terhadap penerima program ini. Penerima punya 7 hari untuk menjawab, lalu komite memutuskan.',

@@ -188,6 +188,9 @@ export function DashboardPage() {
   // Falls back to the first program until one is picked (or if the picked one disappears).
   const selectedProgram = programsCreated.find((p) => p.pid === selectedPid) ?? programsCreated[0];
   const selectedScholarship = scholarships[scholarshipIndex];
+  // Open the activity tab that has something in it.
+  const defaultActivityTab =
+    votes.length + stakes.length > 0 ? 'voter' : disputes.length > 0 ? 'reporter' : committeeProgramIds.length > 0 ? 'committee' : 'voter';
   // Reports filed against the program being shown (the creator's own view of them).
   const selectedProgramReports = (dashboard.programDisputes ?? []).filter((d) => d.pid === selectedProgram?.pid);
 
@@ -389,16 +392,33 @@ export function DashboardPage() {
           </div>
         )}
 
-        {/* Other role panels */}
-        <div className="space-y-10">
-          <VoterPanel votes={votes} stakes={stakes} dashboardData={dashboard} />
-          <BountyHunterPanel disputes={disputes} />
-          <CommitteePanel
-            programIds={committeeProgramIds}
-            dashboardData={dashboard}
-            address={address}
-          />
-        </div>
+        {/* Everything else this wallet does, in the same tabbed layout as the section above */}
+        <DashboardTabs defaultValue={defaultActivityTab} className="mb-12">
+          <DashboardTabsList>
+            <DashboardTabsTrigger value="voter" className="bg-skpurple text-white">
+              {t('panel.voterActivity')}{votes.length + stakes.length > 0 ? ` (${votes.length + stakes.length})` : ''}
+            </DashboardTabsTrigger>
+            <DashboardTabsTrigger value="reporter" className="bg-skgreen">
+              {t('panel.reporterActivity')}{disputes.length > 0 ? ` (${disputes.length})` : ''}
+            </DashboardTabsTrigger>
+            <DashboardTabsTrigger value="committee" className="bg-skcyan">
+              {t('panel.committeeDuties')}{committeeProgramIds.length > 0 ? ` (${committeeProgramIds.length})` : ''}
+            </DashboardTabsTrigger>
+          </DashboardTabsList>
+          <DashboardTabsContent value="voter" className="!min-h-0">
+            <div className="w-full min-w-0"><VoterPanel votes={votes} stakes={stakes} dashboardData={dashboard} bare /></div>
+          </DashboardTabsContent>
+          <DashboardTabsContent value="reporter" className="!min-h-0">
+            <div className="w-full min-w-0">
+              <BountyHunterPanel disputes={disputes} bare hasProgramReports={(dashboard.programDisputes ?? []).length > 0} />
+            </div>
+          </DashboardTabsContent>
+          <DashboardTabsContent value="committee" className="!min-h-0">
+            <div className="w-full min-w-0">
+              <CommitteePanel programIds={committeeProgramIds} dashboardData={dashboard} address={address} bare />
+            </div>
+          </DashboardTabsContent>
+        </DashboardTabs>
       </div>
 
       <CreateProgramModal

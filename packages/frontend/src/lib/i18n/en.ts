@@ -811,6 +811,7 @@ export const en = {
   'dash.tabPrograms': 'Program Actions',
   'dash.tabAchievements': 'My Achievements',
   'dash.tabReports': 'Reports',
+  'panel.reportsAbove': 'Reports about the programs you run are in the “Reports” tab above.',
   'progReports.emptyTitle': 'No reports against this program',
   'progReports.emptyBody': 'When someone reports a scholar of this program, it shows up here with the evidence and the deadline for the scholar to answer.',
   'progReports.intro': 'Reports filed against scholars of this program. The scholar has 7 days to answer; the committee then decides.',
