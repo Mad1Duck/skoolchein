@@ -144,6 +144,23 @@ export function useLeftoverBalance(program: { pid: number; status: string } | un
   return { balance: completed ? (data as bigint | undefined) : undefined, refetch };
 }
 
+/**
+ * The service fee (basis points) a creator pays on top of a program fund. `undefined` while loading.
+ * A Treasury deployed before the fee existed has no such value, which means no fee.
+ */
+export function useCreationFeeBps() {
+  const { chainId } = useActiveChain();
+  const v4 = useV4Addresses();
+  const { data, isError } = useReadContract({
+    chainId,
+    address: v4.ScholarshipTreasury,
+    abi: scholarshipTreasuryAbi,
+    functionName: "creationFeeBps",
+    query: { retry: 1 },
+  });
+  return isError ? 0n : (data as bigint | undefined);
+}
+
 /** What each wallet got from a program's leftover fund, keyed by lower-case address. */
 export function useLeftoverShares(pid: number | undefined, wallets: string[]) {
   const { chainId } = useActiveChain();

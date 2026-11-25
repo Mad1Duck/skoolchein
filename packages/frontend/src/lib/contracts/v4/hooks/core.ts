@@ -31,6 +31,8 @@ export function useCreateProgram() {
     timeline: readonly [bigint, bigint, bigint, bigint];
     milestoneDisputeWindow: bigint;
     totalFund: string;
+    /** Service fee paid on top of the fund, in the token's smallest unit. */
+    fee: bigint;
     maxOptionalMilestones: number;
     committeeContract: `0x${string}`;
     /** Payment token. Zero address = native currency. Must be whitelisted
@@ -62,7 +64,7 @@ export function useCreateProgram() {
         token,
       ],
       // Native funds travel as msg.value; ERC20 relies on a prior approve().
-      value: nativeValueFor(totalFund, token),
+      value: nativeValueFor(totalFund + args.fee, token),
     });
   };
 

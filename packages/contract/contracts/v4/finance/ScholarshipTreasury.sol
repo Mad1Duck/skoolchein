@@ -18,6 +18,7 @@ interface IStakeCore {
     function getProtocolConfig() external view returns (ScholarshipTypes.ProtocolConfig memory);
     function getShortlist(uint256 pid) external view returns (address[] memory);
     function bountyHunter() external view returns (address);
+    function tokenConfig(address token) external view returns (bool enabled, uint256 minDonation, uint256 transactionFee);
 }
 
 /// @dev The slice of ScholarshipBounty that says whether a report against a scholar is still open.
@@ -133,6 +134,15 @@ contract ScholarshipTreasury is
     /// @notice What each scholar received from a completed program's leftover fund, on top of their milestones.
     mapping(uint256 => mapping(address => uint256)) public leftoverReceived;
 
+    /// @notice Service fee a creator pays on top of the fund when creating a program, in basis points.
+    uint256 public creationFeeBps;
+
+    /// @notice Per token, the platform's own money held here: the reserve share of penalties and the
+    ///         donation fees. This is all an admin can withdraw; the rest belongs to programs and users.
+    mapping(address => uint256) public reserveBalance;
+
+    uint256 public constant MAX_CREATION_FEE_BPS = 500; // 5%
+
     enum StakeOutcome { REFUND, SUCCESS, SLASH }
 
     // ── Events ───────────────────────────────────────────────────────────────
@@ -165,6 +175,8 @@ contract ScholarshipTreasury is
     event TreasuryReserveWithdrawn(address indexed token, address indexed recipient, uint256 amount);
     event CreatorRefunded(uint256 indexed pid, address creator, uint256 amount);
     event LeftoverReleased(uint256 indexed pid, address scholar, uint256 amount);
+    event CreationFeeSet(uint256 bps);
+    event CreationFeeCharged(uint256 indexed pid, address token, uint256 amount);
 
     // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -182,6 +194,8 @@ contract ScholarshipTreasury is
     error ProgramNotCompleted();
     error ReportStillOpen();
     error NoCompletedScholar();
+    error FeeTooHigh();
+    error InsufficientReserve();
 
     // ── Native token support ────────────────────────────────────────────────
     // Required so TokenTransfer.payOut's low-level call can forward native
@@ -222,16 +236,35 @@ contract ScholarshipTreasury is
 
     /**
      * @notice Record initator fund deposit when a program is created.
-     *         USDC was already transferred directly to this contract by Core.
+     *         Core has already transferred `amount` plus `creationFee(amount)` to this contract;
+     *         the program gets `amount` and the fee goes to the protocol.
      */
     function depositProgramFund(
         uint256 pid,
         uint256 amount,
         address token
-    ) external override onlyRole(CORE_ROLE) {
+    ) external override nonReentrant onlyRole(CORE_ROLE) {
         programToken[pid]    = token;
         programBalance[pid] += amount;
         emit FundDeposited(pid, msg.sender, amount);
+
+        uint256 fee = creationFee(amount);
+        if (fee > 0) {
+            token.payOut(protocolFeeRecipient, fee);
+            emit CreationFeeCharged(pid, token, fee);
+        }
+    }
+
+    /// @notice What a creator pays on top of a program fund of `amount`.
+    function creationFee(uint256 amount) public view override returns (uint256) {
+        return (amount * creationFeeBps) / 10_000;
+    }
+
+    /// @notice Set the creation service fee. Only turn it on once ScholarshipCore collects it.
+    function setCreationFeeBps(uint256 bps) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (bps > MAX_CREATION_FEE_BPS) revert FeeTooHigh();
+        creationFeeBps = bps;
+        emit CreationFeeSet(bps);
     }
 
     /**
@@ -253,7 +286,19 @@ contract ScholarshipTreasury is
         programTotalDonated[pid] += netAmount;
         programBalance[pid]      += netAmount;
 
+        // Core transferred the donation including its fee; the fee is the platform's.
+        if (address(stakeCore) != address(0)) {
+            address token = programToken[pid];
+            reserveBalance[token] += _donationFee(token);
+        }
+
         emit DonationRecorded(pid, donor, netAmount);
+    }
+
+    /// @dev The same fee ScholarshipCore deducts: the token's own setting, else the global one.
+    function _donationFee(address token) internal view returns (uint256) {
+        (bool enabled, , uint256 fee) = stakeCore.tokenConfig(token);
+        return enabled ? fee : stakeCore.getProtocolConfig().transactionFee;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -322,6 +367,7 @@ contract ScholarshipTreasury is
         }
 
         uint256 toTreasury = forfeited - bhReward - toProtocol; // implicitly = treasuryPercent share
+        reserveBalance[token] += toTreasury;
         emit SlashDistributed(pid, scholarAddr, bountyHunter, bhReward, toTreasury, toProtocol);
     }
 
@@ -708,17 +754,18 @@ contract ScholarshipTreasury is
     }
     
     /**
-     * @notice Withdraw accumulated treasury reserve (from slashes).
+     * @notice Withdraw from the platform's reserve (penalty shares and donation fees), never more
+     *         than the reserve holds, so program funds, stakes and bonus pools cannot be taken.
+     * @param token      Which token's reserve.
      * @param recipient  Address to receive the funds.
-     * @param amount     Amount of USDC to withdraw.
+     * @param amount     Amount to withdraw.
      */
     function withdrawTreasuryReserve(address token, address recipient, uint256 amount)
         external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE)
     {
         if (amount == 0) revert NothingToWithdraw();
-        // We don't have a separate tracker for reserve, but we can check balance vs total program/yield/stakes
-        // However, a simple balance-based check or a dedicated counter is better.
-        // For now, we trust the Admin/Multisig to withdraw only what is surplus.
+        if (amount > reserveBalance[token]) revert InsufficientReserve();
+        reserveBalance[token] -= amount;
         token.payOut(recipient, amount);
         emit TreasuryReserveWithdrawn(token, recipient, amount);
     }

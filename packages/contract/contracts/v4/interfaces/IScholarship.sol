@@ -274,6 +274,9 @@ interface IScholarshipTreasury {
 
     function refundDonors(uint256 pid) external;
 
+    /// @notice Service fee charged on top of a new program's fund.
+    function creationFee(uint256 amount) external view returns (uint256);
+
     function getProgramBalance(uint256 pid) external view returns (uint256);
 
     function getAccruedYield(uint256 pid) external view returns (uint256);

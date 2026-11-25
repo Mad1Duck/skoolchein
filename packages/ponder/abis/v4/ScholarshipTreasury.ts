@@ -70,7 +70,17 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "FeeTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InsufficientProgramBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientReserve",
     "type": "error"
   },
   {
@@ -298,6 +308,44 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "ConfidenceStakeResolved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CreationFeeCharged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "bps",
+        "type": "uint256"
+      }
+    ],
+    "name": "CreationFeeSet",
     "type": "event"
   },
   {
@@ -742,6 +790,19 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "MAX_CREATION_FEE_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "UPGRADER_ROLE",
     "outputs": [
       {
@@ -908,6 +969,38 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "confidenceStakes",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "creationFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "creationFeeBps",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1415,6 +1508,25 @@ export const scholarshipTreasuryAbi = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "reserveBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "pid",
         "type": "uint256"
@@ -1449,6 +1561,19 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "bps",
+        "type": "uint256"
+      }
+    ],
+    "name": "setCreationFeeBps",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

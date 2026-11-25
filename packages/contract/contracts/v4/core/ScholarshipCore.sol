@@ -130,7 +130,8 @@ contract ScholarshipCore is ScholarshipCoreBase {
         programToken[pid] = token;
 
         // Pulls ERC20 via transferFrom, or validates+forwards msg.value for native.
-        TokenTransfer.pullIn(token, msg.sender, address(treasury), totalFund);
+        // The creator pays the fund plus the service fee; the Treasury keeps them apart.
+        TokenTransfer.pullIn(token, msg.sender, address(treasury), totalFund + treasury.creationFee(totalFund));
         treasury.depositProgramFund(pid, totalFund, token);
 
         programs[pid] = ScholarshipTypes.Program({
