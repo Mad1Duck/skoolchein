@@ -195,6 +195,17 @@ it("a ruling for one program cannot touch a report from another program", async 
   await expectRevert(sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, wrongPid, true]), "OnlyInitiator");
 });
 
+it("an upheld heavy-fraud report goes through (Core mints the fraud NFT) and the creator can rule on it", async () => {
+  const { committee } = sys.contracts;
+  const HEAVY_FRAUD = 2;
+  const p = await submittedMilestone();
+  await raise(reporter(), p, 0n, HEAVY_FRAUD);
+  await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+  await sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, BigInt(p.pid), true]);
+  assert.equal((await sys.read(core, "getScholar", [p.scholar, BigInt(p.pid)])).status, 2, "scholar frozen");
+  assert.equal(await sys.read(core, "globalStudentStatus", [p.scholar]), 3, "blacklisted");
+});
+
 it("the program is still running after a report", async () => {
   const p = await submittedMilestone();
   await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
