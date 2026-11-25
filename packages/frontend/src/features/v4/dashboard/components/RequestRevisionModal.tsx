@@ -61,7 +61,7 @@ export function RequestRevisionModal({ milestone, onClose }: { milestone: Milest
       {step === 'uploading' ? (
         <div className="text-center py-12">
           <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
-          <p className="font-bold">{t('dispute.uploading')}</p>
+          <p className="font-bold">{t('reportForm.uploading')}</p>
         </div>
       ) : step === 'tx' ? (
         <div className="text-center py-12 space-y-2">

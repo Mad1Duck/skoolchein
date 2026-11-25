@@ -31,7 +31,7 @@ import type {
   Milestone,
   Applicant,
 } from '@/lib/api/types';
-import { useProgram, useProgramApplicants, useProgramMilestones, useExternalProgress } from '@/lib/api/hooks';
+import { useProgramApplicants, useProgramMilestones, useExternalProgress } from '@/lib/api/hooks';
 
 import { CommitteeManagementModal } from '../../programs/components/CommitteeManagementModal';
 import { ResolveShortlistModal } from '../../programs/components/ResolveShortlistModal';
@@ -42,6 +42,7 @@ import { ProposeMilestoneModal } from './ProposeMilestoneModal';
 import { CommitteeScoreModal } from './CommitteeScoreModal';
 import { StakeClaimButton } from './StakeClaimButton';
 import { EvidenceView } from '@/components/ui/EvidenceView';
+import { useProgramLabel } from '@/lib/api/useProgramLabel';
 import { useVotingClock } from '@/features/v4/vote/useVotingClock';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
 import { ExtendDeadlineModal } from './ExtendDeadlineModal';
@@ -640,18 +641,6 @@ export function VoterPanel({
       )}
     </section>
   );
-}
-
-/** Program name and token for a row on the dashboard (the vote/stake rows only carry the program id). */
-function useProgramLabel(pid: number) {
-  const { data: program } = useProgram(String(pid));
-  const { data: meta } = useQuery({
-    queryKey: ['ipfs-meta', program?.metadataCID],
-    queryFn: () => fetchProgramMeta(program!.metadataCID),
-    enabled: !!program?.metadataCID,
-    staleTime: Infinity,
-  });
-  return { program, name: meta?.name ?? `Program #${pid}` };
 }
 
 const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;

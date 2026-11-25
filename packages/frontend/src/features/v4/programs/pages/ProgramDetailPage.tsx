@@ -38,9 +38,9 @@ import { toDate } from '@/lib/time';
 import { effectiveStatus } from '@/lib/programStatus';
 import { useFormatMoney } from '@/lib/money';
 
-type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'disputes';
+type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'reports';
 
-const TAB_KEYS: Tab[] = ['overview', 'applicants', 'scholars', 'milestones', 'votes', 'disputes'];
+const TAB_KEYS: Tab[] = ['overview', 'applicants', 'scholars', 'milestones', 'votes', 'reports'];
 
 export function ProgramDetailPage() {
   const { t } = useT();
@@ -99,7 +99,7 @@ export function ProgramDetailPage() {
     }
     return all > 0n ? Number((mine * 1000n) / all) / 10 : 0;
   };
-  const disputesQ = useProgramDisputes(activeTab === 'disputes' ? id : '');
+  const reportsQ = useProgramDisputes(activeTab === 'reports' ? id : '');
 
 
   if (isLoading) {
@@ -318,7 +318,7 @@ export function ProgramDetailPage() {
               ? program._counts.applicants
               : tab.key === 'scholars' && program._counts?.scholars
                 ? program._counts.scholars
-                : tab.key === 'disputes' && program._counts?.disputes
+                : tab.key === 'reports' && program._counts?.disputes
                   ? program._counts.disputes
                   : null;
           return (
@@ -453,10 +453,10 @@ export function ProgramDetailPage() {
             )}
           />
         )}
-        {activeTab === 'disputes' && (
+        {activeTab === 'reports' && (
           <ListTab
-            data={disputesQ.data}
-            isLoading={disputesQ.isLoading}
+            data={reportsQ.data}
+            isLoading={reportsQ.isLoading}
             renderItem={(d) => (
               <div key={d.blockchainId} className="flex items-center justify-between p-4 md:p-5 gap-4">
                 <div className="min-w-0">

@@ -105,7 +105,7 @@ export function DefendModal({
             />
           )}
           {step === "tx" && (
-            <NeoButton label={t("dispute.waiting")} variant="primary" disabled loading={isPending} />
+            <NeoButton label={t("reportForm.waiting")} variant="primary" disabled loading={isPending} />
           )}
         </div>
       </div>

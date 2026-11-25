@@ -12,8 +12,10 @@ import { statusLabel } from "@/lib/i18n/status";
 import { NeoSkeleton } from "@/components/ui/NeoSkeleton";
 import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
 import { EvidenceView } from "@/components/ui/EvidenceView";
+import { WalletAvatar } from "@/components/ui/WalletAvatar";
+import { useProgramLabel } from "@/lib/api/useProgramLabel";
 import { useVotingClock } from "@/features/v4/vote/useVotingClock";
-import { DefendModal } from "../components/DefendModal";
+import { DefendModal } from "./DefendModal";
 import type { Dispute } from "@/lib/api/types";
 import { useT } from "@/lib/i18n";
 
@@ -26,7 +28,7 @@ const same = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCa
  * person can do next. Raising a report happens on /report; this page is for following them up,
  * defending against one, and settling those whose defense window ran out.
  */
-export function DisputesBoard() {
+export function ReportsBoard() {
   const { t } = useT();
   const { address } = useAccount();
   const { data, isLoading } = useDisputes();
@@ -49,11 +51,11 @@ export function DisputesBoard() {
   const needsMe = against.filter((d) => d.status === "ACTIVE" && !d.counterEvidenceCID);
 
   const tabs: Array<{ key: Tab; label: string; items: Dispute[]; tone: string }> = [
-    { key: "active", label: t("disputes.tabActive"), items: active, tone: "bg-skred text-white" },
-    { key: "program", label: t("disputes.tabProgram"), items: inMyPrograms, tone: "bg-skgreen" },
-    { key: "against", label: t("disputes.tabAgainst"), items: against, tone: "bg-skyellow" },
-    { key: "mine", label: t("disputes.tabMine"), items: mine, tone: "bg-skcyan" },
-    { key: "resolved", label: t("disputes.tabResolved"), items: resolved, tone: "bg-gray-200" },
+    { key: "active", label: t("reports.tabActive"), items: active, tone: "bg-skred text-white" },
+    { key: "program", label: t("reports.tabProgram"), items: inMyPrograms, tone: "bg-skgreen" },
+    { key: "against", label: t("reports.tabAgainst"), items: against, tone: "bg-skyellow" },
+    { key: "mine", label: t("reports.tabMine"), items: mine, tone: "bg-skcyan" },
+    { key: "resolved", label: t("reports.tabResolved"), items: resolved, tone: "bg-gray-200" },
   ];
   const visibleTabs = tabs.filter((x) => x.key === "active" || x.key === "resolved" || x.items.length > 0 || x.key === tab);
   const shown = tabs.find((x) => x.key === tab)?.items ?? [];
@@ -62,8 +64,8 @@ export function DisputesBoard() {
     <>
       {needsMe.length > 0 && (
         <div className="mb-6 rounded-2xl border-2 border-black bg-skyellow-light p-4 shadow-[4px_4px_0_0_#000]">
-          <p className="font-bold">{t("disputes.needsYou", { n: needsMe.length })}</p>
-          <p className="text-sm text-gray-700">{t("disputes.needsYouBody")}</p>
+          <p className="font-bold">{t("reports.needsYou", { n: needsMe.length })}</p>
+          <p className="text-sm text-gray-700">{t("reports.needsYouBody")}</p>
         </div>
       )}
 
@@ -87,13 +89,13 @@ export function DisputesBoard() {
         <NeoSkeleton lines={6} />
       ) : shown.length === 0 ? (
         <div className="rounded-2xl border-2 border-black bg-white p-12 text-center shadow-[4px_4px_0_0_#000]">
-          <p className="font-paytone text-xl mb-1">{t("disputes.emptyTitle")}</p>
-          <p className="text-sm text-gray-500">{t("disputes.emptyBody")}</p>
+          <p className="font-paytone text-xl mb-1">{t("reports.emptyTitle")}</p>
+          <p className="text-sm text-gray-500">{t("reports.emptyBody")}</p>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {shown.map((d) => (
-            <DisputeCard key={d.blockchainId} dispute={d} me={address} onDefend={() => setDefending(d)} />
+            <ReportCard key={d.blockchainId} dispute={d} me={address} onDefend={() => setDefending(d)} />
           ))}
         </div>
       )}
@@ -103,11 +105,12 @@ export function DisputesBoard() {
   );
 }
 
-function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: string; onDefend: () => void }) {
+function ReportCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: string; onDefend: () => void }) {
   const { t } = useT();
   const { chainId } = useActiveChain();
   const { triggerAutoGuilty, isPending } = useTriggerAutoGuilty();
   const clock = useVotingClock(d.defenseDeadline);
+  const { name } = useProgramLabel(d.pid ?? 0);
 
   const isActive = d.status === "ACTIVE";
   const iAmScholar = same(d.scholarAddress, me);
@@ -123,43 +126,54 @@ function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: stri
 
   return (
     <article className={`rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] ${iAmScholar && isActive && !defended ? "ring-4 ring-skyellow" : ""}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black bg-skred-light px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-bold font-data">#{d.blockchainId}</span>
+      {/* Which program, what kind of report, and where it stands */}
+      <div className="border-b-2 border-black bg-skred-light px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-paytone text-lg leading-tight">{name}</p>
+            <p className="text-[11px] font-bold text-gray-600">
+              {t("report.cardNo", { id: d.blockchainId })}
+              {d.raisedAt ? ` · ${new Date(d.raisedAt).toLocaleDateString()}` : ""}
+            </p>
+          </div>
+          <span className={`shrink-0 rounded-full border-2 border-black px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${tone}`}>
+            {statusLabel(t, d.status)}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
           <span className="rounded-full border-2 border-black bg-skred px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
             {statusLabel(t, d.disputeType)}
           </span>
+          <span className="rounded-full border-2 border-black bg-white px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+            {d.milestoneId ? t("report.aboutMilestone", { id: d.milestoneId }) : t("report.aboutScholar")}
+          </span>
         </div>
-        <span className={`rounded-full border-2 border-black px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${tone}`}>
-          {statusLabel(t, d.status)}
-        </span>
       </div>
 
       <div className="space-y-3 p-4">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <Fact label={t("disputes.program")}>
-            {d.pid !== null ? (
-              <Link to="/programs/$id" params={{ id: String(d.pid) }} className="font-bold underline">#{d.pid}</Link>
-            ) : "—"}
-          </Fact>
-          <Fact label={t("disputes.about")}>
-            {d.milestoneId ? t("report.aboutMilestone", { id: d.milestoneId }) : t("report.aboutScholar")}
-          </Fact>
-          <Fact label={t("disputes.scholar")}>
-            <CopyableText value={d.scholarAddress} display={truncateMiddle(d.scholarAddress, 6, 4)} />
-            {iAmScholar && <span className="ml-1 text-[10px] font-extrabold uppercase">({t("appl.you")})</span>}
-          </Fact>
-          <Fact label={t("disputes.reporter")}>
-            <CopyableText value={d.bountyHunter} display={truncateMiddle(d.bountyHunter, 6, 4)} />
-            {iAmReporter && <span className="ml-1 text-[10px] font-extrabold uppercase">({t("appl.you")})</span>}
-          </Fact>
-          <Fact label={t("disputes.deposit")}>
-            <span className="font-data">{formatTokenWithSymbol(d.stake, usdcAddress(chainId))}</span>
-          </Fact>
-          <Fact label={t("disputes.reward")}>
-            <span className="font-data font-bold">{formatTokenWithSymbol(d.potentialReward, d.token)}</span>
-          </Fact>
+        {/* Reporter -> accused */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <Party label={t("reports.reporter")} address={d.bountyHunter} you={iAmReporter} />
+          <span aria-hidden className="text-lg font-bold">→</span>
+          <Party label={t("reports.scholar")} address={d.scholarAddress} you={iAmScholar} />
+        </div>
+
+        {/* The money */}
+        <dl className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border-2 border-black bg-white p-2.5">
+            <dt className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t("reports.deposit")}</dt>
+            <dd className="mt-0.5 font-data text-sm font-bold">{formatTokenWithSymbol(d.stake, usdcAddress(chainId))}</dd>
+          </div>
+          <div className="rounded-xl border-2 border-black bg-skyellow-light p-2.5">
+            <dt className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t("reports.reward")}</dt>
+            <dd className="mt-0.5 font-data text-sm font-bold">{formatTokenWithSymbol(d.potentialReward, d.token)}</dd>
+          </div>
         </dl>
+        {d.pid !== null && (
+          <Link to="/programs/$id" params={{ id: String(d.pid) }} className="inline-block text-xs font-bold underline">
+            {t("report.openProgram")}
+          </Link>
+        )}
 
         <details className="rounded-xl border-2 border-black bg-white p-3">
           <summary className="cursor-pointer text-xs font-extrabold uppercase tracking-wider text-skred">{t("evidence.report")}</summary>
@@ -173,12 +187,12 @@ function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: stri
         {isActive && (
           <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm">
             {defended ? (
-              <p className="font-bold">{t("disputes.withCommittee")}</p>
+              <p className="font-bold">{t("reports.withCommittee")}</p>
             ) : windowClosed ? (
-              <p className="font-bold">{t("disputes.windowClosed")}</p>
+              <p className="font-bold">{t("reports.windowClosed")}</p>
             ) : (
               <p>
-                <span className="font-bold">{t("disputes.defenseLeft")}:</span>{" "}
+                <span className="font-bold">{t("reports.defenseLeft")}:</span>{" "}
                 <span className="font-data">{clock.text ?? "—"}</span>
               </p>
             )}
@@ -187,7 +201,7 @@ function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: stri
 
         {isActive && !defended && (
           iAmScholar && !windowClosed ? (
-            <NeoButton label={t("disputes.defend")} variant="primary" className="!rounded-xl" fullWidth onClick={onDefend} />
+            <NeoButton label={t("reports.defend")} variant="primary" className="!rounded-xl" fullWidth onClick={onDefend} />
           ) : windowClosed ? (
             <NeoButton
               label={isPending ? t("panel.triggering") : t("panel.autoGuilty")}
@@ -199,7 +213,7 @@ function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: stri
               onClick={() => triggerAutoGuilty(BigInt(d.blockchainId))}
             />
           ) : (
-            <NeoButton label={t("disputes.awaiting")} variant="ghost" className="!rounded-xl" fullWidth disabled />
+            <NeoButton label={t("reports.awaiting")} variant="ghost" className="!rounded-xl" fullWidth disabled />
           )
         )}
       </div>
@@ -207,11 +221,16 @@ function DisputeCard({ dispute: d, me, onDefend }: { dispute: Dispute; me?: stri
   );
 }
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Party({ label, address, you }: { label: string; address: string; you: boolean }) {
+  const { t } = useT();
   return (
-    <div className="min-w-0">
-      <dt className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{label}</dt>
-      <dd className="mt-0.5 [overflow-wrap:anywhere]">{children}</dd>
+    <div className="flex min-w-0 items-center gap-2 rounded-xl border-2 border-black bg-white p-2">
+      <WalletAvatar address={address} size={32} />
+      <div className="min-w-0">
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{label}{you ? ` · ${t("appl.you")}` : ""}</p>
+        <CopyableText value={address} display={truncateMiddle(address, 6, 4)} />
+      </div>
     </div>
   );
 }
+
