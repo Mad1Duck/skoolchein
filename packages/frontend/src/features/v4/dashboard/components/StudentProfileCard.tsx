@@ -3,6 +3,7 @@ import { DashboardCard } from "./DashboardCard";
 import { NeoButton } from "@/components/ui/NeoButton";
 import type { Program, Scholar } from "@/lib/api/types";
 import { formatTokenCompact } from "@/lib/contracts/v4/token";
+import { useLeftoverShares } from "@/lib/contracts/v4/hooks/treasury";
 import { fetchProgramMeta } from "@/lib/ipfs";
 import { useT } from '@/lib/i18n';
 
@@ -25,7 +26,10 @@ export function StudentProfileCard({ scholar, program, isLoading, onNext }: Stud
   const creatorImage = `https://api.dicebear.com/9.x/thumbs/svg?seed=${program?.initiator ?? "creator"}`;
   const name = scholar ? `Scholar #${scholar.pid}` : "No Name";
   // Scholar carries no token of its own; the amount is in the program's token.
-  const totalReceived = scholar ? formatTokenCompact(scholar.totalReceived, program?.token) : "—";
+  const { total: bonus } = useLeftoverShares(scholar?.pid, scholar ? [scholar.wallet] : []);
+  const totalReceived = scholar
+    ? formatTokenCompact(BigInt(scholar.totalReceived || "0") + bonus, program?.token)
+    : "—";
   const programTitle = meta?.name ?? (program?.pid ? `Program #${program.pid}` : "No Program");
 
   return (

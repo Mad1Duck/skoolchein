@@ -8,6 +8,7 @@ import { donationPresets, formatTokenAmount, getTokenMeta } from '@/lib/contract
 import { useT } from '@/lib/i18n';
 import { toEpochSec } from '@/lib/time';
 import { useFormatMoney } from '@/lib/money';
+import { effectiveStatus } from '@/lib/programStatus';
 import { DonationPresets } from './DonationPresets';
 
 interface Props {
@@ -63,7 +64,13 @@ export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReaso
   // No fundraising goal exists in the program data, so the bar shows how much of
   // the pool has been allocated to scholars — real numbers, not an invented target.
   const total = Number(program.totalFund);
-  const pctAllocated = total > 0 ? Math.min(100, (Number(program.allocatedFund) / total) * 100) : 0;
+  // `allocatedFund` only counts optional milestones, so money already paid out counts as allocated too.
+  const committed = Math.max(Number(program.allocatedFund), Number(program.spentFund));
+  const pctAllocated = total > 0 ? Math.min(100, (committed / total) * 100) : 0;
+  // The contract accepts donations only while applications are open.
+  const phase = effectiveStatus(program);
+  const donationsClosed = phase !== 'CREATED' && phase !== 'APPLICATION_OPEN';
+  const donationsRunning = phase === 'APPLICATION_OPEN' && !(endSec !== null && ended);
 
   const { data: rep } = useReputation(address ?? '');
   const votingPower = Number(formatTokenAmount(rep?.remainingVotingPower ?? '0', token));
@@ -117,11 +124,15 @@ export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReaso
         </p>
       </div>
 
-      {program.openDonation && donateBlockedReason && (
+      {program.openDonation && donationsClosed && (
+        <p className="rounded-xl border-2 border-black bg-gray-100 px-3 py-2 text-sm font-bold">{t('fundCard.donationsOver')}</p>
+      )}
+
+      {program.openDonation && donationsRunning && donateBlockedReason && (
         <p className="rounded-xl border-2 border-black bg-skyellow-light px-3 py-2 text-sm font-bold">{donateBlockedReason}</p>
       )}
 
-      {program.openDonation && !donateBlockedReason && (
+      {program.openDonation && donationsRunning && !donateBlockedReason && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <DonationPresets token={token} value={amount} onChange={setAmount} />

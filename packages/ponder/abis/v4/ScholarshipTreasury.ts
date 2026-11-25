@@ -112,6 +112,11 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "NoCompletedScholar",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotInitializing",
     "type": "error"
   },
@@ -127,7 +132,22 @@ export const scholarshipTreasuryAbi = [
   },
   {
     "inputs": [],
+    "name": "ProgramNotCancelled",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ProgramNotCompleted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReportStillOpen",
     "type": "error"
   },
   {
@@ -292,6 +312,31 @@ export const scholarshipTreasuryAbi = [
       {
         "indexed": false,
         "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CreatorRefunded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "donor",
         "type": "address"
       },
@@ -366,6 +411,31 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "scholar",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "LeftoverReleased",
     "type": "event"
   },
   {
@@ -1124,6 +1194,30 @@ export const scholarshipTreasuryAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "leftoverReceived",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "maxPushRefundDonors",
     "outputs": [
@@ -1283,6 +1377,19 @@ export const scholarshipTreasuryAbi = [
       }
     ],
     "name": "refundDonors",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      }
+    ],
+    "name": "releaseLeftover",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

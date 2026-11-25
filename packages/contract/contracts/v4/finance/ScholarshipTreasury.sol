@@ -16,6 +16,13 @@ interface IStakeCore {
     function getProgram(uint256 pid) external view returns (ScholarshipTypes.Program memory);
     function getScholar(address wallet, uint256 pid) external view returns (ScholarshipTypes.Scholar memory);
     function getProtocolConfig() external view returns (ScholarshipTypes.ProtocolConfig memory);
+    function getShortlist(uint256 pid) external view returns (address[] memory);
+    function bountyHunter() external view returns (address);
+}
+
+/// @dev The slice of ScholarshipBounty that says whether a report against a scholar is still open.
+interface IOpenReports {
+    function activeDisputeForScholar(address scholar, uint256 pid) external view returns (uint256);
 }
 
 /**
@@ -30,7 +37,8 @@ interface IStakeCore {
  *         4. Distribute slash proceeds (BH reward + treasury reserve + protocol)
  *         5. Manage confidence-stake lifecycle (deposit → resolve/slash)
  *         6. Distribute yield share to voters at programme end
- *         7. Refund donors on programme cancellation
+ *         7. Refund donors and the creator on programme cancellation
+ *         8. Hand a completed programme's unspent fund to the scholars who finished it
  *
  *         YIELD (Phase 1)
  *         Protocol accumulates a fraction of fees and distributes pro-rata
@@ -122,6 +130,9 @@ contract ScholarshipTreasury is
      */
     mapping(uint256 => uint256) public bonusPool;
 
+    /// @notice What each scholar received from a completed program's leftover fund, on top of their milestones.
+    mapping(uint256 => mapping(address => uint256)) public leftoverReceived;
+
     enum StakeOutcome { REFUND, SUCCESS, SLASH }
 
     // ── Events ───────────────────────────────────────────────────────────────
@@ -152,6 +163,8 @@ contract ScholarshipTreasury is
     event YieldClaimed(uint256 indexed pid, address voter, uint256 amount);
     event DonorRefunded(uint256 indexed pid, address donor, uint256 amount);
     event TreasuryReserveWithdrawn(address indexed token, address indexed recipient, uint256 amount);
+    event CreatorRefunded(uint256 indexed pid, address creator, uint256 amount);
+    event LeftoverReleased(uint256 indexed pid, address scholar, uint256 amount);
 
     // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -165,6 +178,10 @@ contract ScholarshipTreasury is
     error StakeNotSettled();
     error StakeCoreNotSet();
     error UnknownProgram();
+    error ProgramNotCancelled();
+    error ProgramNotCompleted();
+    error ReportStillOpen();
+    error NoCompletedScholar();
 
     // ── Native token support ────────────────────────────────────────────────
     // Required so TokenTransfer.payOut's low-level call can forward native
@@ -270,12 +287,14 @@ contract ScholarshipTreasury is
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Distribute a fraudulent scholar's remaining program balance.
+     * @notice Distribute what a penalized scholar had not yet received of their own portion.
+     *         The other scholars' portions stay in the program.
      *
      *         Default split: 20% → BH, 70% → treasury reserve, 10% → protocol.
      *         The treasury share stays in this contract for reallocation.
      *
-     * @dev    CEI: programBalance zeroed BEFORE any transfer.
+     * @dev    A scholar who was already paid in full forfeits nothing, and the ruling still goes
+     *         through. CEI: programBalance reduced BEFORE any transfer.
      * @return bhReward Amount sent to the bounty hunter.
      */
     function slashAndDistribute(
@@ -286,14 +305,13 @@ contract ScholarshipTreasury is
         uint256, /* treasuryPercent — treasury share stays in contract, no transfer */
         uint256 protocolPercent
     ) external override nonReentrant onlyRole(BOUNTY_ROLE) returns (uint256 bhReward) {
-        uint256 remaining = programBalance[pid];
-        if (remaining == 0) revert InsufficientProgramBalance();
+        uint256 forfeited = _unpaidPortion(pid, scholarAddr);
 
-        // CEI: zero balance first
-        programBalance[pid] = 0;
+        // CEI: take it out of the program first
+        programBalance[pid] -= forfeited;
 
-        bhReward             = (remaining * bhPercent)      / 100;
-        uint256 toProtocol   = (remaining * protocolPercent) / 100;
+        bhReward             = (forfeited * bhPercent)       / 100;
+        uint256 toProtocol   = (forfeited * protocolPercent) / 100;
         // remainder (treasuryPercent) stays in contract — no transfer needed
 
         address token = programToken[pid];
@@ -303,8 +321,19 @@ contract ScholarshipTreasury is
             protocolFeeAccumulated += toProtocol;
         }
 
-        uint256 toTreasury = remaining - bhReward - toProtocol; // implicitly = treasuryPercent share
+        uint256 toTreasury = forfeited - bhReward - toProtocol; // implicitly = treasuryPercent share
         emit SlashDistributed(pid, scholarAddr, bountyHunter, bhReward, toTreasury, toProtocol);
+    }
+
+    /// @dev One winner's portion (the same split the milestones are created from) minus what they
+    ///      have received, never more than the program still holds.
+    function _unpaidPortion(uint256 pid, address scholar) internal view returns (uint256 unpaid) {
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
+        ScholarshipTypes.Program memory p = stakeCore.getProgram(pid);
+        uint256 portion  = p.totalFund / p.targetWinners;
+        uint256 received = stakeCore.getScholar(scholar, pid).totalReceived;
+        if (portion > received) unpaid = portion - received;
+        if (unpaid > programBalance[pid]) unpaid = programBalance[pid];
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -511,60 +540,125 @@ contract ScholarshipTreasury is
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Push-refund all donors when a programme is cancelled.
+     * @notice Settle a cancelled programme. The creator gets back everything that did not come from
+     *         donors, and donors get their donations back.
      *
-     * @dev    Only safe for small programmes (≤ MAX_PUSH_REFUND_DONORS donors).
-     *         For larger programmes the loop will revert — use claimRefund()
-     *         (pull pattern) instead.
+     * @dev    Donors are paid here only while there are at most `maxPushRefundDonors` of them.
+     *         Larger programmes are not blocked: each donor then collects with `claimRefund`.
      */
     function refundDonors(uint256 pid)
         external override nonReentrant onlyRole(CORE_ROLE)
     {
-        address[] memory donors  = _programDonors[pid];
-        if (donors.length > maxPushRefundDonors)
-            revert TooManyDonorsForPushRefund();
-        uint256          balance = programBalance[pid];
-        uint256          total   = programTotalDonated[pid];
-        address          token   = programToken[pid];
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
 
-        // CEI: zero balance first
-        programBalance[pid] = 0;
+        uint256 balance = programBalance[pid];
+        uint256 donated = programTotalDonated[pid];
+
+        if (balance > donated) {
+            uint256 rest    = balance - donated;
+            address creator = stakeCore.getProgram(pid).initiator;
+            programBalance[pid] = donated;
+            programToken[pid].payOut(creator, rest);
+            emit CreatorRefunded(pid, creator, rest);
+        }
+
+        address[] memory donors = _programDonors[pid];
+        if (donors.length > maxPushRefundDonors) return;
 
         for (uint256 i = 0; i < donors.length; ) {
-            address donor   = donors[i];
-            uint256 donated = donorBalance[pid][donor];
-            if (donated > 0 && total > 0) {
-                uint256 refund = (balance * donated) / total;
-                donorBalance[pid][donor] = 0;
-                if (refund > 0) {
-                    token.payOut(donor, refund);
-                    emit DonorRefunded(pid, donor, refund);
-                }
-            }
+            _refundDonor(pid, donors[i]);
             unchecked { ++i; }
         }
     }
 
     /**
-     * @notice Pull-pattern refund for individual donors.
-     *         Safer for large donor lists; recommended for programmatic callers.
+     * @notice A donor of a CANCELLED programme collects their donation.
+     *         Anyone may call it; the money always goes to `donor`.
      */
     function claimRefund(uint256 pid, address donor)
         external nonReentrant
     {
-        uint256 donated = donorBalance[pid][donor];
-        if (donated == 0) revert NothingToRefund();
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
+        if (stakeCore.getProgram(pid).status != ScholarshipTypes.ProgramStatus.CANCELLED)
+            revert ProgramNotCancelled();
+        if (donorBalance[pid][donor] == 0) revert NothingToRefund();
+        _refundDonor(pid, donor);
+    }
 
-        uint256 balance = programBalance[pid];
-        uint256 total   = programTotalDonated[pid];
-        uint256 refund  = total > 0 ? (balance * donated) / total : 0;
+    /**
+     * @dev A donor never gets more than they gave. If the balance no longer covers every donation,
+     *      what is left is shared in proportion; reducing the outstanding total with each refund keeps
+     *      that proportion the same whatever order donors collect in. CEI: state before transfer.
+     */
+    function _refundDonor(uint256 pid, address donor) internal {
+        uint256 donated = donorBalance[pid][donor];
+        if (donated == 0) return;
+
+        uint256 outstanding = programTotalDonated[pid];
+        uint256 balance     = programBalance[pid];
+        uint256 refund      = balance >= outstanding ? donated : (balance * donated) / outstanding;
 
         donorBalance[pid][donor]  = 0;
-        programBalance[pid]      -= refund;
+        programTotalDonated[pid]  = outstanding - donated;
+        programBalance[pid]       = balance - refund;
 
         if (refund > 0) {
             programToken[pid].payOut(donor, refund);
             emit DonorRefunded(pid, donor, refund);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // LEFTOVER FUND (completed programmes)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Share whatever a COMPLETED programme did not spend equally among the scholars who
+     *         completed it. Anyone may call it; the money can only go to those scholars.
+     *         Waits while a report against any of the programme's scholars is still open, because
+     *         upholding it distributes this same balance.
+     */
+    function releaseLeftover(uint256 pid) external nonReentrant {
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
+        if (stakeCore.getProgram(pid).status != ScholarshipTypes.ProgramStatus.COMPLETED)
+            revert ProgramNotCompleted();
+
+        uint256 balance = programBalance[pid];
+        if (balance == 0) revert NothingToWithdraw();
+
+        (address[] memory scholars, uint256 n) = _completedScholars(pid);
+        if (n == 0) revert NoCompletedScholar();
+
+        programBalance[pid] = 0;
+
+        address token = programToken[pid];
+        uint256 each  = balance / n;
+        for (uint256 i = 0; i < n; ) {
+            // The last one also gets the rounding remainder, so nothing stays behind.
+            uint256 amount = i + 1 == n ? balance - each * (n - 1) : each;
+            if (amount > 0) {
+                leftoverReceived[pid][scholars[i]] += amount;
+                token.payOut(scholars[i], amount);
+                emit LeftoverReleased(pid, scholars[i], amount);
+            }
+            unchecked { ++i; }
+        }
+    }
+
+    /// @dev Winners are always taken from the shortlist. Only the first `n` entries of `done` are filled.
+    function _completedScholars(uint256 pid) internal view returns (address[] memory done, uint256 n) {
+        address[] memory list = stakeCore.getShortlist(pid);
+        address reports       = stakeCore.bountyHunter();
+        done = new address[](list.length);
+
+        for (uint256 i = 0; i < list.length; ) {
+            ScholarshipTypes.Scholar memory s = stakeCore.getScholar(list[i], pid);
+            if (s.wallet != address(0)) {
+                if (reports != address(0) && IOpenReports(reports).activeDisputeForScholar(s.wallet, pid) != 0)
+                    revert ReportStillOpen();
+                if (s.status == ScholarshipTypes.StudentStatus.COMPLETED) done[n++] = s.wallet;
+            }
+            unchecked { ++i; }
         }
     }
 

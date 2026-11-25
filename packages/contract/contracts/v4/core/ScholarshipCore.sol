@@ -195,7 +195,8 @@ contract ScholarshipCore is ScholarshipCoreBase {
     function getRemainingFund(address wallet, uint256 pid) external view returns (uint256) {
         ScholarshipTypes.Scholar memory s = scholars[wallet][pid];
         ScholarshipTypes.Program memory p = programs[pid];
-        return (p.totalFund / p.targetWinners) - s.totalReceived;
+        uint256 portion = p.totalFund / p.targetWinners;
+        return portion > s.totalReceived ? portion - s.totalReceived : 0;
     }
 
     // ── Status transitions ───────────────────────────────────────────────────

@@ -437,13 +437,20 @@ abstract contract ScholarshipCoreBase is Initializable {
         programs[pid].allocatedFund += amt;
     }
 
+    /// @dev A program is complete once none of its winners is still working: each one has finished or
+    ///      been penalized, and at least one finished. The winners can be fewer than `targetWinners`
+    ///      (too few candidates, or a private program's creator choosing fewer).
     function _checkProgramCompletion(uint256 pid) internal {
-        ScholarshipTypes.Program storage p = programs[pid];
-        if (programCompletedScholars[pid] >= p.targetWinners) {
-            p.status = ScholarshipTypes.ProgramStatus.COMPLETED;
-            emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.COMPLETED);
-            emit ProgramCompleted(pid);
+        if (programCompletedScholars[pid] == 0) return;
+        address[] storage list = _shortlist[pid];
+        for (uint256 i; i < list.length; ) {
+            ScholarshipTypes.Scholar storage s = scholars[list[i]][pid];
+            if (s.wallet != address(0) && s.status == ScholarshipTypes.StudentStatus.ACTIVE) return;
+            unchecked { ++i; }
         }
+        programs[pid].status = ScholarshipTypes.ProgramStatus.COMPLETED;
+        emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.COMPLETED);
+        emit ProgramCompleted(pid);
     }
 
     function _slashScholar(address wallet, uint256 pid, ScholarshipTypes.DisputeType dtype) internal {
@@ -459,6 +466,8 @@ abstract contract ScholarshipCoreBase is Initializable {
             globalFreezeUntil[wallet] = block.timestamp + _config.freezeHeavy;
         }
         emit ScholarSlashed(wallet, pid, dtype);
+        // The penalized scholar may have been the last one the program was waiting for.
+        if (programs[pid].status == ScholarshipTypes.ProgramStatus.ACTIVE) _checkProgramCompletion(pid);
     }
 
     function _resolveDisputeBH(uint256) internal {}

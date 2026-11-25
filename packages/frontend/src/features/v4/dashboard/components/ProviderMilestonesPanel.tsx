@@ -6,7 +6,7 @@ import { DashboardCard } from "./DashboardCard";
 import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
 import { EvidenceView } from "@/components/ui/EvidenceView";
 import { WalletAvatar } from "@/components/ui/WalletAvatar";
-import { useProgramMilestones } from "@/lib/api/hooks";
+import { useProgramMilestones, useProgramScholars } from "@/lib/api/hooks";
 import { useExecuteMilestone } from "@/lib/contracts/write-hooks";
 import { useApproveSubmission } from "@/lib/contracts/v4";
 import { RequestRevisionModal } from "./RequestRevisionModal";
@@ -19,6 +19,8 @@ import { decodeSpec } from '@/lib/milestoneSpec';
 import { statusLabel } from '@/lib/i18n/status';
 import { formatTokenCompact } from '@/lib/contracts/v4/token';
 import { DualAmount, Money, RecipientDetails } from './RecipientDetails';
+import { LeftoverFund } from './LeftoverFund';
+import { useLeftoverBalance, useLeftoverShares } from '@/lib/contracts/v4/hooks/treasury';
 import { toDate } from "@/lib/time";
 
 interface ProviderMilestonesPanelProps {
@@ -102,6 +104,13 @@ export function ProviderMilestonesPanel({ program, isLoading }: ProviderMileston
   // The milestones of the creator's PROGRAM. They used to come from the dashboard payload, which only
   // lists milestones where the viewer is the scholar, so a creator never saw a single one.
   const { data: programMilestones = [], isLoading: loadingMilestones } = useProgramMilestones(program ? String(program.pid) : '');
+  const { balance: leftover, refetch: refetchLeftover } = useLeftoverBalance(program);
+  const { shares, total: sharedOut, refetch: refetchShares } = useLeftoverShares(
+    program?.pid,
+    [...new Set(programMilestones.map((m) => (m.scholarWallet ?? '').toLowerCase()).filter(Boolean))],
+  );
+
+  const { data: scholars } = useProgramScholars(program ? String(program.pid) : '');
 
   if (isLoading || loadingMilestones || !program) {
     return (
@@ -119,9 +128,23 @@ export function ProviderMilestonesPanel({ program, isLoading }: ProviderMileston
   }
 
   const count = (s: string) => programMilestones.filter((m) => m.status === s).length;
-  const { released, upcoming, frozen } = totals(programMilestones);
+  // A report was upheld against these scholars: what they had not received yet has left the program.
+  const penalized = new Set(
+    (scholars ?? []).filter((s) => s.status === 'FROZEN' || s.status === 'BLACKLISTED').map((s) => s.wallet.toLowerCase()),
+  );
+  const lost = (m: Milestone) => m.status !== 'COMPLETED' && penalized.has((m.scholarWallet ?? '').toLowerCase());
+  const { released } = totals(programMilestones);
+  const { upcoming, frozen } = totals(programMilestones.filter((m) => !lost(m)));
+  const forfeited = programMilestones.filter(lost).reduce((sum, m) => sum + BigInt(m.amount || '0'), 0n);
   const fund = BigInt(program.totalFund || "0");
-  const unallocated = fund > released + upcoming + frozen ? fund - released - upcoming - frozen : 0n;
+  const accounted = released + upcoming + frozen + forfeited;
+  const unspent = fund > accounted ? fund - accounted : 0n;
+  // Once completed, the Treasury balance says what is really left (the leftover may already be shared).
+  const unallocated = leftover ?? unspent;
+  const onReleased = () => {
+    void refetchLeftover();
+    void refetchShares();
+  };
 
   return (
     <div className="space-y-5 w-full">
@@ -156,17 +179,22 @@ export function ProviderMilestonesPanel({ program, isLoading }: ProviderMileston
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Money label={t('fund.total')} raw={fund} token={program.token} />
-            <Money label={t('fund.released')} raw={released} token={program.token} tone="bg-skgreen" />
+            <Money label={t('fund.released')} raw={released + sharedOut} token={program.token} tone="bg-skgreen" />
             <Money label={t('fund.upcoming')} raw={upcoming} token={program.token} tone="bg-skyellow" />
             {frozen > 0n ? (
               <Money label={t('fund.frozen')} raw={frozen} token={program.token} tone="bg-skred-light" />
             ) : (
-              <Money label={t('fund.unallocated')} raw={unallocated} token={program.token} tone="bg-skpurple-light" />
+              <Money label={leftover === undefined ? t('fund.unallocated') : t('fund.leftover')} raw={unallocated} token={program.token} tone="bg-skpurple-light" />
             )}
           </div>
           {frozen > 0n && unallocated > 0n && (
-            <p className="text-xs font-bold text-gray-600">{t('fund.unallocated')}: {formatTokenCompact(unallocated, program.token)}</p>
+            <p className="text-xs font-bold text-gray-600">{t(leftover === undefined ? 'fund.unallocated' : 'fund.leftover')}: {formatTokenCompact(unallocated, program.token)}</p>
           )}
+          {forfeited > 0n && (
+            <p className="text-xs font-bold text-skred">{t('fund.forfeited')}: {formatTokenCompact(forfeited, program.token)}</p>
+          )}
+
+          {!!leftover && <LeftoverFund program={program} balance={leftover} onReleased={onReleased} />}
 
           <div className="grid grid-cols-3 gap-3">
             <Tile label={t('pm.statWaiting')} value={String(count("PENDING"))} tone="bg-skyellow" />
@@ -178,7 +206,7 @@ export function ProviderMilestonesPanel({ program, isLoading }: ProviderMileston
 
           <div className="space-y-5">
             {[...groups.entries()].map(([wallet, items]) => (
-              <ScholarGroup key={wallet} wallet={wallet} milestones={items} program={program} />
+              <ScholarGroup key={wallet} wallet={wallet} milestones={items} program={program} bonus={shares.get(wallet) ?? 0n} penalized={penalized.has(wallet)} />
             ))}
           </div>
         </>
@@ -211,10 +239,14 @@ function Tile({ label, value, tone }: { label: string; value: string; tone: stri
   );
 }
 
-function ScholarGroup({ wallet, milestones, program }: { wallet: string; milestones: Milestone[]; program: Program }) {
+function ScholarGroup({ wallet, milestones, program, bonus, penalized }: { wallet: string; milestones: Milestone[]; program: Program; bonus: bigint; penalized: boolean }) {
   const { t } = useT();
   const done = milestones.filter((m) => m.status === "COMPLETED").length;
-  const { released, upcoming, frozen } = totals(milestones);
+  const sums = totals(milestones);
+  const released = sums.released;
+  const upcoming = penalized ? 0n : sums.upcoming;
+  const frozen = penalized ? 0n : sums.frozen;
+  const forfeited = penalized ? sums.upcoming + sums.frozen : 0n;
 
   return (
     <section className="rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0_0_#000]">
@@ -237,27 +269,38 @@ function ScholarGroup({ wallet, milestones, program }: { wallet: string; milesto
 
       <div className="space-y-3 border-b-2 border-black/10 p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Money label={t('recipient.share')} raw={released + upcoming + frozen} token={program.token} />
-          <Money label={t('recipient.received')} raw={released} token={program.token} tone="bg-skgreen" />
-          {frozen > 0n ? (
+          <Money label={t('recipient.share')} raw={released + upcoming + frozen + bonus} token={program.token} />
+          <Money label={t('recipient.received')} raw={released + bonus} token={program.token} tone="bg-skgreen" />
+          {forfeited > 0n ? (
+            <Money label={t('fund.forfeited')} raw={forfeited} token={program.token} tone="bg-skred-light" />
+          ) : frozen > 0n ? (
             <Money label={t('fund.frozen')} raw={frozen} token={program.token} tone="bg-skred-light" />
           ) : (
             <Money label={t('fund.upcoming')} raw={upcoming} token={program.token} tone="bg-skyellow-light" />
           )}
         </div>
+        {bonus > 0n && (
+          <p className="text-xs font-bold text-gray-600">{t('leftover.included', { amount: formatTokenCompact(bonus, program.token) })}</p>
+        )}
         <RecipientDetails pid={program.pid} wallet={wallet} />
       </div>
 
       <div className="divide-y-2 divide-black/10">
         {milestones.map((m) => (
-          <MilestoneRowCard key={m.blockchainId} milestone={m} program={program} />
+          <MilestoneRowCard
+            key={m.blockchainId}
+            // Nothing more can be paid to a penalized scholar, so no approve or release buttons.
+            milestone={penalized && m.status !== "COMPLETED" ? { ...m, status: "FROZEN" } : m}
+            program={program}
+            forfeited={penalized && m.status !== "COMPLETED"}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function MilestoneRowCard({ milestone: m, program }: { milestone: Milestone; program: Program }) {
+function MilestoneRowCard({ milestone: m, program, forfeited }: { milestone: Milestone; program: Program; forfeited: boolean }) {
   const { t } = useT();
   const { executeMilestone, isPending } = useExecuteMilestone();
   const { approve, isPending: approving } = useApproveSubmission();
@@ -279,7 +322,7 @@ function MilestoneRowCard({ milestone: m, program }: { milestone: Milestone; pro
         <StatusPill status={m.status} />
         <span className="ml-auto text-right">
           <span className="block text-[10px] font-extrabold uppercase tracking-widest text-gray-500">
-            {m.status === "COMPLETED" ? t('fund.released') : m.status === "FROZEN" ? t('fund.frozen') : t('fund.upcoming')}
+            {m.status === "COMPLETED" ? t('fund.released') : forfeited ? t('fund.forfeited') : m.status === "FROZEN" ? t('fund.frozen') : t('fund.upcoming')}
           </span>
           <DualAmount raw={m.amount || "0"} token={m.token ?? program.token} align="right" size="text-base" />
         </span>

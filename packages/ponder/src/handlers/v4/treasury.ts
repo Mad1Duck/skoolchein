@@ -193,6 +193,28 @@ export const scholarshipTreasuryHandlers = () => {
     }
   });
 
+  ponder.on("ScholarshipTreasury:CreatorRefunded", async ({ event, context }) => {
+    try {
+      const chainId = context.chain.id;
+      const { pid, creator, amount } = event.args;
+      await insertBlock({ db: context.db, chainId, event, eventName: "ScholarshipTreasury:CreatorRefunded" });
+      await sendSseToAll("main", { chainId, step: "CreatorRefunded", data: { pid, creator, amount: String(amount) }, status: true, blockHash: event.block.hash });
+    } catch (err) {
+      logger.error({ err }, "CreatorRefunded handler error");
+    }
+  });
+
+  ponder.on("ScholarshipTreasury:LeftoverReleased", async ({ event, context }) => {
+    try {
+      const chainId = context.chain.id;
+      const { pid, scholar, amount } = event.args;
+      await insertBlock({ db: context.db, chainId, event, eventName: "ScholarshipTreasury:LeftoverReleased" });
+      await sendSseToAll("main", { chainId, step: "LeftoverReleased", data: { pid, scholar, amount: String(amount) }, status: true, blockHash: event.block.hash });
+    } catch (err) {
+      logger.error({ err }, "LeftoverReleased handler error");
+    }
+  });
+
   ponder.on("ScholarshipTreasury:TreasuryReserveWithdrawn", async ({ event, context }) => {
     try {
       const chainId = context.chain.id;
