@@ -11,6 +11,7 @@ import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoBadge } from '@/components/ui/NeoBadge';
+import { WalletAvatar } from '@/components/ui/WalletAvatar';
 import type { TranslationKey } from '@/lib/i18n/en';
 import {
   useOpenApplications,
@@ -30,7 +31,7 @@ import type {
   Milestone,
   Applicant,
 } from '@/lib/api/types';
-import { useProgramApplicants, useProgramMilestones, useExternalProgress } from '@/lib/api/hooks';
+import { useProgram, useProgramApplicants, useProgramMilestones, useExternalProgress } from '@/lib/api/hooks';
 
 import { CommitteeManagementModal } from '../../programs/components/CommitteeManagementModal';
 import { ResolveShortlistModal } from '../../programs/components/ResolveShortlistModal';
@@ -598,7 +599,6 @@ export function VoterPanel({
   bare?: boolean;
 }) {
   const { t } = useT();
-  const fmt = useFormatMoney();
   return (
     <section>
       {!bare && (
@@ -618,57 +618,118 @@ export function VoterPanel({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <NeoCard>
-          <NeoCardBody>
-            <h3 className="font-bold mb-4">{t('panel.castVotes', { n: votes.length })}</h3>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="font-paytone text-lg">{t('panel.castVotes', { n: votes.length })}</h3>
             {votes.length === 0 ? (
-              <p className="text-gray-500 text-sm">{t('panel.noVotes')}</p>
+              <p className="rounded-xl border-2 border-dashed border-black/40 bg-white/60 p-4 text-sm text-gray-600">{t('panel.noVotes')}</p>
             ) : (
-              <ul className="space-y-2 text-sm">
-                {votes.slice(0, 5).map((v) => (
-                  <li key={`${v.pid}-${v.voterAddress}`} className="flex justify-between border-b border-gray-200 pb-1">
-                    <span>{t('panel.progShort', { id: v.pid })}</span>
-                    <span className="font-mono">{v.candidateAddress.slice(0, 6)}…</span>
-                  </li>
-                ))}
-              </ul>
+              votes.map((v) => <VoteCard key={`${v.pid}-${v.voterAddress}`} vote={v} />)
             )}
-          </NeoCardBody>
-        </NeoCard>
-
-        <NeoCard>
-          <NeoCardBody>
-            <h3 className="font-bold mb-4">{t('panel.backings', { n: stakes.length })}</h3>
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-paytone text-lg">{t('panel.backings', { n: stakes.length })}</h3>
             {stakes.length === 0 ? (
-              <p className="text-gray-500 text-sm">{t('panel.noBackings')}</p>
+              <p className="rounded-xl border-2 border-dashed border-black/40 bg-white/60 p-4 text-sm text-gray-600">{t('panel.noBackings')}</p>
             ) : (
-              <ul className="space-y-2 text-sm">
-                {stakes.map((s) => (
-                  <li key={`${s.pid}-${s.voterAddress}`} className="flex items-center justify-between gap-2 border-b border-gray-200 pb-1">
-                    <span>{t('panel.progShort', { id: s.pid })}</span>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className={
-                          s.isResolved
-                            ? s.wasSlashed
-                              ? 'text-skred'
-                              : 'text-skgreen'
-                            : 'text-skyellow'
-                        }>
-                        {fmt(s.amount, s.token)}
-                      </span>
-                      {!s.isResolved && <StakeClaimButton pid={s.pid} voter={s.voterAddress} />}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              stakes.map((s) => <BackingCard key={`${s.pid}-${s.voterAddress}`} stake={s} />)
             )}
-          </NeoCardBody>
-        </NeoCard>
+          </div>
         </div>
       )}
     </section>
+  );
+}
+
+/** Program name and token for a row on the dashboard (the vote/stake rows only carry the program id). */
+function useProgramLabel(pid: number) {
+  const { data: program } = useProgram(String(pid));
+  const { data: meta } = useQuery({
+    queryKey: ['ipfs-meta', program?.metadataCID],
+    queryFn: () => fetchProgramMeta(program!.metadataCID),
+    enabled: !!program?.metadataCID,
+    staleTime: Infinity,
+  });
+  return { program, name: meta?.name ?? `Program #${pid}` };
+}
+
+const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString() : '');
+
+/** One vote: who it went to, how much it was worth, in which program and what state that program is in. */
+function VoteCard({ vote }: { vote: DashboardData['votes'][number] }) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
+  const { program, name } = useProgramLabel(vote.pid);
+  return (
+    <div className="rounded-2xl border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{name}</p>
+          <p className="text-[11px] text-gray-500">{t('panel.progShort', { id: vote.pid })} · {when(vote.createdAt)}</p>
+        </div>
+        {program && <NeoBadge status={program.status} />}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <WalletAvatar address={vote.candidateAddress} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('vote.sumCandidate')}</p>
+          <p className="font-data text-sm font-bold">{shortAddr(vote.candidateAddress)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('board.myVote')}</p>
+          <p className="font-data text-sm font-bold">{fmt(vote.votingWeight, program?.token)}</p>
+        </div>
+      </div>
+      <Link to="/programs/$id" params={{ id: String(vote.pid) }} className="mt-3 inline-block text-xs font-bold underline">
+        {t('panel.openProgram')}
+      </Link>
+    </div>
+  );
+}
+
+/** One backing deposit: how much, for whom, what it returns in each outcome, and where it stands. */
+function BackingCard({ stake }: { stake: DashboardData['stakes'][number] }) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
+  const { program, name } = useProgramLabel(stake.pid);
+  const state = !stake.isResolved
+    ? { label: t('panel.stakePending'), tone: 'bg-skyellow' }
+    : stake.wasSlashed
+      ? { label: t('panel.stakeSlashed'), tone: 'bg-skred text-white' }
+      : { label: t('panel.stakeReturned'), tone: 'bg-skgreen' };
+  return (
+    <div className="rounded-2xl border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{name}</p>
+          <p className="text-[11px] text-gray-500">{t('panel.progShort', { id: stake.pid })} · {when(stake.createdAt)}</p>
+        </div>
+        <span className={`rounded border-2 border-black px-2 py-0.5 text-[10px] font-extrabold uppercase ${state.tone}`}>{state.label}</span>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <WalletAvatar address={stake.scholarAddress} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.backedScholar')}</p>
+          <p className="font-data text-sm font-bold">{shortAddr(stake.scholarAddress)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('panel.stakeDeposit')}</p>
+          <p className="font-data text-sm font-bold">{fmt(stake.amount, program?.token ?? stake.token)}</p>
+        </div>
+      </div>
+      {stake.isResolved ? (
+        <dl className="mt-3 grid grid-cols-2 gap-2 border-t-2 border-black/10 pt-2 text-xs">
+          <div><dt className="text-gray-500">{t('panel.stakeBack')}</dt><dd className="font-data font-bold">{fmt(stake.returnedAmount, stake.token)}</dd></div>
+          <div><dt className="text-gray-500">{t('panel.stakeBonus')}</dt><dd className="font-data font-bold">{fmt(stake.bonusAmount, stake.token)}</dd></div>
+        </dl>
+      ) : (
+        <div className="mt-3 flex items-center justify-between gap-2 border-t-2 border-black/10 pt-2">
+          <p className="text-xs text-gray-600">{t('panel.stakeWaiting')}</p>
+          <StakeClaimButton pid={stake.pid} voter={stake.voterAddress} />
+        </div>
+      )}
+    </div>
   );
 }
 
