@@ -63,6 +63,7 @@ const artifacts = {
   milestoneManager: art("core/MilestoneManager.sol/MilestoneManager.json"),
   bounty: art("core/ScholarshipBounty.sol/ScholarshipBounty.json"),
   committee: art("governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
+  fraudNFT: art("tokens/ScholarshipNFTs.sol/FraudNFT.json"),
 };
 
 const chain = defineChain({ id: chainId, name: `chain-${chainId}`, nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });

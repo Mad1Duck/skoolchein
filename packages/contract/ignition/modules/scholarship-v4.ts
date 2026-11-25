@@ -198,6 +198,8 @@ export default buildModule("ScholarshipV4", (m) => {
   // NFTs
   m.call(donorNFT, "grantRole", [ROLES.MINTER_ROLE, coreProxy], { id: "donorNFT_grantMinterRole", ...afterAll });
   m.call(studentNFT, "grantRole", [ROLES.MINTER_ROLE, coreProxy], { id: "studentNFT_grantMinterRole", ...afterAll });
+  // Upholding a heavy-fraud report mints the fraud NFT from Core, so Core needs this role too.
+  m.call(fraudNFT, "grantRole", [ROLES.MINTER_ROLE, coreProxy], { id: "fraudNFT_grantMinterRole", ...afterAll });
 
   // Committee Access (Bounty)
   m.call(bounty, "grantRole", [ROLES.RESOLVER_ROLE, committeeProxy], { id: "bounty_grantResolverRole", ...afterAll });

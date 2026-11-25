@@ -149,6 +149,7 @@ export async function deploySystem() {
   await send(reputation, art.reputation.abi, "grantRole", [ROLE.LOCKER, core]);
   await send(donorNFT, art.donorNFT.abi, "grantRole", [ROLE.MINTER, core]);
   await send(studentNFT, art.studentNFT.abi, "grantRole", [ROLE.MINTER, core]);
+  await send(fraudNFT, art.fraudNFT.abi, "grantRole", [ROLE.MINTER, core]);
   // Native currency only: no ERC20 approvals needed. 0.01 ETH minimum, 0.001 ETH fee.
   await send(core, art.core.abi, "setTokenConfig", [zeroAddress, true, parseEther("0.01"), parseEther("0.001")]);
   await send(selection, art.selection.abi, "setConfig", [10_000, 3_000, 2_500]);

@@ -10,6 +10,7 @@ export const ROLES = {
   UPGRADER: ROLE("UPGRADER_ROLE"),
   CORE: ROLE("CORE_ROLE"),
   RESOLVER: ROLE("RESOLVER_ROLE"),
+  MINTER: ROLE("MINTER_ROLE"),
 };
 
 /** Contracts that can be upgraded, and how each one is upgraded. */
@@ -143,6 +144,16 @@ export async function upgradeV4({ publicClient, walletClient, addresses, artifac
     // Committee rulings reach Bounty.resolveDispute through Core.
     await step("bounty: RESOLVER_ROLE for Core", () => read(addr("bounty"), bounty.abi, "hasRole", [ROLES.RESOLVER, addr("core")]), () =>
       send(addr("bounty"), bounty.abi, "grantRole", [ROLES.RESOLVER, addr("core")]));
+  }
+
+  if (artifacts.fraudNFT) {
+    // Upholding a heavy-fraud report makes Core mint the fraud NFT; deployments made before this role
+    // was part of the deploy script lack it, and the ruling then reverts. Checked on every run.
+    const fraudAddr = getAddress(await read(addr("core"), core.abi, "fraudNFT"));
+    if (fraudAddr !== zeroAddress) {
+      await step("fraudNFT: MINTER_ROLE for Core", () => read(fraudAddr, artifacts.fraudNFT.abi, "hasRole", [ROLES.MINTER, addr("core")]), () =>
+        send(fraudAddr, artifacts.fraudNFT.abi, "grantRole", [ROLES.MINTER, addr("core")]));
+    }
   }
 
   log("Upgrade complete. Proxy addresses are unchanged.");
