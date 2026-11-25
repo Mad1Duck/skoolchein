@@ -171,6 +171,25 @@ export async function uploadEvidence(input: {
   return { metaCID: res.metaCID, files };
 }
 
+/**
+ * Have the backend draw a credential's picture and pin the NFT metadata for it. Returns the
+ * `ipfs://` link to mint with, or null when it could not be made.
+ */
+export async function createBadgeMetadata(input: {
+  kind: "student" | "donor";
+  wallet: string;
+  pid: number;
+  programName?: string;
+}): Promise<string | null> {
+  try {
+    const { data } = await rawApi.post("/ipfs/badge", input);
+    return data?.metaCID ? `ipfs://${data.metaCID}` : null;
+  } catch {
+    console.error("[IPFS] Badge generation failed");
+    return null;
+  }
+}
+
 /** Upload data to IPFS via the Ponder backend proxy */
 export async function uploadToIPFS(payload: {
   meta: unknown;

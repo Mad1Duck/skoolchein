@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { createBadgeMetadata } from '@/lib/ipfs';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useApproveUSDC, useDonate, needsApproval } from '@/lib/contracts/write-hooks';
 import { useV4Addresses } from '@/lib/chain/useActiveChain';
@@ -36,8 +38,11 @@ export function DonateModal({ isOpen, onClose, programId, programName, token, in
 
   const [step, setStep] = useState<Step>('form');
   const [amount, setAmount] = useState(initialAmount ?? tokenMeta.minDonationHint);
-  // Metadata link for the donor badge. Technical, so it lives under "Advanced".
-  const [nftUri, setNftUri] = useState('ipfs://QmDonorNFT');
+  // Metadata link for the donor badge. Left empty, a badge picture is generated for this donor.
+  // A custom link is technical, so the field lives under "Advanced".
+  const [nftUri, setNftUri] = useState('');
+  const [makingBadge, setMakingBadge] = useState(false);
+  const { address } = useAccount();
 
   const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(token, amount);
   const [topUpOpen, setTopUpOpen] = useState(false);
@@ -54,7 +59,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token, in
     if (donated && step === 'donate') setStep('done');
   }, [donated, step]);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (step === 'form') {
       if (requiresApproval) {
         setStep('approve');
@@ -64,7 +69,14 @@ export function DonateModal({ isOpen, onClose, programId, programName, token, in
         setStep('donate');
       }
     } else if (step === 'donate') {
-      donate(BigInt(programId), amount, nftUri, token);
+      let uri = nftUri.trim();
+      if (!uri && address) {
+        setMakingBadge(true);
+        uri = (await createBadgeMetadata({ kind: 'donor', wallet: address, pid: programId, programName })) ?? '';
+        setMakingBadge(false);
+      }
+      // A donation must not fail because the picture could not be made.
+      donate(BigInt(programId), amount, uri || 'ipfs://QmDonorNFT', token);
     }
   };
 
@@ -207,13 +219,13 @@ export function DonateModal({ isOpen, onClose, programId, programName, token, in
           )}
           {step === 'donate' && (
             <NeoButton
-              label={isDonating ? t('donate.donating') : t('donate.now')}
+              label={makingBadge ? t('donate.makingBadge') : isDonating ? t('donate.donating') : t('donate.now')}
               variant="primary"
               size="lg"
               className="!rounded-xl"
               onClick={handleAction}
-              loading={isDonating}
-              disabled={isDonating}
+              loading={isDonating || makingBadge}
+              disabled={isDonating || makingBadge}
               fullWidth
             />
           )}
@@ -222,7 +234,7 @@ export function DonateModal({ isOpen, onClose, programId, programName, token, in
             variant="ghost"
             className="!rounded-xl"
             onClick={handleClose}
-            disabled={isApproving || isDonating}
+            disabled={isApproving || isDonating || makingBadge}
             fullWidth
           />
         </div>
