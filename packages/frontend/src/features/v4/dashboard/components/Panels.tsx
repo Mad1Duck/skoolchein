@@ -42,6 +42,7 @@ import { ProposeMilestoneModal } from './ProposeMilestoneModal';
 import { CommitteeScoreModal } from './CommitteeScoreModal';
 import { StakeClaimButton } from './StakeClaimButton';
 import { EvidenceView } from '@/components/ui/EvidenceView';
+import { useVotingClock } from '@/features/v4/vote/useVotingClock';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
 import { ExtendDeadlineModal } from './ExtendDeadlineModal';
 
@@ -762,7 +763,7 @@ export function BountyHunterPanel({
           <h2 className="font-paytone text-3xl border-l-8 border-skgreen pl-4 leading-none">
             {t('panel.reporterActivity')}
           </h2>
-          <Link to="/report">
+          <Link to="/report" search={{ new: true }}>
             <NeoButton label={t('panel.raise')} variant="danger" size="sm" />
           </Link>
         </div>
@@ -774,7 +775,7 @@ export function BountyHunterPanel({
             title={t('panel.guardTitle')}
             body={`${t('panel.guardBody')} ${t('panel.guardRule')}`}
             action={
-              <Link to="/report">
+              <Link to="/report" search={{ new: true }}>
                 <NeoButton label={t('panel.startReporting')} variant="danger" size="md" className="!rounded-xl" />
               </Link>
             }
@@ -828,72 +829,113 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
   const { t } = useT();
   const fmt = useFormatMoney();
   const { triggerAutoGuilty, isPending: triggering } = useTriggerAutoGuilty();
+  const { program, name } = useProgramLabel(dispute.pid ?? 0);
+  const clock = useVotingClock(dispute.defenseDeadline);
 
-  const now = Date.now();
-  const defenseDeadlinePassed =
-    dispute.defenseDeadline !== null && new Date(dispute.defenseDeadline).getTime() < now;
-  const noCounterEvidence = !dispute.counterEvidenceCID;
-  const canAutoGuilty = dispute.status === 'ACTIVE' && defenseDeadlinePassed && noCounterEvidence;
+  const active = dispute.status === 'ACTIVE';
+  const won = dispute.status.includes('WON') || dispute.status.includes('GUILTY') || dispute.status.includes('CONCEDED');
+  const defended = !!dispute.counterEvidenceCID;
+  const windowClosed = dispute.defenseDeadline !== null && clock.ended;
+  const canAutoGuilty = active && windowClosed && !defended;
+
+  // Where the report stands: reported -> the scholar answers -> the committee rules.
+  const answer = defended
+    ? { text: t('panel.stepAnswered'), tone: 'bg-skgreen' }
+    : windowClosed
+      ? { text: t('panel.stepNoAnswer'), tone: 'bg-skred text-white' }
+      : { text: clock.text ? t('panel.stepWaitingLeft', { left: clock.text }) : t('panel.stepWaiting'), tone: 'bg-skyellow' };
+  const ruling = active
+    ? { text: defended ? t('panel.stepCommittee') : windowClosed ? t('panel.stepAuto') : t('panel.stepAfterAnswer'), tone: 'bg-gray-100' }
+    : won
+      ? { text: t('panel.stepUpheld'), tone: 'bg-skgreen' }
+      : { text: t('panel.stepRejected'), tone: 'bg-skred text-white' };
 
   return (
-    <NeoCard>
-      <NeoCardBody>
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="font-bold">{t('panel.report', { id: dispute.blockchainId })}</h3>
-            <p className="text-xs text-gray-500 font-mono">
-              {t('panel.target', { addr: `${dispute.scholarAddress.slice(0, 6)}…` })}
-            </p>
-          </div>
-          <span
-            className={`px-2 py-0.5 border-2 border-black rounded text-[10px] font-bold uppercase ${
-              dispute.status === 'ACTIVE'
-                ? 'bg-skyellow text-black'
-                : dispute.status.includes('WON') ||
-                    dispute.status.includes('GUILTY') ||
-                    dispute.status.includes('CONCEDED')
-                  ? 'bg-skgreen text-black'
-                  : 'bg-skred text-white'
-            }`}>
+    <div className="rounded-2xl border-2 border-black bg-white p-4 shadow-[3px_3px_0_0_#000] space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{name}</p>
+          <p className="text-[11px] text-gray-500">
+            {t('panel.report', { id: dispute.blockchainId })} · {dispute.raisedAt ? new Date(dispute.raisedAt).toLocaleDateString() : ''}
+            {program ? ` · ${statusLabel(t, program.status)}` : ''}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full border-2 border-black bg-white px-2 py-0.5 text-[10px] font-extrabold uppercase">
+            {statusLabel(t, dispute.disputeType)}
+          </span>
+          <span className={`rounded border-2 border-black px-2 py-0.5 text-[10px] font-extrabold uppercase ${active ? 'bg-skyellow' : won ? 'bg-skgreen' : 'bg-skred text-white'}`}>
             {statusLabel(t, dispute.status)}
           </span>
         </div>
+      </div>
 
-        <dl className="mt-2 pt-2 border-t border-gray-200 mb-3 space-y-1 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="text-gray-500">{t('panel.stakePaid')}</dt>
-            <dd className="font-data font-bold">{fmt(dispute.stake, dispute.token)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-gray-500">{t('panel.potentialReward')}</dt>
-            <dd className="font-data font-bold">{fmt(dispute.potentialReward, dispute.token)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-gray-500">{t('panel.rewardPaid')}</dt>
-            <dd className="font-bold font-paytone">{fmt(dispute.bhRewardPaid, dispute.token)}</dd>
-          </div>
-        </dl>
-        {dispute.status === 'ACTIVE' && <p className="text-xs text-gray-600 mb-3">{t('panel.stakeRule')}</p>}
-
-        {canAutoGuilty && (
-          <NeoButton
-            label={triggering ? t('panel.triggering') : t('panel.autoGuilty')}
-            variant="danger"
-            size="sm"
-            fullWidth
-            loading={triggering}
-            disabled={triggering}
-            onClick={() => triggerAutoGuilty(BigInt(dispute.blockchainId))}
-          />
+      {/* Who is accused */}
+      <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-skyellow-light p-2.5">
+        <WalletAvatar address={dispute.scholarAddress} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('progReports.accused')}</p>
+          <p className="font-data text-sm font-bold">{shortAddr(dispute.scholarAddress)}</p>
+        </div>
+        {dispute.milestoneId !== null && (
+          <span className="rounded border-2 border-black bg-white px-2 py-0.5 text-[10px] font-extrabold uppercase">
+            {t('progReports.milestone')} #{dispute.milestoneId}
+          </span>
         )}
+      </div>
 
-        {dispute.status === 'ACTIVE' && !defenseDeadlinePassed && dispute.defenseDeadline && (
-          <p className="text-xs text-gray-500 text-center mt-2">
-            {t('panel.responseDeadline', { date: new Date(dispute.defenseDeadline).toLocaleDateString() })}
-          </p>
+      {/* The money */}
+      <dl className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-xl border-2 border-black bg-white p-2">
+          <dt className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">{t('panel.stakePaid')}</dt>
+          <dd className="mt-0.5 font-data text-sm font-bold">{fmt(dispute.stake, dispute.token)}</dd>
+        </div>
+        <div className="rounded-xl border-2 border-black bg-white p-2">
+          <dt className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">{t('panel.potentialReward')}</dt>
+          <dd className="mt-0.5 font-data text-sm font-bold">{fmt(dispute.potentialReward, dispute.token)}</dd>
+        </div>
+        <div className={`rounded-xl border-2 border-black p-2 ${won ? 'bg-skgreen' : 'bg-white'}`}>
+          <dt className="text-[10px] font-extrabold uppercase tracking-wider text-gray-600">{t('panel.rewardPaid')}</dt>
+          <dd className="mt-0.5 font-data text-sm font-bold">{fmt(dispute.bhRewardPaid, dispute.token)}</dd>
+        </div>
+      </dl>
+
+      {/* Progress of the report */}
+      <ol className="space-y-1.5 text-xs">
+        <li className="flex items-center gap-2"><span className="w-5 h-5 shrink-0 rounded-full border-2 border-black bg-skgreen text-center text-[10px] leading-4 font-bold">1</span><span className="font-bold">{t('panel.stepReported')}</span></li>
+        <li className="flex items-center gap-2"><span className={`w-5 h-5 shrink-0 rounded-full border-2 border-black text-center text-[10px] leading-4 font-bold ${answer.tone}`}>2</span><span>{answer.text}</span></li>
+        <li className="flex items-center gap-2"><span className={`w-5 h-5 shrink-0 rounded-full border-2 border-black text-center text-[10px] leading-4 font-bold ${ruling.tone}`}>3</span><span>{ruling.text}</span></li>
+      </ol>
+
+      {/* What was submitted */}
+      <details className="rounded-xl border-2 border-black bg-white p-2.5 text-sm">
+        <summary className="cursor-pointer font-bold">{t('progReports.evidence')}</summary>
+        <div className="mt-2"><EvidenceView cid={dispute.evidenceCID} /></div>
+        {defended && (
+          <div className="mt-3 border-t-2 border-black/10 pt-2">
+            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('progReports.defence')}</p>
+            <EvidenceView cid={dispute.counterEvidenceCID} />
+          </div>
         )}
-      </NeoCardBody>
-    </NeoCard>
+      </details>
+
+      {active && <p className="text-xs text-gray-600">{t('panel.stakeRule')}</p>}
+      {!active && (
+        <p className="rounded-xl border-2 border-black bg-white p-2.5 text-xs">{won ? t('panel.outcomeWon') : t('panel.outcomeLost')}</p>
+      )}
+
+      {canAutoGuilty && (
+        <NeoButton
+          label={triggering ? t('panel.triggering') : t('panel.autoGuilty')}
+          variant="danger"
+          size="sm"
+          fullWidth
+          loading={triggering}
+          disabled={triggering}
+          onClick={() => triggerAutoGuilty(BigInt(dispute.blockchainId))}
+        />
+      )}
+    </div>
   );
 }
 
@@ -1194,7 +1236,7 @@ export function ProgramReportsPanel({
                 </div>
               )}
               {renderActions?.(d)}
-              <Link to="/disputes"><NeoButton label={t('progReports.open')} variant="secondary" size="sm" className="!rounded-xl" /></Link>
+              <Link to="/report"><NeoButton label={t('progReports.open')} variant="secondary" size="sm" className="!rounded-xl" /></Link>
             </NeoCardBody>
           </NeoCard>
         );

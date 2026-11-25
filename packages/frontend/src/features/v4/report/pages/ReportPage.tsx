@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { useDisputes, useProgramApplicants, useProgramMilestones, useProgramScholars, usePrograms } from '@/lib/api/hooks';
+import { useProgramApplicants, useProgramMilestones, useProgramScholars, usePrograms } from '@/lib/api/hooks';
 import { fetchProgramMeta } from '@/lib/ipfs';
 import type { Milestone, Program, Scholar } from '@/lib/api/types';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useFormatMoney } from '@/lib/money';
-import { statusLabel } from '@/lib/i18n/status';
 import { useT } from '@/lib/i18n';
 import { ReportScholarCard } from '../components/ReportScholarCard';
 import { ReportEvidenceModal } from '../components/ReportEvidenceModal';
@@ -22,7 +21,7 @@ interface Target {
  * progress, milestones and the proof they handed in), then report either the participant or one
  * milestone with evidence.
  */
-export function ReportPage() {
+export function NewReportFlow() {
   const { t } = useT();
   const { address } = useAccount();
   const { data: programsData, isLoading } = usePrograms({ status: 'ACTIVE' });
@@ -31,51 +30,40 @@ export function ReportPage() {
   const program = programs.find((p) => p.pid === pickedPid) ?? programs[0];
 
   return (
-    <main className="min-h-screen bg-skyellow relative isolate">
-      <div
-        className="absolute top-0 right-0 left-0 h-[42vh] bg-skred"
-        style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 88%, 0 100%)' }}
-      />
-      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-10">
-        <header className="pt-8 mb-8 text-center md:text-left">
-          <h1 className="font-paytone text-4xl md:text-6xl mb-3 text-white drop-shadow-[4px_4px_0_#000]">{t('report.title')}</h1>
-          <p className="text-black/80 text-lg md:text-xl max-w-3xl font-medium">{t('report.lead')}</p>
-        </header>
+    <>
+      <p className="mb-5 max-w-3xl text-lg font-medium text-black/80">{t('report.lead')}</p>
 
-        <ol className="mb-8 grid gap-3 sm:grid-cols-3">
-          {(['report.step1', 'report.step2', 'report.step3'] as const).map((key, i) => (
-            <li key={key} className="flex items-center gap-3 rounded-2xl border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000]">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-black text-sm font-bold text-white">{i + 1}</span>
-              <span className="text-sm font-bold">{t(key)}</span>
-            </li>
-          ))}
-        </ol>
+      <ol className="mb-8 grid gap-3 sm:grid-cols-3">
+        {(['report.step1', 'report.step2', 'report.step3'] as const).map((key, i) => (
+          <li key={key} className="flex items-center gap-3 rounded-2xl border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000]">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-black text-sm font-bold text-white">{i + 1}</span>
+            <span className="text-sm font-bold">{t(key)}</span>
+          </li>
+        ))}
+      </ol>
 
-        {isLoading ? (
-          <NeoSkeleton lines={5} />
-        ) : programs.length === 0 ? (
-          <div className="rounded-2xl border-2 border-black bg-white p-12 text-center shadow-[4px_4px_0_0_#000]">
-            <p className="font-paytone text-xl mb-1">{t('report.noPrograms')}</p>
-            <p className="text-sm text-gray-500">{t('report.noProgramsBody')}</p>
+      {isLoading ? (
+        <NeoSkeleton lines={5} />
+      ) : programs.length === 0 ? (
+        <div className="rounded-2xl border-2 border-black bg-white p-12 text-center shadow-[4px_4px_0_0_#000]">
+          <p className="font-paytone text-xl mb-1">{t('report.noPrograms')}</p>
+          <p className="text-sm text-gray-500">{t('report.noProgramsBody')}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] gap-6 items-start">
+          <aside className="space-y-3 lg:sticky lg:top-24">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-700">{t('report.programs')}</h2>
+            {programs.map((p) => (
+              <ProgramPick key={p.pid} program={p} selected={p.pid === program?.pid} onClick={() => setPickedPid(p.pid)} />
+            ))}
+          </aside>
+
+          <div className="min-w-0 space-y-6">
+            {program && <ProgramReport program={program} me={address} />}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] gap-6 items-start">
-            <aside className="space-y-3 lg:sticky lg:top-24">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-700">{t('report.programs')}</h2>
-              {programs.map((p) => (
-                <ProgramPick key={p.pid} program={p} selected={p.pid === program?.pid} onClick={() => setPickedPid(p.pid)} />
-              ))}
-            </aside>
-
-            <div className="min-w-0 space-y-6">
-              {program && <ProgramReport program={program} me={address} />}
-            </div>
-          </div>
-        )}
-
-        <MyReports me={address} />
-      </div>
-    </main>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -175,43 +163,6 @@ function ProgramReport({ program, me }: { program: Program; me?: string }) {
         />
       )}
     </>
-  );
-}
-
-function MyReports({ me }: { me?: string }) {
-  const { t } = useT();
-  const { data } = useDisputes(me ? { bountyHunter: me } : undefined);
-  const mine = (data?.data ?? []).filter((d) => !!me && d.dispute.bountyHunter.toLowerCase() === me.toLowerCase());
-
-  return (
-    <section className="mt-12">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <h2 className="font-paytone text-2xl md:text-3xl">{t('report.mine', { n: mine.length })}</h2>
-        <Link to="/disputes" className="text-sm font-bold underline">{t('report.board')}</Link>
-      </div>
-      {!me ? (
-        <p className="rounded-2xl border-2 border-black bg-white p-6 text-sm text-gray-600">{t('report.connect')}</p>
-      ) : mine.length === 0 ? (
-        <p className="rounded-2xl border-2 border-black bg-white p-6 text-sm text-gray-600">{t('report.noneYet')}</p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {mine.map(({ dispute: d }) => (
-            <div key={d.blockchainId} className="rounded-xl border-2 border-black bg-white p-4 shadow-[3px_3px_0_0_#000]">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold font-data">#{d.blockchainId} · Program #{d.pid}</span>
-                <span className="rounded-full border-2 border-black bg-gray-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
-                  {statusLabel(t, d.status)}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-gray-600 font-data break-all">{d.scholarAddress}</p>
-              <p className="mt-1 text-xs text-gray-600">
-                {d.milestoneId ? t('report.aboutMilestone', { id: d.milestoneId }) : t('report.aboutScholar')}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 

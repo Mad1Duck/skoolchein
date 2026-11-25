@@ -314,7 +314,7 @@ function MilestoneRowCard({ milestone: m, program }: { milestone: Milestone; pro
       {(m.status === "FROZEN" || m.status === "DISPUTED") && (
         <p className="text-sm">
           <span className="font-bold text-skred">{t('pm.frozen')}</span>{" "}
-          <Link to="/disputes" className="underline font-bold">{t('pm.seeReport')}</Link>
+          <Link to="/report" className="underline font-bold">{t('pm.seeReport')}</Link>
         </p>
       )}
 
