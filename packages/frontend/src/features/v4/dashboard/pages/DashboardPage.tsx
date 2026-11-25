@@ -12,6 +12,7 @@ import {
   StudentPanel,
   VoterPanel,
   BountyHunterPanel,
+  ProgramReportsPanel,
   CommitteePanel,
 } from '../components/Panels';
 import { CreateProgramModal } from '../../programs/components/CreateProgramModal';
@@ -187,6 +188,8 @@ export function DashboardPage() {
   // Falls back to the first program until one is picked (or if the picked one disappears).
   const selectedProgram = programsCreated.find((p) => p.pid === selectedPid) ?? programsCreated[0];
   const selectedScholarship = scholarships[scholarshipIndex];
+  // Reports filed against the program being shown (the creator's own view of them).
+  const selectedProgramReports = (dashboard.programDisputes ?? []).filter((d) => d.pid === selectedProgram?.pid);
 
   const nextScholarship = () => setScholarshipIndex((i) => (i + 1) % scholarships.length);
 
@@ -310,10 +313,16 @@ export function DashboardPage() {
                 <DashboardTabsTrigger value="programs" className="bg-skcyan">
                   {t('dash.tabPrograms')}
                 </DashboardTabsTrigger>
+                <DashboardTabsTrigger value="reports" className="bg-skgreen">
+                  {t('dash.tabReports')}{selectedProgramReports.length > 0 ? ` (${selectedProgramReports.length})` : ''}
+                </DashboardTabsTrigger>
                 <DashboardTabsTrigger value="achievements" className="bg-skyellow">
                   {t('dash.tabAchievements')}
                 </DashboardTabsTrigger>
               </DashboardTabsList>
+              <DashboardTabsContent value="reports">
+                <ProgramReportsPanel disputes={selectedProgramReports} />
+              </DashboardTabsContent>
               <DashboardTabsContent value="milestones">
                 <ProviderMilestonesPanel
                   program={selectedProgram}
