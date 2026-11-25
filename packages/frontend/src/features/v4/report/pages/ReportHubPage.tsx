@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useT } from '@/lib/i18n';
-import { DisputesBoard } from '@/features/v4/disputes/pages/DisputesPage';
+import { ReportsBoard } from '../components/ReportsBoard';
 import { NewReportFlow } from './ReportPage';
 
 type View = 'list' | 'new';
@@ -27,7 +27,7 @@ export function ReportHubPage({ initialView = 'list' }: { initialView?: View }) 
       />
       <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-10">
         <header className="pt-8 mb-6">
-          <h1 className="font-paytone text-4xl md:text-6xl mb-3 text-white drop-shadow-[4px_4px_0_#000]">{t('disputes.title')}</h1>
+          <h1 className="font-paytone text-4xl md:text-6xl mb-3 text-white drop-shadow-[4px_4px_0_#000]">{t('reports.title')}</h1>
           <p className="text-black/80 text-lg md:text-xl max-w-2xl font-medium">{t('hub.lead')}</p>
         </header>
 
@@ -48,7 +48,7 @@ export function ReportHubPage({ initialView = 'list' }: { initialView?: View }) 
           ))}
         </div>
 
-        {view === 'list' ? <DisputesBoard /> : <NewReportFlow />}
+        {view === 'list' ? <ReportsBoard /> : <NewReportFlow />}
       </div>
     </main>
   );

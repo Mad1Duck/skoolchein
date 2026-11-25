@@ -103,20 +103,20 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
     >
       {isSuccess ? (
         <div className="text-center py-8 space-y-2">
-          <h2 className="font-paytone text-2xl">{t('dispute.successHeading')}</h2>
-          <p className="text-gray-600">{t('dispute.successBody')}</p>
+          <h2 className="font-paytone text-2xl">{t('reportForm.successHeading')}</h2>
+          <p className="text-gray-600">{t('reportForm.successBody')}</p>
         </div>
       ) : step === 'uploading' ? (
         <div className="text-center py-12">
           <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-spin mb-4" />
-          <p className="font-bold">{t('dispute.uploading')}</p>
+          <p className="font-bold">{t('reportForm.uploading')}</p>
         </div>
       ) : step === 'tx' ? (
         <div className="text-center py-12 space-y-2">
           <div className="w-10 h-10 border-2 border-black bg-skpurple mx-auto animate-pulse mb-4" />
-          <p className="font-bold">{phase === 'approving' ? t('dispute.approving') : t('dispute.confirming')}</p>
+          <p className="font-bold">{phase === 'approving' ? t('reportForm.approving') : t('reportForm.confirming')}</p>
           <p className="text-sm text-gray-600">
-            {phase === 'approving' ? t('dispute.approvingBody') : t('dispute.confirmingBody')}
+            {phase === 'approving' ? t('reportForm.approvingBody') : t('reportForm.confirmingBody')}
           </p>
           {error && <ErrorNotice error={error} className="mt-4" />}
           {error && <NeoButton label={t('common.retry')} variant="danger" onClick={() => setStep('form')} />}
@@ -135,35 +135,35 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
 
           {!milestone && (
             <div>
-              <label className="block text-sm font-bold mb-1">{t('dispute.type')}</label>
+              <label className="block text-sm font-bold mb-1">{t('reportForm.type')}</label>
               <NeoSelect
                 value={participantType}
                 onChange={setParticipantType}
                 options={[
-                  { value: 0, label: t('dispute.typeLight') },
-                  { value: 2, label: t('dispute.typeHeavy') },
+                  { value: 0, label: t('reportForm.typeLight') },
+                  { value: 2, label: t('reportForm.typeHeavy') },
                 ]}
               />
             </div>
           )}
 
           <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-xs space-y-1">
-            <p className="font-bold text-sm">{t('dispute.rulesTitle')}</p>
+            <p className="font-bold text-sm">{t('reportForm.rulesTitle')}</p>
             <ul className="list-disc ml-5 text-gray-700 space-y-0.5">
-              <li>{stakeKnown ? t('dispute.ruleDeposit', { amount: toMoney(stakeRequired) }) : t('dispute.ruleDepositPending')}</li>
-              <li>{t('dispute.ruleReward', { amount: stakeKnown ? toMoney(potentialReward) : '—' })}</li>
-              <li>{t('dispute.ruleLost')}</li>
-              {milestone && <li>{t('dispute.ruleDouble')}</li>}
+              <li>{stakeKnown ? t('reportForm.ruleDeposit', { amount: toMoney(stakeRequired) }) : t('reportForm.ruleDepositPending')}</li>
+              <li>{t('reportForm.ruleReward', { amount: stakeKnown ? toMoney(potentialReward) : '—' })}</li>
+              <li>{t('reportForm.ruleLost')}</li>
+              {milestone && <li>{t('reportForm.ruleDouble')}</li>}
             </ul>
             {isNativeToken(program.token) && <p className="font-bold text-skred">{t('report.nativeNote')}</p>}
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-bold">{t('dispute.evidence')}</label>
+            <label className="block text-sm font-bold">{t('reportForm.evidence')}</label>
             <textarea
               rows={5}
               className="w-full border-2 border-black p-2 rounded-lg resize-none focus:outline-none focus:border-skpurple"
-              placeholder={t('dispute.evidencePlaceholder')}
+              placeholder={t('reportForm.evidencePlaceholder')}
               value={evidence}
               onChange={(e) => setEvidence(e.target.value)}
             />
@@ -176,7 +176,7 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
 
           {stakeKnown && !hasEnough && (
             <div className="text-xs font-bold text-skred">
-              {t('dispute.shortfall', { amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${stakeUsdc} USDC` })}{' '}
+              {t('reportForm.shortfall', { amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${stakeUsdc} USDC` })}{' '}
               <button type="button" className="underline" onClick={() => setTopUpOpen(true)}>
                 {t('donate.addFunds')}
               </button>
@@ -193,7 +193,7 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
           <div className="flex gap-2 pt-2 border-t-2 border-gray-100">
             <NeoButton label={t('common.cancel')} variant="ghost" className="!rounded-xl" onClick={onClose} disabled={isPending} type="button" fullWidth />
             <NeoButton
-              label={isPending ? t('dispute.reporting') : t('dispute.submit')}
+              label={isPending ? t('reportForm.reporting') : t('reportForm.submit')}
               variant="danger"
               className="!rounded-xl"
               loading={isPending}
