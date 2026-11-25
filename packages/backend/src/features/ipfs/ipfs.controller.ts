@@ -69,6 +69,22 @@ export class IpfsController {
     return this.service.uploadToIPFS(file as File, metadata);
   }
 
+  @Post("/badge")
+  @ApiDoc({ summary: "Generate a credential NFT picture and its metadata, and pin both" })
+  async badge(c: Context) {
+    const body = await c.req.json().catch(() => null);
+    const kind = body?.kind;
+    const wallet = body?.wallet;
+    const pid = Number(body?.pid);
+    if (kind !== "student" && kind !== "donor") throw HttpException.badRequest("kind must be student or donor.");
+    if (typeof wallet !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw HttpException.badRequest("wallet must be an address.");
+    if (!Number.isSafeInteger(pid) || pid < 1) throw HttpException.badRequest("pid must be a program id.");
+    const programName =
+      typeof body.programName === "string" && body.programName.trim() ? body.programName.trim().slice(0, 120) : `Program #${pid}`;
+
+    return this.service.uploadBadge({ kind, wallet, pid, programName, date: new Date() });
+  }
+
   @Post("/upload/erc-721")
   @ApiDoc({ summary: "Upload NFT-style metadata (with image) to IPFS" })
   async uploadERC721(c: Context) {

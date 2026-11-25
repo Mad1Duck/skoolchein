@@ -11,8 +11,13 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@dicebear/collection": "^9",
+    "@dicebear/core": "^9",
+    "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo-google-fonts/paytone-one": "^0.4.2",
     "@google/generative-ai": "^0.24.1",
     "@ponder/client": "^0.11.37",
+    "@resvg/resvg-js": "^2.6.2",
     "check-disk-space": "^3.4.0",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.41.0",

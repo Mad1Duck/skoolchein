@@ -1,5 +1,6 @@
 import { Injectable, Singleton } from "hono-forge";
 import { getPinata, getPinataGateway } from "@/utils/lib/ipfs";
+import { BADGE_THEME, renderBadgePng, type BadgeInput } from "./badge";
 
 export interface IMetadata {
   [key: string]: unknown;
@@ -46,6 +47,29 @@ export class IpfsService {
       metadataURL: `${gateway}/${metaCID}`,
       imageURL: imageCID ? `${gateway}/${imageCID}` : '',
     };
+  }
+
+  /** Draw a credential's picture, pin it, and pin the NFT metadata that points at it. */
+  async uploadBadge(input: BadgeInput) {
+    const theme = BADGE_THEME[input.kind];
+    const name = `skoolchein_badge_${input.kind}_${input.pid}_${input.wallet.slice(2, 8).toLowerCase()}`;
+    const imageCID = await uploadFile(new File([renderBadgePng(input)], `${name}.png`, { type: "image/png" }));
+    const metadata = {
+      name: `${theme.title} #${input.pid}`,
+      description:
+        input.kind === "student"
+          ? `Credential for completing the scholarship program "${input.programName}".`
+          : `Proof of donating to the scholarship program "${input.programName}".`,
+      image: `ipfs://${imageCID}`,
+      attributes: [
+        { trait_type: "Program", value: input.programName },
+        { trait_type: "Program ID", value: input.pid },
+        { trait_type: "Role", value: theme.tag },
+        { display_type: "date", trait_type: "Issued", value: Math.floor(input.date.getTime() / 1000) },
+      ],
+    };
+    const metaCID = await uploadJson(metadata);
+    return { imageCID, metaCID, imageURL: `${getPinataGateway()}/${imageCID}` };
   }
 
   async uploadERCToIPFS(file: File, metadata: IMetadata) {
