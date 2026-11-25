@@ -861,7 +861,10 @@ function CommitteeProgramSection({
     dashboardData.committeePrograms.find((p) => p.pid === programId)?.screeningMode === 0;
   const pendingApplicants = allApplicants.filter((a) => a.status === 'PENDING_REVIEW');
   const proposedMilestones = allMilestones.filter((m) => m.status === 'PROPOSED');
-  const activeDisputes = dashboardData.disputes.filter((d) => d.status === 'ACTIVE');
+  // Reports in THIS program (not only the ones this wallet filed or is accused of), so a committee
+  // member sees what they are meant to rule on.
+  const programReports = (dashboardData.programDisputes ?? []).filter((d) => d.pid === programId);
+  const activeDisputes = programReports.filter((d) => d.status === 'ACTIVE');
 
   const [scoreTarget, setScoreTarget] = useState<Applicant | null>(null);
 
@@ -915,11 +918,11 @@ function CommitteeProgramSection({
             <p className="text-xs font-bold uppercase text-gray-500 mb-2">
               {t('panel.activeReports', { n: activeDisputes.length })}
             </p>
-            <div className="space-y-2">
-              {activeDisputes.map((d) => (
-                <CommitteeDisputeVoteRow key={d.blockchainId} dispute={d} programId={programId} />
-              ))}
-            </div>
+            <ProgramReportsPanel
+              disputes={activeDisputes}
+              showIntro={false}
+              renderActions={(d) => <CommitteeDisputeVoteRow dispute={d} programId={programId} />}
+            />
           </div>
         )}
 
@@ -1036,7 +1039,16 @@ function CommitteeDisputeVoteRow({ dispute, programId }: { dispute: Dispute; pro
  * Every report filed against someone in the program, for the person who created it: who reported
  * whom, what kind of fraud, the evidence, how long the accused has to answer, and the state.
  */
-export function ProgramReportsPanel({ disputes }: { disputes: Dispute[] }) {
+export function ProgramReportsPanel({
+  disputes,
+  renderActions,
+  showIntro = true,
+}: {
+  disputes: Dispute[];
+  /** Extra controls under a report (the committee's vote buttons). */
+  renderActions?: (d: Dispute) => React.ReactNode;
+  showIntro?: boolean;
+}) {
   const { t } = useT();
   const fmt = useFormatMoney();
   const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -1054,7 +1066,7 @@ export function ProgramReportsPanel({ disputes }: { disputes: Dispute[] }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-700">{t('progReports.intro')}</p>
+      {showIntro && <p className="text-sm text-gray-700">{t('progReports.intro')}</p>}
       {disputes.map((d) => {
         const deadline = d.defenseDeadline ? new Date(d.defenseDeadline) : null;
         return (
@@ -1093,6 +1105,7 @@ export function ProgramReportsPanel({ disputes }: { disputes: Dispute[] }) {
                   <EvidenceView cid={d.counterEvidenceCID} />
                 </div>
               )}
+              {renderActions?.(d)}
               <Link to="/disputes"><NeoButton label={t('progReports.open')} variant="secondary" size="sm" className="!rounded-xl" /></Link>
             </NeoCardBody>
           </NeoCard>
