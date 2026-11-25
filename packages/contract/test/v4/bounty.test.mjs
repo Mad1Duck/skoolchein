@@ -160,6 +160,41 @@ it("an upheld report returns the deposit to the reporter and pays nothing to the
   assert.ok(deposit > 0n);
 });
 
+it("the program's creator can rule on a report in their own program, with no committee at all", async () => {
+  const { committee } = sys.contracts;
+  const p = await submittedMilestone();
+  await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
+  await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+
+  await expectRevert(sys.as(stranger()).write(committee, "resolveDisputeAsCreator", [1n, BigInt(p.pid), true]), "OnlyInitiator");
+  await sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, BigInt(p.pid), true]);
+
+  assert.equal((await sys.read(bounty, "disputes", [1n]))[6], 3, "status: BH_WON");
+  assert.equal((await sys.read(core, "getScholar", [p.scholar, BigInt(p.pid)])).status, 2, "scholar frozen");
+  // A ruling is final: the creator cannot rule twice.
+  // (Core forwards the call with a low-level call, so the reason is not named; it is the Bounty's DisputeAlreadyResolved.)
+  await assert.rejects(sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, BigInt(p.pid), false]));
+});
+
+it("the creator can clear the scholar, which releases the milestone", async () => {
+  const { committee } = sys.contracts;
+  const p = await submittedMilestone();
+  await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
+  await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+  await sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, BigInt(p.pid), false]);
+  assert.notEqual(await milestoneStatus(p.milestoneId), FROZEN);
+});
+
+it("a ruling for one program cannot touch a report from another program", async () => {
+  const { committee } = sys.contracts;
+  const p = await submittedMilestone();
+  await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
+  await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+  // Even the real creator cannot rule on this report while naming a different program.
+  const wrongPid = BigInt(p.pid) + 1n;
+  await expectRevert(sys.as(p.initiator).write(committee, "resolveDisputeAsCreator", [1n, wrongPid, true]), "OnlyInitiator");
+});
+
 it("the program is still running after a report", async () => {
   const p = await submittedMilestone();
   await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);

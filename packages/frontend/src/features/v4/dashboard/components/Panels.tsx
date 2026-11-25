@@ -21,6 +21,7 @@ import {
   useExecuteMilestone,
   useTriggerAutoGuilty,
   useVoteOnDispute,
+  useResolveDisputeAsCreator,
   useVoteOnMilestone,
 } from '@/lib/contracts/write-hooks';
 import type {
@@ -44,6 +45,7 @@ import { StakeClaimButton } from './StakeClaimButton';
 import { EvidenceView } from '@/components/ui/EvidenceView';
 import { useProgramLabel } from '@/lib/api/useProgramLabel';
 import { useVotingClock } from '@/features/v4/vote/useVotingClock';
+import { DefendModal } from '../../report/components/DefendModal';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
 import { ExtendDeadlineModal } from './ExtendDeadlineModal';
 
@@ -929,6 +931,97 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Reports against this wallet (where the accused scholar defends)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function AgainstMePanel({ disputes }: { disputes: DashboardData['disputes'] }) {
+  const { t } = useT();
+  const [defending, setDefending] = useState<Dispute | null>(null);
+  const needs = disputes.filter((d) => d.status === 'ACTIVE' && !d.counterEvidenceCID);
+
+  if (disputes.length === 0) {
+    return <CompactEmpty title={t('panel.againstEmptyTitle')} body={t('panel.againstEmptyBody')} />;
+  }
+  return (
+    <section className="space-y-4">
+      {needs.length > 0 && (
+        <p className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm font-bold">{t('panel.againstNeeds', { n: needs.length })}</p>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {disputes.map((d) => (
+          <AgainstCard key={d.blockchainId} dispute={d} onDefend={() => setDefending(d)} />
+        ))}
+      </div>
+      {defending && <DefendModal isOpen onClose={() => setDefending(null)} dispute={defending} />}
+    </section>
+  );
+}
+
+function AgainstCard({ dispute, onDefend }: { dispute: Dispute; onDefend: () => void }) {
+  const { t } = useT();
+  const { name } = useProgramLabel(dispute.pid ?? 0);
+  const clock = useVotingClock(dispute.defenseDeadline);
+  const active = dispute.status === 'ACTIVE';
+  const defended = !!dispute.counterEvidenceCID;
+  const windowClosed = dispute.defenseDeadline !== null && clock.ended;
+  const canDefend = active && !defended && !windowClosed;
+
+  return (
+    <div className={`rounded-2xl border-2 border-black bg-white p-4 shadow-[3px_3px_0_0_#000] space-y-3 ${canDefend ? 'ring-4 ring-skyellow' : ''}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{name}</p>
+          <p className="text-[11px] text-gray-500">
+            {t('panel.report', { id: dispute.blockchainId })} · {dispute.raisedAt ? new Date(dispute.raisedAt).toLocaleDateString() : ''}
+          </p>
+        </div>
+        <span className={`rounded border-2 border-black px-2 py-0.5 text-[10px] font-extrabold uppercase ${active ? 'bg-skyellow' : 'bg-gray-200'}`}>
+          {statusLabel(t, dispute.status)}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-skred-light p-2.5">
+        <WalletAvatar address={dispute.bountyHunter} size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('reports.reporter')}</p>
+          <p className="font-data text-sm font-bold">{shortAddr(dispute.bountyHunter)}</p>
+        </div>
+        <span className="rounded-full border-2 border-black bg-skred px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">
+          {statusLabel(t, dispute.disputeType)}
+        </span>
+      </div>
+
+      <details className="rounded-xl border-2 border-black bg-white p-2.5 text-sm" open={canDefend}>
+        <summary className="cursor-pointer font-bold">{t('evidence.report')}</summary>
+        <div className="mt-2"><EvidenceView cid={dispute.evidenceCID} /></div>
+        {defended && (
+          <div className="mt-3 border-t-2 border-black/10 pt-2">
+            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('evidence.defense')}</p>
+            <EvidenceView cid={dispute.counterEvidenceCID} />
+          </div>
+        )}
+      </details>
+
+      {active && (
+        <p className="rounded-xl border-2 border-black bg-skyellow-light p-2.5 text-sm">
+          {defended ? (
+            <span className="font-bold">{t('reports.withCommittee')}</span>
+          ) : windowClosed ? (
+            <span className="font-bold">{t('reports.windowClosed')}</span>
+          ) : (
+            <>
+              <span className="font-bold">{t('reports.defenseLeft')}:</span> <span className="font-data">{clock.text ?? '—'}</span>
+            </>
+          )}
+        </p>
+      )}
+
+      {canDefend && <NeoButton label={t('reports.defend')} variant="primary" className="!rounded-xl" fullWidth onClick={onDefend} />}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Committee Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1098,6 +1191,44 @@ function CommitteeMilestoneVoteRow({
           loading={isPending}
           disabled={isPending}
           onClick={() => voteOnMilestone(BigInt(milestone.blockchainId), BigInt(programId), false)}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** The program creator's own way to settle a report in their program (next to the committee's vote). */
+export function CreatorRulingActions({ dispute }: { dispute: Dispute }) {
+  const { t } = useT();
+  const { resolveAsCreator, isPending } = useResolveDisputeAsCreator();
+  const clock = useVotingClock(dispute.defenseDeadline);
+  const defended = !!dispute.counterEvidenceCID;
+  const windowClosed = dispute.defenseDeadline !== null && clock.ended;
+  if (dispute.status !== 'ACTIVE' || dispute.pid === null) return null;
+
+  // The contract only takes a ruling after a defense; with none, the report ends by itself once the window closes.
+  if (!defended) {
+    return <p className="rounded-xl border-2 border-black bg-white p-2.5 text-xs">{windowClosed ? t('reports.windowClosed') : t('panel.creatorWait')}</p>;
+  }
+  return (
+    <div className="space-y-2 rounded-xl border-2 border-black bg-skyellow-light p-3">
+      <p className="text-xs font-bold">{t('panel.creatorRule')}</p>
+      <div className="flex gap-2">
+        <NeoButton
+          label={t('panel.uphold')}
+          variant="danger"
+          size="sm"
+          loading={isPending}
+          disabled={isPending}
+          onClick={() => resolveAsCreator(BigInt(dispute.blockchainId), BigInt(dispute.pid ?? 0), true)}
+        />
+        <NeoButton
+          label={t('panel.dismiss')}
+          variant="ghost"
+          size="sm"
+          loading={isPending}
+          disabled={isPending}
+          onClick={() => resolveAsCreator(BigInt(dispute.blockchainId), BigInt(dispute.pid ?? 0), false)}
         />
       </div>
     </div>

@@ -101,6 +101,7 @@ export async function deploySystem() {
     selection: artifact("contracts/v4/core/ScholarshipSelection.sol/ScholarshipSelection.json"),
     bounty: artifact("contracts/v4/core/ScholarshipBounty.sol/ScholarshipBounty.json"),
     coreLogic: artifact("contracts/v4/core/ScholarshipCoreLogic.sol/ScholarshipCoreLogic.json"),
+    committee: artifact("contracts/v4/governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
   };
 
   const usdc = await deploy(deployer, art.usdc);
@@ -116,6 +117,7 @@ export async function deploySystem() {
   const admin = await deployProxy(deployer, art.admin, [deployer, core]);
   const selection = await deployProxy(deployer, art.selection, [deployer, core]);
   const bounty = await deployProxy(deployer, art.bounty, [deployer, usdc, core, treasury]);
+  const committee = await deployProxy(deployer, art.committee, [deployer, core, milestones]);
 
   const send = async (address, abi, functionName, args = [], value) => {
     const hash = await walletFor(deployer).writeContract({ address, abi, functionName, args, value });
@@ -130,6 +132,7 @@ export async function deploySystem() {
   await send(core, art.core.abi, "grantRole", [ROLE.CONFIG_ADMIN, admin]);
   await send(core, art.core.abi, "grantRole", [ROLE.SELECTION, selection]);
   await send(core, art.core.abi, "grantRole", [ROLE.COMMITTEE, deployer]);
+  await send(core, art.core.abi, "grantRole", [ROLE.COMMITTEE, committee]);
   await send(treasury, art.treasury.abi, "grantRole", [ROLE.CORE, core]);
   // The MilestoneManager releases milestone payments through the Treasury, so it needs the same role.
   await send(treasury, art.treasury.abi, "grantRole", [ROLE.CORE, milestones]);
@@ -163,6 +166,7 @@ export async function deploySystem() {
     treasury: { address: treasury, abi: abiOf(art.treasury.abi) },
     bounty: { address: bounty, abi: abiOf(art.bounty.abi) },
     usdc: { address: usdc, abi: abiOf(art.usdc.abi) },
+    committee: { address: committee, abi: abiOf(art.committee.abi) },
   };
 
   const as = (account) => {

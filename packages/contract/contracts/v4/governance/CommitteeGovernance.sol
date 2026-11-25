@@ -77,6 +77,7 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     error AlreadyVotedOnMilestone();
     error MilestoneAlreadyResolved();
     error OnlyInitiator();
+    error DisputeNotInProgram();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -168,8 +169,28 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     // DISPUTE VOTING (unchanged from v4)
     // ═══════════════════════════════════════════════════════════════════
 
+    /**
+     * @notice The program's creator rules on a report about their own program, alone and at any time after
+     *         the scholar has answered. It sits next to the committee vote, not instead of it: whichever
+     *         reaches a ruling first settles the report (Bounty rejects a second ruling).
+     */
+    function resolveDisputeAsCreator(uint256 disputeId, uint256 pid, bool upholdDispute) external {
+        if (msg.sender != _core.getProgram(pid).initiator) revert OnlyInitiator();
+        _requireDisputeOfProgram(disputeId, pid);
+        emit DisputeVoteCast(disputeId, msg.sender, upholdDispute);
+        if (upholdDispute) _core.resolveDisputeBH(disputeId);
+        else               _core.resolveDisputeScholar(disputeId);
+    }
+
+    /// @dev A ruling for program `pid` may only touch a report that was raised in that program.
+    function _requireDisputeOfProgram(uint256 disputeId, uint256 pid) internal view {
+        address bounty = _core.bountyHunter();
+        if (IBountyGov(bounty).getDispute(disputeId).pid != pid) revert DisputeNotInProgram();
+    }
+
     function voteOnDispute(uint256 disputeId, uint256 pid, bool upholdDispute) external {
         if (!isCommitteeMember[pid][msg.sender]) revert NotCommitteeMember();
+        _requireDisputeOfProgram(disputeId, pid);
         if (hasVotedOnDispute[disputeId][msg.sender]) revert AlreadyVotedOnDispute();
         hasVotedOnDispute[disputeId][msg.sender] = true;
         if (upholdDispute) disputeVotesFor[disputeId]++;
@@ -243,6 +264,11 @@ interface IScholarshipCoreGov {
     function submitCommitteeScore(uint256 pid, address applicant, uint256 academic, uint256 income, uint256 recommend, address committeeAddress) external;
     function resolveDisputeBH(uint256 disputeId) external;
     function resolveDisputeScholar(uint256 disputeId) external;
+    function bountyHunter() external view returns (address);
+}
+
+interface IBountyGov {
+    function getDispute(uint256 disputeId) external view returns (ScholarshipTypes.Dispute memory);
 }
 
 interface IMilestoneManagerGov {
