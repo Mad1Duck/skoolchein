@@ -82,6 +82,14 @@ export class DashboardService {
         .orderBy(desc(v4CommitteeMembers.addedAt)),
     ]);
 
+    // Reports filed against anyone in the programs this wallet created, so a creator sees them too.
+    const createdPids = programsCreated.map((p) => p.pid);
+    const programDisputes = createdPids.length === 0
+      ? []
+      : await ponderClient.db.select().from(v4Disputes)
+          .where(onChain(v4Disputes, or(...createdPids.map((pid) => eq(v4Disputes.pid, pid)))))
+          .orderBy(desc(v4Disputes.createdAt));
+
     const committeePids = [...new Set(committeeMemberships.map((m) => m.pid))];
 
     // Every program this wallet touches, in one query.
@@ -129,6 +137,7 @@ export class DashboardService {
       votes,
       stakes,
       disputes: disputes.map(withDefenseDeadline),
+      programDisputes: programDisputes.map(withDefenseDeadline),
       reputation: reputation ?? null,
       committeePrograms,
     };

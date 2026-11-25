@@ -1027,3 +1027,77 @@ function CommitteeDisputeVoteRow({ dispute, programId }: { dispute: Dispute; pro
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reports against a program (creator's side)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Every report filed against someone in the program, for the person who created it: who reported
+ * whom, what kind of fraud, the evidence, how long the accused has to answer, and the state.
+ */
+export function ProgramReportsPanel({ disputes }: { disputes: Dispute[] }) {
+  const { t } = useT();
+  const fmt = useFormatMoney();
+  const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+  if (disputes.length === 0) {
+    return (
+      <NeoCard hoverable={false} className="border-dashed">
+        <NeoCardBody className="py-10 text-center">
+          <h3 className="font-paytone text-xl mb-1">{t('progReports.emptyTitle')}</h3>
+          <p className="text-sm text-gray-600 max-w-md mx-auto">{t('progReports.emptyBody')}</p>
+        </NeoCardBody>
+      </NeoCard>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-700">{t('progReports.intro')}</p>
+      {disputes.map((d) => {
+        const deadline = d.defenseDeadline ? new Date(d.defenseDeadline) : null;
+        return (
+          <NeoCard key={d.blockchainId} hoverable={false}>
+            <NeoCardBody className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold">{t('panel.report', { id: d.blockchainId })}</h3>
+                  <p className="text-xs text-gray-600 font-mono">
+                    {t('progReports.reporter')} {short(d.bountyHunter)} → {t('progReports.accused')} {short(d.scholarAddress)}
+                  </p>
+                </div>
+                <span className={`px-2 py-0.5 border-2 border-black rounded text-[10px] font-bold uppercase ${d.status === 'ACTIVE' ? 'bg-skyellow' : d.status.includes('WON') || d.status.includes('GUILTY') || d.status.includes('CONCEDED') ? 'bg-skgreen' : 'bg-skred text-white'}`}>
+                  {statusLabel(t, d.status)}
+                </span>
+              </div>
+
+              <dl className="grid grid-cols-2 gap-2 text-xs">
+                <div><dt className="text-gray-500">{t('progReports.type')}</dt><dd className="font-bold">{statusLabel(t, d.disputeType)}</dd></div>
+                <div><dt className="text-gray-500">{t('panel.stakePaid')}</dt><dd className="font-data font-bold">{fmt(d.stake, d.token)}</dd></div>
+                {d.milestoneId !== null && (
+                  <div><dt className="text-gray-500">{t('progReports.milestone')}</dt><dd className="font-bold">#{d.milestoneId}</dd></div>
+                )}
+                {deadline && (
+                  <div><dt className="text-gray-500">{t('progReports.answerBy')}</dt><dd className="font-bold">{deadline.toLocaleString()}</dd></div>
+                )}
+              </dl>
+
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 mb-1">{t('progReports.evidence')}</p>
+                <EvidenceView cid={d.evidenceCID} />
+              </div>
+              {d.counterEvidenceCID && (
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 mb-1">{t('progReports.defence')}</p>
+                  <EvidenceView cid={d.counterEvidenceCID} />
+                </div>
+              )}
+              <Link to="/disputes"><NeoButton label={t('progReports.open')} variant="secondary" size="sm" className="!rounded-xl" /></Link>
+            </NeoCardBody>
+          </NeoCard>
+        );
+      })}
+    </div>
+  );
+}

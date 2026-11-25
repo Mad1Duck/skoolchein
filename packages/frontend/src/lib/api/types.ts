@@ -232,6 +232,8 @@ export interface DashboardData {
   votes: Vote[];
   stakes: ConfidenceStake[];
   disputes: Dispute[];
+  /** Reports filed against anyone in the programs this wallet created. */
+  programDisputes?: Dispute[];
   reputation: Reputation | null;
   committeePrograms: Program[];
 }
