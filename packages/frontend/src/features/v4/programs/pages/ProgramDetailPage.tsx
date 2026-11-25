@@ -12,6 +12,8 @@ import { ApplicantRow } from '../components/ApplicantRow';
 import { VotingBoard } from '../components/VotingBoard';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { MilestonePlanCard } from '../components/MilestonePlanCard';
+import { DonorRefundCard } from '../components/DonorRefundCard';
+import { useLeftoverShares } from '@/lib/contracts/v4/hooks/treasury';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -100,6 +102,7 @@ export function ProgramDetailPage() {
     return all > 0n ? Number((mine * 1000n) / all) / 10 : 0;
   };
   const reportsQ = useProgramDisputes(activeTab === 'reports' ? id : '');
+  const { shares: leftoverShares } = useLeftoverShares(program?.pid, (scholarsQ.data ?? []).map((s) => s.wallet));
 
 
   if (isLoading) {
@@ -284,6 +287,8 @@ export function ProgramDetailPage() {
           <MyRecommendationsCard programId={program.pid} student={userAddress} />
         )}
 
+      <DonorRefundCard program={program} />
+
       <MilestonePlanCard programId={program.pid} />
 
       <ProgramFundingCard
@@ -391,7 +396,7 @@ export function ProgramDetailPage() {
                   <div className="min-w-0">
                     <p className="font-bold font-data text-sm">{shortenAddress(s.wallet)}</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
-                      {t('detail.received')} <span className="font-data font-bold">{fmtAmount(s.totalReceived, program.token)}</span> · {t('detail.milestone')} <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
+                      {t('detail.received')} <span className="font-data font-bold">{fmtAmount(BigInt(s.totalReceived || '0') + (leftoverShares.get(s.wallet.toLowerCase()) ?? 0n), program.token)}</span> · {t('detail.milestone')} <span className="font-data">{s.currentMilestone}/{s.totalMilestones}</span>
                     </p>
                   </div>
                 </div>
@@ -488,9 +493,11 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
   // range, so subtracting as Number silently loses precision on native-token
   // programs. Only the percentages below narrow to Number, where a ratio of
   // two similar magnitudes is safe.
-  const unallocated = BigInt(program.totalFund) - BigInt(program.allocatedFund);
+  // `allocatedFund` only counts optional milestones, so money already paid out counts as allocated too.
+  const allocated = BigInt(program.allocatedFund) > BigInt(program.spentFund) ? BigInt(program.allocatedFund) : BigInt(program.spentFund);
+  const unallocated = BigInt(program.totalFund) > allocated ? BigInt(program.totalFund) - allocated : 0n;
   const pctSpent = (Number(program.spentFund) / Math.max(1, Number(program.totalFund))) * 100;
-  const pctAllocated = ((Number(program.allocatedFund) - Number(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100;
+  const pctAllocated = (Number(allocated - BigInt(program.spentFund)) / Math.max(1, Number(program.totalFund))) * 100;
   const pctUnallocated = (Number(unallocated) / Math.max(1, Number(program.totalFund))) * 100;
 
   return (
@@ -541,7 +548,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
             </div>
             <div className="flex justify-between items-baseline border-t-2 border-black/10 pt-2">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.allocated')}</dt>
-              <dd className="font-bold font-data">{fmtAmount(program.allocatedFund, program.token)}</dd>
+              <dd className="font-bold font-data">{fmtAmount(allocated, program.token)}</dd>
             </div>
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.spent')}</dt>
@@ -565,7 +572,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <div
                 className="h-full bg-skyellow border-r-2 border-black"
                 style={{ width: `${pctAllocated}%` }}
-                title={`${t('detail.pending')}: ${fmtAmount(BigInt(program.allocatedFund) - BigInt(program.spentFund), program.token)}`}
+                title={`${t('detail.pending')}: ${fmtAmount(allocated - BigInt(program.spentFund), program.token)}`}
               />
               <div
                 className="h-full bg-gray-200"
