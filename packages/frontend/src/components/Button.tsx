@@ -1,4 +1,4 @@
-import { ConnectButton } from "@xellar/kit";
+import { WalletButtonState } from "./wallet/WalletButtonState";
 
 interface ButtonProps {
   label?: React.ReactNode;
@@ -70,7 +70,7 @@ export const Button = ({
   }
 
   return (
-    <ConnectButton.Custom>
+    <WalletButtonState>
       {({
         isConnected,
         openProfileModal,
@@ -157,8 +157,8 @@ export const Button = ({
                     className={`${getButtonClasses(size)} max-lg:w-full`}
                   >
                     {address}
-                    {account.address &&
-                      ` (${account.balanceFormatted?.slice(0, 5)})`}
+                    {account.balanceFormatted &&
+                      ` (${account.balanceFormatted.slice(0, 5)})`}
                   </button>
                 </ButtonWrapper>
               </div>
@@ -166,6 +166,6 @@ export const Button = ({
           </div>
         );
       }}
-    </ConnectButton.Custom>
+    </WalletButtonState>
   );
 };

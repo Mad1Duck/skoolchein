@@ -76,7 +76,7 @@ const PUBLIC_CARDS = [
 function PublicView() {
   const { t } = useT();
   return (
-    <main className="flex flex-col px-9 pb-9 w-full min-h-screen relative isolate bg-skyellow">
+    <main className="flex flex-col px-9 max-sm:px-3 pb-9 w-full min-h-screen relative isolate bg-skyellow">
       <div
         className="h-[60vh] absolute right-0 left-0 -top-px bg-skpurple"
         style={{ clipPath: arc }}
@@ -150,7 +150,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <main className="flex px-9 pb-9 w-full min-h-screen relative isolate bg-skyellow">
+      <main className="flex px-9 max-sm:px-3 pb-9 w-full min-h-screen relative isolate bg-skyellow">
         <div
           className="h-[60vh] absolute right-0 left-0 -top-px bg-skpurple"
           style={{ clipPath: arc }}
@@ -204,7 +204,7 @@ export function DashboardPage() {
   const nextScholarship = () => setScholarshipIndex((i) => (i + 1) % scholarships.length);
 
   return (
-    <main className="flex flex-col px-9 pb-9 w-full min-h-screen relative isolate bg-skyellow">
+    <main className="flex flex-col px-9 max-sm:px-3 pb-9 w-full min-h-screen relative isolate bg-skyellow">
       <div
         className="h-[60vh] absolute right-0 left-0 -top-px bg-skpurple"
         style={{ clipPath: arc }}
@@ -231,12 +231,12 @@ export function DashboardPage() {
               </div>
               <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">{t('nav.dashboard')}</h1>
             </div>
-            <div className="flex flex-col items-start md:items-end gap-1">
+            <div className="flex min-w-0 flex-col items-start md:items-end gap-1">
               <div className="flex items-center gap-2">
                 <LiveBadge />
                 <p className="text-xs font-data text-gray-400 uppercase tracking-widest">{t('dash.connected')}</p>
               </div>
-              <p className="text-sm font-data text-gray-600">{address}</p>
+              <p className="max-w-full break-all text-sm font-data text-gray-600">{address}</p>
             </div>
           </div>
         </div>

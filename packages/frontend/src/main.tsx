@@ -10,7 +10,7 @@ import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from './constants/wagmi.config';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientConfig } from './constants/queryclient.config';
-import { darkTheme, XellarKitProvider } from '@xellar/kit';
+import { WalletKit } from './components/wallet/WalletKit';
 import { TokenRateProvider } from './components/providers/TokenProvider';
 import { ChainSync } from './components/ChainSync';
 import { RealtimeSync } from './lib/realtime/realtime';
@@ -35,14 +35,14 @@ if (!rootElement.innerHTML) {
       <I18nProvider>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClientConfig}>
-          <XellarKitProvider theme={darkTheme}>
+          <WalletKit>
             <ChainSync />
             <RealtimeSync />
             <TokenRateProvider>
               <RouterProvider router={router} />
             </TokenRateProvider>
             <Toaster />
-          </XellarKitProvider>
+          </WalletKit>
         </QueryClientProvider>
       </WagmiProvider>
     </I18nProvider>

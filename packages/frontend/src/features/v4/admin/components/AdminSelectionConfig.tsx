@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSelectionAddress, useSelectionConfig, useSetSelectionConfig } from '@/lib/contracts/v4/hooks/selection';
+import { useT } from '@/lib/i18n';
 
 /**
  * Admin settings for winner selection (ScholarshipSelection.setConfig). Percent in the form,
  * basis points on-chain.
  */
 export function AdminSelectionConfig() {
+  const { t } = useT();
   const address = useSelectionAddress();
   const { config, isLoading, refetch } = useSelectionConfig();
   const { setConfig, isPending, isSuccess, error } = useSetSelectionConfig();
@@ -28,14 +30,14 @@ export function AdminSelectionConfig() {
 
   if (!address) {
     return (
-      <Card title="Winner Selection">
+      <Card title={t('admin.sel.title')}>
         <p className="text-sm font-bold text-gray-500">
-          The selection contract is not deployed on this network yet.
+          {t('admin.sel.notDeployed')}
         </p>
       </Card>
     );
   }
-  if (isLoading || !config) return <div className="p-8 text-center font-bold">Loading selection settings…</div>;
+  if (isLoading || !config) return <div className="p-8 text-center font-bold">{t('admin.sel.loading')}</div>;
 
   const toBps = (v: string) => Math.round((parseFloat(v) || 0) * 100);
   const max = toBps(maxPct);
@@ -47,10 +49,10 @@ export function AdminSelectionConfig() {
 
   return (
     <Card
-      title="Winner Selection"
+      title={t('admin.sel.title')}
       action={
         <NeoButton
-          label={isPending ? 'Saving…' : 'Apply Changes'}
+          label={isPending ? t('common.processing') : t('admin.apply')}
           variant="success"
           className="!rounded-xl"
           onClick={() => setConfig(max, def, cap)}
@@ -60,20 +62,20 @@ export function AdminSelectionConfig() {
       }
     >
       <p className="text-xs text-gray-500">
-        Final score = screening × (1 − w) + vote share × w. Program creators choose w, up to the maximum below.
+        {t('admin.sel.formula')}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="Max vote weight" unit="%" value={maxPct} onChange={setMaxPct}
-          help="Highest share of the final score a creator may give to votes." />
-        <Field label="Default vote weight" unit="%" value={defaultPct} onChange={setDefaultPct}
-          help="Used when a creator does not choose. Cannot exceed the maximum." error={def > max} />
-        <Field label="Per-voter cap" unit="%" value={capPct} onChange={setCapPct}
-          help="One donor's counted votes, as a share of the program fund. 0 = no cap." />
+        <Field label={t('admin.sel.max')} unit="%" value={maxPct} onChange={setMaxPct}
+          help={t('admin.sel.maxHelp')} />
+        <Field label={t('admin.sel.default')} unit="%" value={defaultPct} onChange={setDefaultPct}
+          help={t('admin.sel.defaultHelp')} error={def > max} />
+        <Field label={t('admin.sel.cap')} unit="%" value={capPct} onChange={setCapPct}
+          help={t('admin.sel.capHelp')} />
       </div>
 
-      {invalid && <p className="text-xs font-bold text-skred">The default cannot exceed the maximum, and no value may exceed 100%.</p>}
-      {error && <p className="text-xs font-bold text-skred">Could not save. Your wallet must hold the Selection admin role.</p>}
+      {invalid && <p className="text-xs font-bold text-skred">{t('admin.sel.invalid')}</p>}
+      {error && <p className="text-xs font-bold text-skred">{t('admin.sel.error')}</p>}
     </Card>
   );
 }

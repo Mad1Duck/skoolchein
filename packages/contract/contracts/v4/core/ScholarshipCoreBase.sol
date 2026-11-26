@@ -491,8 +491,13 @@ abstract contract ScholarshipCoreBase is Initializable {
                 fraudNFT.mint(wallet, pid, "ipfs://QmFraudAlertMetadata");
             }
         } else {
-            globalStudentStatus[wallet] = ScholarshipTypes.StudentStatus.FROZEN;
-            globalFreezeUntil[wallet] = block.timestamp + _config.freezeHeavy;
+            uint256 until = block.timestamp +
+                (dtype == ScholarshipTypes.DisputeType.LIGHT_FRAUD ? _config.freezeLight : _config.freezeMilestone);
+            // A later, lighter ruling never shortens a freeze already running, nor lifts a blacklist.
+            if (until > globalFreezeUntil[wallet]) globalFreezeUntil[wallet] = until;
+            if (globalStudentStatus[wallet] != ScholarshipTypes.StudentStatus.BLACKLISTED) {
+                globalStudentStatus[wallet] = ScholarshipTypes.StudentStatus.FROZEN;
+            }
         }
         emit ScholarSlashed(wallet, pid, dtype);
         // The penalized scholar may have been the last one the program was waiting for, or the only

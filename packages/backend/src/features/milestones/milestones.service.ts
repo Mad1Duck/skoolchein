@@ -1,9 +1,10 @@
 import { Injectable, Singleton } from "hono-forge";
-import { eq, and, asc } from "@ponder/client";
+import { eq, asc, inArray } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
 import { onChain } from "@/config/chain-context";
+import { programLookup } from "@/features/programs/program-lookup";
 
-const { v4Milestones, v4Scholars, v4Programs } = ponderSchema;
+const { v4Milestones, v4Scholars } = ponderSchema;
 
 @Injectable()
 @Singleton()
@@ -14,24 +15,30 @@ export class MilestonesService {
     if (opts.status) conditions.push(eq(v4Milestones.status, opts.status as any));
     const where = onChain(v4Milestones, ...conditions);
 
-    return ponderClient.db.select({
-      milestone: v4Milestones,
-      scholar: {
-        wallet: v4Scholars.wallet,
-        status: v4Scholars.status,
-        totalReceived: v4Scholars.totalReceived,
-      },
-      program: {
-        pid: v4Programs.pid,
-      },
-    })
-      .from(v4Milestones)
-      .leftJoin(v4Scholars, and(eq(v4Milestones.chainId, v4Scholars.chainId), eq(v4Milestones.pid, v4Scholars.pid), eq(v4Milestones.scholarWallet, v4Scholars.wallet)))
-      .leftJoin(v4Programs, and(eq(v4Milestones.chainId, v4Programs.chainId), eq(v4Milestones.pid, v4Programs.pid)))
+    const rows = await ponderClient.db.select().from(v4Milestones)
       .where(where)
       .orderBy(asc(v4Milestones.blockchainId))
       .limit(opts.limit)
       .offset(opts.offset);
+    // Joined in code, not in SQL: see programLookup.
+    const pids = [...new Set(rows.map((m) => m.pid).filter((pid): pid is number => pid !== null))];
+    const [scholars, program] = await Promise.all([
+      pids.length
+        ? ponderClient.db.select().from(v4Scholars).where(onChain(v4Scholars, inArray(v4Scholars.pid, pids)))
+        : Promise.resolve([]),
+      programLookup(pids, ["pid"]),
+    ]);
+
+    return rows.map((milestone) => {
+      const scholar = scholars.find((s) => s.pid === milestone.pid && s.wallet === milestone.scholarWallet);
+      return {
+        milestone,
+        scholar: scholar
+          ? { wallet: scholar.wallet, status: scholar.status, totalReceived: scholar.totalReceived }
+          : null,
+        program: program(milestone.pid),
+      };
+    });
   }
 
   async getByBlockchainId(blockchainId: number) {

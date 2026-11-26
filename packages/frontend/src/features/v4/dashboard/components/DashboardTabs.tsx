@@ -32,14 +32,14 @@ export function DashboardTabs({
   };
   return (
     <TabsContext.Provider value={{ current, setCurrent }}>
-      <div className={`flex flex-col ${className ?? ""}`}>{children}</div>
+      <div className={`flex min-w-0 flex-col ${className ?? ""}`}>{children}</div>
     </TabsContext.Provider>
   );
 }
 
 export function DashboardTabsList({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`-mb-1 -space-x-1 z-10 flex items-end ${className ?? ""}`}>
+    <div className={`relative -mb-1 -space-x-1 z-10 flex items-end overflow-x-auto overflow-y-hidden ${className ?? ""}`}>
       {children}
     </div>
   );
@@ -60,7 +60,7 @@ export function DashboardTabsTrigger({
     <button
       type="button"
       onClick={() => setCurrent(value)}
-      className={`rounded-t-2xl p-3 font-paytone border-4 border-black transition-all ${className ?? ""} ${
+      className={`shrink-0 whitespace-nowrap max-sm:text-sm rounded-t-2xl p-3 font-paytone border-4 border-black transition-all ${className ?? ""} ${
         active ? "bg-skbw border-b-0 h-14" : "border-b-0 h-11 opacity-80"
       }`}
     >
@@ -82,7 +82,7 @@ export function DashboardTabsContent({
   if (current !== value) return null;
   return (
     <div
-      className={`flex bg-skbw border-4 border-black rounded-b-2xl rounded-r-2xl relative p-4 grow min-h-[20rem] ${className ?? ""}`}
+      className={`flex bg-skbw border-4 border-black rounded-b-2xl rounded-r-2xl relative p-4 max-sm:p-2.5 grow min-h-[20rem] [&>*]:min-w-0 [&>*]:w-full ${className ?? ""}`}
     >
       {children}
     </div>

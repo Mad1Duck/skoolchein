@@ -142,7 +142,7 @@ export function ProgramDetailPage() {
     !(program.status === 'CREATED' || program.status === 'APPLICATION_OPEN') || applicationsClosed || !!hasDonors;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
+    <div className="w-full min-w-0 max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
         <Link to="/programs" className="font-bold hover:text-skpurple transition-colors duration-75">

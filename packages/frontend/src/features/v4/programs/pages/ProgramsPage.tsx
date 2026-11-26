@@ -5,6 +5,7 @@ import type { Program } from '@/lib/api/types';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { CreateProgramModal } from '../components/CreateProgramModal';
 import { ProgramTabs } from '../components/ProgramTabs';
+import { RunningPrograms } from '../components/RunningPrograms';
 import SplitText from '@/components/ui/split-text';
 import { ApproachableWrapper } from '@/components/ornaments/ApproachableWrapper';
 import { useT } from '@/lib/i18n';
@@ -21,8 +22,8 @@ const getTabs = (t: (key: TranslationKey) => string) => [
       </span>
     ),
     color: 'bg-skpurple',
-    filter: (p: Program) =>
-      ['APPLICATION_OPEN', 'SCREENING', 'ACTIVE'].includes(effectiveStatus(p)),
+    // Programs already paying their recipients have their own section further down.
+    filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(effectiveStatus(p)),
   },
   {
     id: 'vote',
@@ -109,7 +110,8 @@ export function ProgramsPage() {
 
   // Live updates come from the app-wide <RealtimeSync /> (lib/realtime), which
   // refetches this query whenever the indexer reports a chain event.
-  const { data: result, isLoading } = usePrograms();
+  // 100 is the most the API returns at once; the default of 20 would hide older programs.
+  const { data: result, isLoading } = usePrograms({ limit: 100 });
   const programs = result?.data ?? [];
 
   useEffect(() => {
@@ -121,7 +123,10 @@ export function ProgramsPage() {
   }, [messagesIndex]);
 
   return (
-    <div className="w-screen h-auto flex flex-col">
+    // data-snap-sections turns on section-by-section scrolling for this page (see index.css).
+    <div data-snap-sections className="w-full h-auto flex flex-col">
+      {/* The large scroll margin makes this section snap to the very top, header included. */}
+      <section className="snap-start scroll-mt-96 flex flex-col min-h-[calc(100svh-10rem)]">
       <div>
         <div className="flex flex-col m-16 max-lg:mx-0 max-lg:mt-0 items-center gap-6 font-paytone text-[3.5rem] text-center">
           <Title />
@@ -193,21 +198,25 @@ export function ProgramsPage() {
         </div>
       </div>
 
-      <div id="find-scholarship" className="px-9 py-12 z-[2] max-sm:px-3">
-        <div className="inline-flex flex-col justify-center items-start gap-3.5">
+      </section>
+
+      <section id="find-scholarship" className="relative z-[2] snap-start flex min-h-svh flex-col bg-skyellow px-9 py-12 max-sm:px-3">
+        <div className="flex flex-col justify-center items-start gap-3.5">
           <h2 className="font-paytone text-5xl max-sm:text-[24px]">{t('home.find')}</h2>
           <p className="text-2xl max-sm:text-xs">{t('home.findHint')}</p>
         </div>
-        <div className="py-7">
+        <div className="flex flex-1 flex-col pt-7">
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex flex-1 items-center justify-center py-20">
               <div className="w-12 h-12 border-2 border-black bg-skyellow animate-pulse shadow-[3px_3px_0_0_#000]" />
             </div>
           ) : (
             <ProgramTabs programs={programs} tabs={getTabs(t)} />
           )}
         </div>
-      </div>
+      </section>
+
+      <RunningPrograms programs={programs} isLoading={isLoading} />
 
       <CreateProgramModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </div>

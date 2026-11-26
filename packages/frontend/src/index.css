@@ -77,6 +77,19 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   SECTION SNAPPING — pages that mark themselves with data-snap-sections
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+html:has([data-snap-sections]) {
+  scroll-snap-type: y mandatory;
+}
+/* `overflow-x: hidden` would make <main> a scroll container of its own, and sections would snap to it
+   instead of the page. `clip` hides the same overflow without that. */
+html:has([data-snap-sections]) main {
+  overflow-x: clip;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    ELEVATION SYSTEM — Layered depth without blur
    ══════════════════════════════════════════════════════════════════════════════ */
 

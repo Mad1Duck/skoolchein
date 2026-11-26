@@ -5,11 +5,13 @@ import { type Program } from '@/lib/api';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { toLocalInput } from '@/lib/time';
+import { useT } from '@/lib/i18n';
+import { statusLabel } from '@/lib/i18n/status';
 
 // Simplified enum map matching the smart contract
 const PROGRAM_STATUSES = [
   { value: 0, label: 'CREATED' },
-  { value: 1, label: 'APPLICATION OPEN' },
+  { value: 1, label: 'APPLICATION_OPEN' },
   { value: 2, label: 'SCREENING' },
   { value: 3, label: 'VOTING' },
   { value: 4, label: 'ACTIVE' },
@@ -26,6 +28,7 @@ export function AdminControlModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<'status' | 'dates'>('status');
   const [selectedStatus, setSelectedStatus] = useState<number>(0);
 
@@ -65,7 +68,7 @@ export function AdminControlModal({
   const isPending = forcing || updating;
 
   return (
-    <NeoModal isOpen={isOpen} onClose={onClose} title={`Admin: Program ${program.pid}`}>
+    <NeoModal isOpen={isOpen} onClose={onClose} title={t('admin.modal.title', { id: program.pid })}>
       <div className="flex gap-2 mb-6">
         <button
           className={`flex-1 py-2 font-bold border-2 border-black transition-all duration-75 ${
@@ -74,7 +77,7 @@ export function AdminControlModal({
               : 'bg-white shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
           }`}
           onClick={() => setActiveTab('status')}>
-          Force Status
+          {t('admin.modal.forceTab')}
         </button>
         <button
           className={`flex-1 py-2 font-bold border-2 border-black transition-all duration-75 ${
@@ -83,31 +86,31 @@ export function AdminControlModal({
               : 'bg-white shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
           }`}
           onClick={() => setActiveTab('dates')}>
-          Update Dates
+          {t('admin.modal.datesTab')}
         </button>
       </div>
 
       {activeTab === 'status' ? (
         <div className="space-y-4">
           <div className="p-3 bg-white border-2 border-black shadow-[3px_3px_0_0_#000]">
-            <p className="text-xs font-bold text-gray-500 uppercase">Current Status</p>
-            <p className="font-paytone text-xl">{program.status.replace('_', ' ')}</p>
+            <p className="text-xs font-bold text-gray-500 uppercase">{t('admin.modal.current')}</p>
+            <p className="font-paytone text-xl">{statusLabel(t, program.status)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-bold mb-2">Target Status</label>
+            <label className="block text-sm font-bold mb-2">{t('admin.modal.target')}</label>
             <NeoSelect
               value={selectedStatus}
               onChange={setSelectedStatus}
-              options={PROGRAM_STATUSES.map((s) => ({ value: s.value, label: `${s.value} - ${s.label}` }))}
+              options={PROGRAM_STATUSES.map((s) => ({ value: s.value, label: `${s.value} - ${statusLabel(t, s.label)}` }))}
             />
             <p className="text-[10px] text-red-500 font-bold mt-1 uppercase italic">
-              Warning: Side-effects (like fund locking) may not run during forced bypass.
+              {t('admin.modal.warning')}
             </p>
           </div>
 
           <NeoButton
-            label={forcing ? 'Forcing...' : 'Execute Force Status'}
+            label={forcing ? t('common.processing') : t('admin.modal.forceRun')}
             variant="danger"
             fullWidth
             loading={forcing}
@@ -117,9 +120,9 @@ export function AdminControlModal({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold mb-1">Application Start</label>
+              <label className="block text-xs font-bold mb-1">{t('admin.appStart')}</label>
               <input
                 type="datetime-local"
                 value={dates.appStart}
@@ -128,7 +131,7 @@ export function AdminControlModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Application End</label>
+              <label className="block text-xs font-bold mb-1">{t('admin.appEnd')}</label>
               <input
                 type="datetime-local"
                 value={dates.appEnd}
@@ -137,7 +140,7 @@ export function AdminControlModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Voting Start</label>
+              <label className="block text-xs font-bold mb-1">{t('admin.voteStart')}</label>
               <input
                 type="datetime-local"
                 value={dates.voteStart}
@@ -146,7 +149,7 @@ export function AdminControlModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Voting End</label>
+              <label className="block text-xs font-bold mb-1">{t('admin.voteEnd')}</label>
               <input
                 type="datetime-local"
                 value={dates.voteEnd}
@@ -156,7 +159,7 @@ export function AdminControlModal({
             </div>
           </div>
           <NeoButton
-            label={updating ? 'Updating...' : 'Execute Date Update'}
+            label={updating ? t('common.processing') : t('admin.modal.datesRun')}
             variant="secondary"
             fullWidth
             loading={updating}

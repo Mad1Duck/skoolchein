@@ -1,10 +1,11 @@
 import { Injectable, Singleton } from "hono-forge";
-import { eq, ilike, and, desc, count } from "@ponder/client";
+import { eq, ilike, desc, count } from "@ponder/client";
 import { ponderClient, ponderSchema } from "@/config/ponder-client";
 import { onChain } from "@/config/chain-context";
+import { programLookup } from "@/features/programs/program-lookup";
 import { withDefenseDeadline } from "./defense";
 
-const { v4Disputes, v4Programs } = ponderSchema;
+const { v4Disputes } = ponderSchema;
 
 @Injectable()
 @Singleton()
@@ -16,46 +17,29 @@ export class DisputesService {
     if (opts.scholar) conditions.push(ilike(v4Disputes.scholarAddress, opts.scholar));
     const where = onChain(v4Disputes, ...conditions);
 
-    const [data, [total]] = await Promise.all([
-      ponderClient.db.select({
-        dispute: v4Disputes,
-        program: {
-          pid: v4Programs.pid,
-          metadataCID: v4Programs.metadataCID,
-          token: v4Programs.token,
-          status: v4Programs.status,
-        },
-      })
-        .from(v4Disputes)
-        .leftJoin(v4Programs, and(eq(v4Disputes.chainId, v4Programs.chainId), eq(v4Disputes.pid, v4Programs.pid)))
+    const [rows, [total]] = await Promise.all([
+      ponderClient.db.select().from(v4Disputes)
         .where(where)
         .orderBy(desc(v4Disputes.createdAt))
         .limit(opts.limit)
         .offset(opts.offset),
       ponderClient.db.select({ value: count() }).from(v4Disputes).where(where),
     ]);
+    const program = await programLookup(rows.map((d) => d.pid), ["pid", "metadataCID", "token", "status"]);
 
     return {
-      data: data.map((row) => ({ ...row, dispute: withDefenseDeadline(row.dispute) })),
+      data: rows.map((d) => ({ dispute: withDefenseDeadline(d), program: program(d.pid) })),
       total: Number(total?.value ?? 0),
     };
   }
 
   async getByBlockchainId(blockchainId: number) {
-    const [result] = await ponderClient.db.select({
-      dispute: v4Disputes,
-      program: {
-        pid: v4Programs.pid,
-        metadataCID: v4Programs.metadataCID,
-        token: v4Programs.token,
-        status: v4Programs.status,
-      },
-    })
-      .from(v4Disputes)
-      .leftJoin(v4Programs, and(eq(v4Disputes.chainId, v4Programs.chainId), eq(v4Disputes.pid, v4Programs.pid)))
+    const [dispute] = await ponderClient.db.select().from(v4Disputes)
       .where(onChain(v4Disputes, eq(v4Disputes.blockchainId, blockchainId)))
       .limit(1);
+    if (!dispute) return null;
+    const program = await programLookup([dispute.pid], ["pid", "metadataCID", "token", "status"]);
 
-    return result ? { ...result, dispute: withDefenseDeadline(result.dispute) } : null;
+    return { dispute: withDefenseDeadline(dispute), program: program(dispute.pid) };
   }
 }
