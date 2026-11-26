@@ -30,20 +30,27 @@ import { fetchProgramMeta } from '@/lib/ipfs';
 import type { ProgramMetadata } from '@/lib/api/types';
 import { NeoBadge } from '@/components/ui/NeoBadge';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
+import { FolderTabs } from '@/components/ui/FolderTabs';
+import { PANEL } from '@/components/ui/surface';
 import { PhaseTimeline } from '@/components/ui/PhaseTimeline';
-import { StatCard } from '@/components/ui/StatCard';
 import { WalletAvatar, shortenAddress } from '@/components/ui/WalletAvatar';
 import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
 import { statusLabel } from '@/lib/i18n/status';
 import { toDate } from '@/lib/time';
-import { displayStatus } from '@/lib/programStatus';
+import { STATUS_TONE, displayStatus } from '@/lib/programStatus';
 import { useFormatMoney } from '@/lib/money';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'reports';
 
-const TAB_KEYS: Tab[] = ['overview', 'applicants', 'scholars', 'milestones', 'votes', 'reports'];
+const TABS: { id: Tab; color: string }[] = [
+  { id: 'overview', color: STATUS_TONE.soon },
+  { id: 'applicants', color: STATUS_TONE.screening },
+  { id: 'scholars', color: STATUS_TONE.running },
+  { id: 'milestones', color: STATUS_TONE.vote },
+  { id: 'votes', color: STATUS_TONE.active },
+  { id: 'reports', color: STATUS_TONE.cancelled },
+];
 
 export function ProgramDetailPage() {
   const { t } = useT();
@@ -111,8 +118,8 @@ export function ProgramDetailPage() {
     return (
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14 space-y-6">
         <NeoSkeleton lines={3} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <NeoSkeleton key={i} lines={2} />
           ))}
         </div>
@@ -142,10 +149,79 @@ export function ProgramDetailPage() {
   const publicLocked =
     !(program.status === 'CREATED' || program.status === 'APPLICATION_OPEN') || applicationsClosed || !!hasDonors;
 
+  const mayManage = program.openDonation || userAddress === program.initiator;
+  const canApply = shownStatus === 'APPLICATION_OPEN' && !applicationsClosed;
+  const canVote = program.status === 'VOTING' && program.openDonation;
+  const canShortlist =
+    (program.status === 'SCREENING' || (program.status === 'APPLICATION_OPEN' && applicationsClosed)) &&
+    shownStatus !== 'EXPIRED' && mayManage;
+  const canSelectWinners = program.status === 'VOTING' && mayManage;
+  const actions = (canApply || canVote || canShortlist || canSelectWinners) && (
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3 max-sm:[&_button]:w-full max-sm:[&_button]:justify-center">
+      {/* Show the current application state instead of inviting a second apply: the contract
+          rejects a duplicate, so offering the button would only produce a failed transaction. */}
+      {canApply && (myApplication ? (
+        <NeoButton
+          label={t('detail.applied', { status: statusLabel(t, myApplication.status) })}
+          variant="secondary"
+          size="md"
+          className="!rounded-xl"
+          disabled
+        />
+      ) : (
+        <Link to="/apply/$id" params={{ id: String(program.pid) }} className="flex flex-col">
+          <NeoButton label={t('detail.apply')} variant="primary" size="md" className="!rounded-xl" />
+        </Link>
+      ))}
+      {canVote && (
+        <NeoButton label={t('detail.castVote')} variant="primary" size="md" className="!rounded-xl" onClick={() => setActiveTab('applicants')} />
+      )}
+      {canShortlist && (
+        <NeoButton label={t('panel.resolve')} variant="secondary" size="md" className="!rounded-xl" onClick={() => setIsResolveOpen(true)} />
+      )}
+      {canSelectWinners && (
+        <NeoButton label={t('detail.selectWinners')} variant="secondary" size="md" className="!rounded-xl" onClick={() => setIsSelectWinnersOpen(true)} />
+      )}
+    </div>
+  );
+
+  // Creator only. This is a setting, not an action, so it is a switch, and it says what it changes.
+  const settings = userAddress === program.initiator && (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={program.openDonation}
+        disabled={isToggling || publicLocked}
+        onClick={() => {
+          // Closing donations turns a public program into a private one, which is easy to do by accident.
+          if (program.openDonation && !window.confirm(t('detail.donationsConfirm'))) return;
+          toggle(BigInt(program.pid), !program.openDonation);
+        }}
+        className="inline-flex items-center gap-2.5 rounded-full border-2 border-black bg-white py-1.5 pl-2 pr-4 text-sm font-bold shadow-[2px_2px_0_0_#000] transition-all duration-75 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-40"
+      >
+        <span className={`relative h-6 w-11 rounded-full border-2 border-black transition-colors ${program.openDonation ? 'bg-skgreen-dark' : 'bg-gray-300'}`}>
+          <span className={`absolute top-0.5 size-4 rounded-full border-2 border-black bg-white transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
+        </span>
+        {program.openDonation ? t('detail.donationsOpen') : t('detail.donationsClosed')}
+      </button>
+      <span className="text-xs text-gray-500 max-w-md">
+        {program.openDonation ? t('detail.donationsOpenHint') : t('detail.donationsClosedHint')}
+        {publicLocked && ` ${t('detail.publicLocked')}`}
+      </span>
+    </div>
+  );
+
+  const counts: Partial<Record<Tab, number | undefined>> = {
+    applicants: program._counts?.applicants,
+    scholars: program._counts?.scholars,
+    reports: program._counts?.disputes,
+  };
+
   return (
     <div className="w-full min-w-0 max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+      <div className="flex items-center gap-2 text-sm text-gray-500">
         <Link to="/programs" className="font-bold hover:text-skpurple transition-colors duration-75">
           {t('detail.programs')}
         </Link>
@@ -153,97 +229,17 @@ export function ProgramDetailPage() {
         <span className="font-bold text-black">{meta?.name ?? `Program #${program.pid}`}</span>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-2">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">
-              {meta?.name ?? `Program #${program.pid}`}
-            </h1>
-            <NeoBadge status={shownStatus} />
-          </div>
-          {meta?.description && (
-            <p className="text-gray-600 text-base md:text-lg max-w-2xl leading-relaxed">{meta.description}</p>
-          )}
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <WalletAvatar address={program.initiator} size={20} />
-            <span className="font-data">{shortenAddress(program.initiator)}</span>
-            {meta?.organization && <span className="text-gray-300">|</span>}
-            {meta?.organization && <span className="font-medium">{meta.organization}</span>}
-          </div>
-
-          {/* Creator only. This is a setting, not an action, so it is a switch, and it says what it changes. */}
-          {userAddress === program.initiator && (
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={program.openDonation}
-                disabled={isToggling || publicLocked}
-                onClick={() => {
-                  // Closing donations turns a public program into a private one, which is easy to do by accident.
-                  if (program.openDonation && !window.confirm(t('detail.donationsConfirm'))) return;
-                  toggle(BigInt(program.pid), !program.openDonation);
-                }}
-                className="inline-flex items-center gap-2.5 rounded-full border-2 border-black bg-white py-1.5 pl-2 pr-4 text-sm font-bold shadow-[2px_2px_0_0_#000] transition-all duration-75 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-40"
-              >
-                <span className={`relative h-6 w-11 rounded-full border-2 border-black transition-colors ${program.openDonation ? 'bg-skgreen-dark' : 'bg-gray-300'}`}>
-                  <span className={`absolute top-0.5 size-4 rounded-full border-2 border-black bg-white transition-all ${program.openDonation ? 'left-[22px]' : 'left-0.5'}`} />
-                </span>
-                {program.openDonation ? t('detail.donationsOpen') : t('detail.donationsClosed')}
-              </button>
-              <span className="text-xs text-gray-500 max-w-md">
-                {program.openDonation ? t('detail.donationsOpenHint') : t('detail.donationsClosedHint')}
-                {publicLocked && ` ${t('detail.publicLocked')}`}
-              </span>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          {program.status === 'APPLICATION_OPEN' && !applicationsClosed && (
-            // Show the current application state instead of inviting a second
-            // apply — the contract rejects a duplicate, so offering the button
-            // would only produce a failed transaction.
-            myApplication ? (
-              <NeoButton
-                label={t('detail.applied', { status: statusLabel(t, myApplication.status) })}
-                variant="secondary"
-                size="md"
-                disabled
-              />
-            ) : (
-              <Link to="/apply/$id" params={{ id: String(program.pid) }}>
-                <NeoButton label={t('detail.apply')} variant="primary" size="md" />
-              </Link>
-            )
-          )}
-          {program.status === 'VOTING' && program.openDonation && (
-            <NeoButton
-              label={t('detail.castVote')}
-              variant="primary"
-              size="md"
-              onClick={() => setActiveTab('applicants')}
-            />
-          )}
-          {(program.status === 'SCREENING' || (program.status === 'APPLICATION_OPEN' && applicationsClosed)) &&
-            shownStatus !== 'EXPIRED' && (program.openDonation || userAddress === program.initiator) && (
-              <NeoButton
-                label={t('panel.resolve')}
-                variant="secondary"
-                size="md"
-                onClick={() => setIsResolveOpen(true)}
-              />
-            )}
-          {program.status === 'VOTING' && (program.openDonation || userAddress === program.initiator) && (
-            <NeoButton
-              label={t('detail.selectWinners')}
-              variant="secondary"
-              size="md"
-              onClick={() => setIsSelectWinnersOpen(true)}
-            />
-          )}
-        </div>
-      </div>
+      <ProgramFundingCard
+        program={program}
+        donateBlockedReason={myApplication ? t('detail.applicantCannotDonate') : undefined}
+        meta={meta ?? undefined}
+        onDonate={(amount) => {
+          setDonateAmount(amount);
+          setIsDonateOpen(true);
+        }}
+        actions={actions}
+        settings={settings}
+      />
 
       {isDonateOpen && (
         <DonateModal
@@ -297,67 +293,27 @@ export function ProgramDetailPage() {
       <DonorRefundCard program={program} />
       <CancelledFundCard program={program} />
 
-      <MilestonePlanCard programId={program.pid} />
-
-      <ProgramFundingCard
-        program={program}
-        donateBlockedReason={myApplication ? t('detail.applicantCannotDonate') : undefined}
-        meta={meta ?? undefined}
-        onDonate={(amount) => {
-          setDonateAmount(amount);
-          setIsDonateOpen(true);
-        }}
-      />
-
-      {/* Phase timeline */}
-      <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-5 md:p-6">
-        <PhaseTimeline currentStatus={shownStatus} window={program} />
+      {/* Phase timeline. The countdown lives in the card above, so it is not repeated here. */}
+      <div className={`${PANEL} p-5 md:p-6`}>
+        <PhaseTimeline currentStatus={shownStatus} />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label={t('detail.statTotal')} value={fmtAmount(program.totalFund, program.token)} color="green" />
-        <StatCard label={t('detail.statSpent')} value={fmtAmount(program.spentFund, program.token)} color="orange" />
-        <StatCard label={t('detail.statApplicants')} value={program.applicantCount} color="yellow" />
-        <StatCard label={t('detail.statScholars')} value={program.activeScholarCount} color="purple" />
-      </div>
-
-      {/* Tabs — block style */}
-      <div className="flex flex-wrap gap-1.5">
-        {TAB_KEYS.map((tabKey) => {
-          const tab = { key: tabKey, label: t(`detail.tab.${tabKey}` as const) };
-          const count =
-            tab.key === 'applicants' && program._counts?.applicants
-              ? program._counts.applicants
-              : tab.key === 'scholars' && program._counts?.scholars
-                ? program._counts.scholars
-                : tab.key === 'reports' && program._counts?.disputes
-                  ? program._counts.disputes
-                  : null;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`
-                px-3 py-1.5 border-2 font-bold text-xs uppercase tracking-wider
-                transition-all duration-75
-                ${activeTab === tab.key
-                  ? 'bg-black text-white border-black shadow-none translate-x-[2px] translate-y-[2px]'
-                  : 'bg-white text-black border-black shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
-                }
-              `}>
-              {tab.label}
-              {count !== null && <span className="ml-1 opacity-60 font-data">{count}</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab content */}
-      <div>
-        {activeTab === 'overview' && <OverviewTab program={program} meta={meta ?? undefined} />}
+      <FolderTabs
+        size="md"
+        tabs={TABS.map((tab) => ({ ...tab, label: t(`detail.tab.${tab.id}` as const), count: counts[tab.id] || undefined }))}
+        active={activeTab}
+        onChange={setActiveTab}
+        bodyClassName="p-3 sm:p-6 space-y-6"
+      >
+        {activeTab === 'overview' && (
+          <>
+            <OverviewTab program={program} meta={meta ?? undefined} />
+            {/* What winners must deliver, so an applicant knows the terms before applying. */}
+            <MilestonePlanCard programId={program.pid} />
+          </>
+        )}
         {activeTab === 'applicants' && program.status === 'VOTING' && program.openDonation && (
-          <div className="mb-8">
+          <div>
             <VotingBoard
               pid={program.pid}
               token={program.token}
@@ -488,7 +444,7 @@ export function ProgramDetailPage() {
             )}
           />
         )}
-      </div>
+      </FolderTabs>
     </div>
   );
 }
@@ -510,17 +466,12 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <NeoCard fill="cream" hoverable={false}>
-        <NeoCardBody className="space-y-5">
+      <section className={`${PANEL} p-5 space-y-4`}>
           <h3 className="font-paytone text-lg">{t('detail.programDetails')}</h3>
-          <dl className="space-y-3 text-sm">
+          <dl className="divide-y-2 divide-black/5 text-sm [&>div]:gap-3 [&>div]:py-2.5">
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.maxCandidates')}</dt>
               <dd className="font-bold font-data text-base">{program.maxCandidates}</dd>
-            </div>
-            <div className="flex justify-between items-baseline">
-              <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.targetWinners')}</dt>
-              <dd className="font-bold font-data text-base">{program.targetWinners}</dd>
             </div>
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.scoring')}</dt>
@@ -539,13 +490,11 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <dd className="font-bold">{[t('create.edu.elementary'), t('create.edu.junior'), t('create.edu.senior'), t('create.edu.university')][program.educationLevel] ?? '—'}</dd>
             </div>
           </dl>
-        </NeoCardBody>
-      </NeoCard>
+      </section>
 
-      <NeoCard fill="yellow" hoverable={false}>
-        <NeoCardBody className="space-y-5">
+      <section className={`${PANEL} p-5 space-y-4`}>
           <h3 className="font-paytone text-lg">{t('detail.financial')}</h3>
-          <dl className="space-y-3 text-sm">
+          <dl className="divide-y-2 divide-black/5 text-sm [&>div]:gap-3 [&>div]:py-2.5">
             <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.gross')}</dt>
               <dd className="font-bold font-data">{fmtAmount(grossTotal, program.token)}</dd>
@@ -554,7 +503,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <dt className="text-skpurple font-bold text-xs uppercase tracking-wider">{t('detail.net')}</dt>
               <dd className="font-bold text-skpurple font-data text-base">{fmtAmount(program.totalFund, program.token)}</dd>
             </div>
-            <div className="flex justify-between items-baseline border-t-2 border-black/10 pt-2">
+            <div className="flex justify-between items-baseline">
               <dt className="text-gray-500 text-xs uppercase tracking-wider font-bold">{t('detail.allocated')}</dt>
               <dd className="font-bold font-data">{fmtAmount(allocated, program.token)}</dd>
             </div>
@@ -571,7 +520,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
           {/* Allocation Breakdown Bar */}
           <div className="pt-1">
             <h4 className="font-bold text-[10px] uppercase text-gray-500 tracking-widest mb-2">{t('detail.allocation')}</h4>
-            <div className="flex h-5 w-full bg-white border-2 border-black overflow-hidden">
+            <div className="flex h-4 w-full rounded-full bg-white border-2 border-black overflow-hidden">
               <div
                 className="h-full bg-skgreen border-r-2 border-black"
                 style={{ width: `${pctSpent}%` }}
@@ -594,8 +543,7 @@ function OverviewTab({ program }: { program: any; meta?: ProgramMetadata }) {
               <span>{t('detail.unallocated')} {pctUnallocated.toFixed(0)}%</span>
             </div>
           </div>
-        </NeoCardBody>
-      </NeoCard>
+      </section>
     </div>
   );
 }
@@ -613,14 +561,14 @@ function ListTab<T>({
   if (isLoading) return <NeoSkeleton lines={5} className="py-4" />;
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-10 text-center">
+      <div className={`${PANEL} p-10 text-center`}>
         <p className="font-paytone text-lg mb-1">{t('detail.emptyTitle')}</p>
         <p className="text-gray-500 text-sm">{t('detail.emptyBody')}</p>
       </div>
     );
   }
   return (
-    <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg overflow-hidden">
+    <div className={`${PANEL} overflow-hidden`}>
       <div className="divide-y-2 divide-gray-100">{data.map(renderItem)}</div>
     </div>
   );

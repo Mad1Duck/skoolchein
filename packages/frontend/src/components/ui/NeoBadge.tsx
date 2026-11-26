@@ -1,23 +1,23 @@
 import type { ApplicationStatus, ScholarStatus, MilestoneStatus, DisputeStatus } from "@/lib/api/types";
-import type { DisplayStatus } from "@/lib/programStatus";
+import { TONE_BY_STATUS, type DisplayStatus } from "@/lib/programStatus";
 import { useT } from "@/lib/i18n";
 import { statusLabel } from "@/lib/i18n/status";
 
 type StatusType = DisplayStatus | ApplicationStatus | ScholarStatus | MilestoneStatus | DisputeStatus;
 
 const configMap: Record<string, { bg: string; text: string; label?: string }> = {
-  // Program
-  CREATED:           { bg: "bg-gray-200",        text: "text-gray-800" },
-  APPLICATION_OPEN:  { bg: "bg-skyellow",         text: "text-black", label: "Open" },
-  SCREENING:         { bg: "bg-skorange",         text: "text-black" },
-  VOTING:            { bg: "bg-skpurple",         text: "text-white" },
-  ACTIVE:            { bg: "bg-skgreen",          text: "text-black" },
-  COMPLETED:         { bg: "bg-skpurple-light",   text: "text-skpurple" },
-  CANCELLED:         { bg: "bg-skred",            text: "text-white" },
-  EXPIRED:           { bg: "bg-gray-300",         text: "text-black" },
+  // Program (ACTIVE and COMPLETED also describe scholars and milestones)
+  CREATED:           { bg: TONE_BY_STATUS.CREATED,          text: "text-black" },
+  APPLICATION_OPEN:  { bg: TONE_BY_STATUS.APPLICATION_OPEN, text: "text-black", label: "Open" },
+  SCREENING:         { bg: TONE_BY_STATUS.SCREENING,        text: "text-black" },
+  VOTING:            { bg: TONE_BY_STATUS.VOTING,           text: "text-black" },
+  ACTIVE:            { bg: TONE_BY_STATUS.ACTIVE,           text: "text-black" },
+  COMPLETED:         { bg: TONE_BY_STATUS.COMPLETED,        text: "text-black" },
+  CANCELLED:         { bg: TONE_BY_STATUS.CANCELLED,        text: "text-black" },
+  EXPIRED:           { bg: TONE_BY_STATUS.EXPIRED,          text: "text-black" },
   // Applicant
   PENDING_REVIEW:    { bg: "bg-skyellow-light",   text: "text-yellow-800", label: "Pending" },
-  SHORTLISTED:       { bg: "bg-skgreen",          text: "text-green-900" },
+  SHORTLISTED:       { bg: "bg-skgreen-dark",     text: "text-black" },
   SCREENED_OUT:      { bg: "bg-skred-light",      text: "text-red-800", label: "Rejected" },
   LOCKED:            { bg: "bg-gray-300",         text: "text-gray-700" },
   // Scholar
@@ -46,7 +46,7 @@ export function NeoBadge({
   const label = statusLabel(t, status);
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 border-2 border-black text-[10px] font-extrabold uppercase tracking-widest leading-none ${config.bg} ${config.text} ${className}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full border-2 border-black text-[10px] font-extrabold uppercase tracking-widest leading-none ${config.bg} ${config.text} ${className}`}>
       {label}
     </span>
   );

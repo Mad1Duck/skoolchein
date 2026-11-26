@@ -13,6 +13,18 @@ export const STATUS_TONE = {
   unapplied: "bg-gray-300",
 } as const;
 
+/** The same colour, looked up by status. */
+export const TONE_BY_STATUS: Record<DisplayStatus, string> = {
+  CREATED: STATUS_TONE.soon,
+  APPLICATION_OPEN: STATUS_TONE.active,
+  SCREENING: STATUS_TONE.screening,
+  VOTING: STATUS_TONE.vote,
+  ACTIVE: STATUS_TONE.running,
+  COMPLETED: STATUS_TONE.done,
+  CANCELLED: STATUS_TONE.cancelled,
+  EXPIRED: STATUS_TONE.unapplied,
+};
+
 /**
  * The status to SHOW for a program.
  *
