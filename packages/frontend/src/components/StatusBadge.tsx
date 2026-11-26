@@ -1,6 +1,7 @@
 import { useT } from "@/lib/i18n";
+import { STATUS_TONE } from "@/lib/programStatus";
 
-type StatusType = "active" | "vote" | "soon" | "done" | "cancelled" | "pddikti" | "disbursed";
+type StatusType = keyof typeof STATUS_TONE | "pddikti" | "disbursed";
 
 interface StatusBadgeProps {
   status?: string;
@@ -8,13 +9,15 @@ interface StatusBadgeProps {
 }
 
 const STATUS_STYLES = {
-  active: { bg: "bg-black", label: "badge.active" },
-  pddikti: { bg: "bg-black", label: "badge.pddikti" },
-  vote: { bg: "bg-skred", label: "badge.vote" },
-  soon: { bg: "bg-skgreen", label: "badge.soon" },
-  done: { bg: "bg-skgreen", label: "badge.done" },
-  cancelled: { bg: "bg-skred", label: "badge.cancelled" },
-  disbursed: { bg: "bg-skgreen", label: "badge.disbursed" },
+  active: { bg: STATUS_TONE.active, label: "badge.active" },
+  screening: { bg: STATUS_TONE.screening, label: "badge.screening" },
+  vote: { bg: STATUS_TONE.vote, label: "badge.vote" },
+  soon: { bg: STATUS_TONE.soon, label: "badge.soon" },
+  running: { bg: STATUS_TONE.running, label: "badge.running" },
+  done: { bg: STATUS_TONE.done, label: "badge.done" },
+  cancelled: { bg: STATUS_TONE.cancelled, label: "badge.cancelled" },
+  pddikti: { bg: "bg-black text-white", label: "badge.pddikti" },
+  disbursed: { bg: STATUS_TONE.running, label: "badge.disbursed" },
 } as const;
 
 export const StatusBadge = ({
@@ -26,7 +29,7 @@ export const StatusBadge = ({
   const style = STATUS_STYLES[key];
 
   const sizeClasses =
-    size === "small" ? "px-2 py-1 text-[0.625rem]" : "px-4 py-2 text-sm";
+    size === "small" ? "px-2.5 py-1 text-[0.625rem]" : "px-4 py-1.5 text-sm";
 
   if (!style) {
     return (
@@ -40,7 +43,7 @@ export const StatusBadge = ({
 
   return (
     <div
-      className={`flex rounded-2xl ${style.bg} ${sizeClasses} justify-center items-center ${status === "active" || status === "PDDIKTI" ? "text-white" : "text-black"} font-bold`}
+      className={`flex shrink-0 whitespace-nowrap rounded-full border-2 border-black shadow-[2px_2px_0_0_#000] ${style.bg} ${sizeClasses} justify-center items-center font-bold`}
     >
       {t(style.label)}
     </div>

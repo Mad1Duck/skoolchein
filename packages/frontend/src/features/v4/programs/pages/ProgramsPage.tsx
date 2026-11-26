@@ -1,4 +1,4 @@
-import { effectiveStatus } from '@/lib/programStatus';
+import { effectiveStatus, STATUS_TONE } from '@/lib/programStatus';
 import { useState, useEffect, memo } from 'react';
 import { useAllPrograms } from '@/lib/api/hooks';
 import type { Program } from '@/lib/api/types';
@@ -16,38 +16,38 @@ const getTabs = (t: (key: TranslationKey) => string) => [
   {
     id: 'active',
     label: t('tabs.active'),
-    color: 'bg-skpurple',
+    color: STATUS_TONE.active,
     filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(effectiveStatus(p)),
   },
   {
     id: 'vote',
     label: t('tabs.vote'),
-    color: 'bg-skred',
+    color: STATUS_TONE.vote,
     filter: (p: Program) => p.status === 'VOTING',
   },
   {
     id: 'soon',
     label: t('tabs.soon'),
-    color: 'bg-skgreen',
+    color: STATUS_TONE.soon,
     filter: (p: Program) => effectiveStatus(p) === 'CREATED',
   },
   // Running and ended programs stay listed, so anyone can check them.
   {
     id: 'running',
     label: t('tabs.running'),
-    color: 'bg-skpink',
+    color: STATUS_TONE.running,
     filter: (p: Program) => p.status === 'ACTIVE',
   },
   {
     id: 'completed',
     label: t('tabs.completed'),
-    color: 'bg-skpurple-light',
+    color: STATUS_TONE.done,
     filter: (p: Program) => p.status === 'COMPLETED',
   },
   {
     id: 'cancelled',
     label: t('tabs.cancelled'),
-    color: 'bg-skred-light',
+    color: STATUS_TONE.cancelled,
     filter: (p: Program) => p.status === 'CANCELLED',
   },
 ];

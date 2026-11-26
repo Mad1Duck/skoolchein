@@ -43,7 +43,10 @@ function TabButton({
       className={`${baseStyle} ${isActive ? activeStyle : inactiveStyle}`}
     >
       <span>{label}</span>
-      <span className="rounded-full border-2 border-black bg-white px-2 font-data text-sm leading-5 text-black max-sm:px-1.5 max-sm:text-[0.625rem] max-sm:leading-4">
+      {/* The open tab is cream like the panel, so its count carries the status colour. */}
+      <span
+        className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-black px-1.5 font-nunito text-sm font-extrabold text-black max-xl:h-6 max-xl:min-w-6 max-xl:text-xs ${isActive ? color : 'bg-white'}`}
+      >
         {count}
       </span>
     </button>
