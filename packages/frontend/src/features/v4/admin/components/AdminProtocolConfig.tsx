@@ -20,9 +20,8 @@ const READ_ONLY: Record<string, { fixed: number | null; note: TranslationKey }> 
   bhCooldownNormal: { fixed: 30 * 86400, note: 'admin.cfg.fixed' },
   bhCooldownFlagged: { fixed: 90 * 86400, note: 'admin.cfg.fixed' },
   maxCommitteeMembers: { fixed: 15, note: 'admin.cfg.fixed' },
-  // _slashScholar uses `freezeHeavy` for light and milestone cases alike; these two are never read.
-  freezeLight: { fixed: null, note: 'admin.cfg.freezeUnused' },
-  freezeMilestone: { fixed: null, note: 'admin.cfg.freezeUnused' },
+  // A serious violation is a permanent blacklist, so there is no duration to set for it.
+  freezeHeavy: { fixed: null, note: 'admin.cfg.heavyPermanent' },
   optionalApprovalWindow: { fixed: null, note: 'admin.cfg.noLimit' },
   // The Treasury has its own setting; its current value is read below.
   maxPushRefundDonors: { fixed: null, note: 'admin.cfg.refundElsewhere' },
@@ -156,7 +155,7 @@ export function AdminProtocolConfig() {
         <ConfigSection title={t('admin.cfg.sec.freeze')}>
           {renderInput("admin.cfg.freezeLight", "freezeLight", "duration")}
           {renderInput("admin.cfg.freezeMilestone", "freezeMilestone", "duration")}
-          {renderInput("admin.cfg.freezeHeavy", "freezeHeavy", "duration", "admin.cfg.freezeHelp")}
+          {renderInput("admin.cfg.freezeHeavy", "freezeHeavy", "duration")}
         </ConfigSection>
 
         {/* Scoring & Governance */}

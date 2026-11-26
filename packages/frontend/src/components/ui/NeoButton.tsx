@@ -1,5 +1,5 @@
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
-import { ConnectButton } from '@xellar/kit';
+import { WalletButtonState } from '@/components/wallet/WalletButtonState';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'success' | 'ghost' | 'connect';
 type Size = 'sm' | 'md' | 'lg';
@@ -55,7 +55,7 @@ export function NeoButton({
 }: NeoButtonProps) {
   if (variant === 'connect') {
     return (
-      <ConnectButton.Custom>
+      <WalletButtonState>
         {({ isConnected, openProfileModal, account, chain, openChainModal, openConnectModal }) => {
           if (!isConnected) {
             return (
@@ -100,7 +100,7 @@ export function NeoButton({
             </div>
           );
         }}
-      </ConnectButton.Custom>
+      </WalletButtonState>
     );
   }
 
