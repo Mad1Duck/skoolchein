@@ -1014,6 +1014,7 @@ export const en = {
   'admin.cfg.noLimit': 'Not applied: the contracts set no time limit for this.',
   'admin.cfg.refundElsewhere': 'Current value of the Treasury contract; it is not changed from this form.',
   'admin.cfg.days': '{n} days',
+  'card.screening': 'Selecting applicants',
   'card.completed': 'Completed',
   'card.cancelled': 'Cancelled',
   'badge.cancelled': 'Cancelled',

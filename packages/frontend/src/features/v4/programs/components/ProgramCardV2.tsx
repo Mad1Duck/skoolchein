@@ -13,6 +13,7 @@ import { effectiveStatus } from '@/lib/programStatus';
 
 /** Programs with no clock left to count down show their stage instead. */
 const STAGE_BOX: Partial<Record<string, { label: TranslationKey; tone: string }>> = {
+  SCREENING: { label: 'card.screening', tone: 'bg-skyellow' },
   ACTIVE: { label: 'card.running', tone: 'bg-skgreen' },
   COMPLETED: { label: 'card.completed', tone: 'bg-skpurple-light' },
   CANCELLED: { label: 'card.cancelled', tone: 'bg-skred-light' },

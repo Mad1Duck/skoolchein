@@ -1008,6 +1008,7 @@ export const id: Record<TranslationKey, string> = {
   'admin.cfg.noLimit': 'Tidak diterapkan: kontrak tidak membatasi waktu untuk ini.',
   'admin.cfg.refundElsewhere': 'Nilai saat ini di kontrak Treasury; tidak diubah lewat formulir ini.',
   'admin.cfg.days': '{n} hari',
+  'card.screening': 'Sedang diseleksi',
   'card.completed': 'Program selesai',
   'card.cancelled': 'Program dibatalkan',
   'badge.cancelled': 'Dibatalkan',
