@@ -5,7 +5,6 @@ import type { Program } from '@/lib/api/types';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { CreateProgramModal } from '../components/CreateProgramModal';
 import { ProgramTabs } from '../components/ProgramTabs';
-import { StartedPrograms } from '../components/StartedPrograms';
 import SplitText from '@/components/ui/split-text';
 import { ApproachableWrapper } from '@/components/ornaments/ApproachableWrapper';
 import { useT } from '@/lib/i18n';
@@ -16,13 +15,8 @@ const messageKeys = ['home.msg1', 'home.msg2'] as const;
 const getTabs = (t: (key: TranslationKey) => string) => [
   {
     id: 'active',
-    label: (
-      <span>
-        {t('tabs.active')} <span className="max-sm:sr-only">{t('tabs.activeMore')}</span>
-      </span>
-    ),
+    label: t('tabs.active'),
     color: 'bg-skpurple',
-    // Running and ended programs have their own section further down.
     filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(effectiveStatus(p)),
   },
   {
@@ -36,6 +30,25 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     label: t('tabs.soon'),
     color: 'bg-skgreen',
     filter: (p: Program) => effectiveStatus(p) === 'CREATED',
+  },
+  // Running and ended programs stay listed, so anyone can check them.
+  {
+    id: 'running',
+    label: t('tabs.running'),
+    color: 'bg-skpink',
+    filter: (p: Program) => p.status === 'ACTIVE',
+  },
+  {
+    id: 'completed',
+    label: t('tabs.completed'),
+    color: 'bg-skpurple-light',
+    filter: (p: Program) => p.status === 'COMPLETED',
+  },
+  {
+    id: 'cancelled',
+    label: t('tabs.cancelled'),
+    color: 'bg-skred-light',
+    filter: (p: Program) => p.status === 'CANCELLED',
   },
 ];
 
@@ -214,8 +227,6 @@ export function ProgramsPage() {
           )}
         </div>
       </section>
-
-      <StartedPrograms programs={programs} isLoading={isLoading} />
 
       <CreateProgramModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </div>

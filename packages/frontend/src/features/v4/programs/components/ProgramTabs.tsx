@@ -8,7 +8,7 @@ type Tab = {
   id: string;
   label: React.ReactNode;
   color: string;
-  filter?: (program: Program) => boolean;
+  filter: (program: Program) => boolean;
 };
 
 interface ProgramTabsProps {
@@ -18,48 +18,60 @@ interface ProgramTabsProps {
 
 function TabButton({
   label,
+  count,
   isActive,
   color,
   onClick,
 }: {
   label: React.ReactNode;
+  count: number;
   isActive: boolean;
   color: string;
   onClick: () => void;
 }) {
   const baseStyle =
-    'gap-[0.625rem] items-end rounded-t-3xl px-6 text-2xl font-normal border-l-4 border-t-4 border-r-4 border-black text-black font-paytone max-sm:text-sm';
-  const activeStyle = 'bg-skbw py-6 max-sm:py-4 max-sm:pb-6 z-1';
-  const inactiveStyle = `${color} border-b-4 py-4`;
+    'flex items-center justify-center gap-2 border-black font-normal font-paytone lg:shrink-0 lg:whitespace-nowrap lg:rounded-t-3xl lg:border-x-4 lg:border-t-4 lg:px-6 lg:text-2xl lg:max-xl:px-3 lg:max-xl:text-base max-lg:rounded-2xl max-lg:border-2 max-lg:px-2 max-lg:py-2 max-lg:text-sm max-sm:flex-col max-sm:gap-1 max-sm:text-xs';
+  // Folder tabs on wide screens; below that a grid of buttons, so no tab is ever out of sight.
+  const activeStyle = 'text-black lg:bg-skbw lg:py-6 lg:z-1 max-lg:bg-black max-lg:text-white';
+  const inactiveStyle = `${color} text-black lg:border-b-4 lg:py-4`;
 
   return (
     <button
       type="button"
+      aria-pressed={isActive}
       onClick={onClick}
       className={`${baseStyle} ${isActive ? activeStyle : inactiveStyle}`}
     >
-      {label}
+      <span>{label}</span>
+      <span className="rounded-full border-2 border-black bg-white px-2 font-data text-sm leading-5 text-black max-sm:px-1.5 max-sm:text-[0.625rem] max-sm:leading-4">
+        {count}
+      </span>
     </button>
   );
 }
 
 export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
   const { t } = useT();
-  const [activeTab, setActiveTab] = useState<string>(tabs[0]?.id ?? '');
+  // Open on the first tab that has something, instead of greeting visitors with an empty one.
+  const [activeTab, setActiveTab] = useState<string>(
+    () => (tabs.find((tab) => programs.some(tab.filter)) ?? tabs[0])?.id ?? '',
+  );
   const breakpoint = useBreakpoint();
 
   const activeFilter = tabs.find((t) => t.id === activeTab)?.filter;
-  const filtered = activeFilter ? programs.filter(activeFilter) : programs;
+  // Newest first.
+  const filtered = (activeFilter ? programs.filter(activeFilter) : programs).slice().sort((a, b) => b.pid - a.pid);
 
   const size = breakpoint.isLessThan('sm') ? 'small' : 'large';
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="relative -left-2 -top-1 shrink-0 z-10 flex items-end -space-x-1 max-sm:-space-x-2">
+      <div className="relative z-10 shrink-0 lg:-left-2 lg:-top-1 lg:flex lg:items-end lg:-space-x-1 max-lg:mb-5 max-lg:grid max-lg:grid-cols-3 max-lg:gap-2">
         {tabs.map((tab) => (
           <TabButton
             key={tab.id}
             label={tab.label}
+            count={programs.filter(tab.filter).length}
             color={tab.color}
             isActive={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -82,13 +94,8 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
                 <ProgramCardV2
                   key={program.pid}
                   program={program}
-                  labelButton={
-                    activeTab === 'vote'
-                      ? t('tabs.btnVote')
-                      : activeTab === 'soon'
-                        ? t('tabs.btnDetails')
-                        : t('tabs.btnApply')
-                  }
+                  // Applying has its own button on the card, shown only while applications are open.
+                  labelButton={activeTab === 'vote' ? t('tabs.btnVote') : t('tabs.btnDetails')}
                   size={size}
                 />
               ))
