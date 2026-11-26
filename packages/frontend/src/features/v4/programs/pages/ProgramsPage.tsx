@@ -1,11 +1,11 @@
 import { effectiveStatus } from '@/lib/programStatus';
 import { useState, useEffect, memo } from 'react';
-import { usePrograms } from '@/lib/api/hooks';
+import { useAllPrograms } from '@/lib/api/hooks';
 import type { Program } from '@/lib/api/types';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { CreateProgramModal } from '../components/CreateProgramModal';
 import { ProgramTabs } from '../components/ProgramTabs';
-import { RunningPrograms } from '../components/RunningPrograms';
+import { StartedPrograms } from '../components/StartedPrograms';
 import SplitText from '@/components/ui/split-text';
 import { ApproachableWrapper } from '@/components/ornaments/ApproachableWrapper';
 import { useT } from '@/lib/i18n';
@@ -22,7 +22,7 @@ const getTabs = (t: (key: TranslationKey) => string) => [
       </span>
     ),
     color: 'bg-skpurple',
-    // Programs already paying their recipients have their own section further down.
+    // Running and ended programs have their own section further down.
     filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(effectiveStatus(p)),
   },
   {
@@ -110,9 +110,8 @@ export function ProgramsPage() {
 
   // Live updates come from the app-wide <RealtimeSync /> (lib/realtime), which
   // refetches this query whenever the indexer reports a chain event.
-  // 100 is the most the API returns at once; the default of 20 would hide older programs.
-  const { data: result, isLoading } = usePrograms({ limit: 100 });
-  const programs = result?.data ?? [];
+  // All of them: for transparency no program may drop off the page because there are many.
+  const { data: programs = [], isLoading } = useAllPrograms();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -216,7 +215,7 @@ export function ProgramsPage() {
         </div>
       </section>
 
-      <RunningPrograms programs={programs} isLoading={isLoading} />
+      <StartedPrograms programs={programs} isLoading={isLoading} />
 
       <CreateProgramModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </div>
