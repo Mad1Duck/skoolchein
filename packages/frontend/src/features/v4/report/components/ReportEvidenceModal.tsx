@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { formatUnits } from 'viem';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -10,11 +9,10 @@ import { uploadEvidence } from '@/lib/ipfs';
 import { EvidenceFilesInput } from '@/components/ui/EvidenceFilesInput';
 import { useRaiseDisputeWithStake, useBountyStake } from '@/lib/contracts/v4';
 import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
-import { isNativeToken } from '@/lib/contracts/v4/token';
-import { useActiveChain } from '@/lib/chain/useActiveChain';
-import { usdcAddress } from '@/lib/chain/chains';
-import { useTokenRate } from '@/context/token-rate-context';
-import { formatToIDR, usdcToIdr } from '@/util/localCurrency';
+import { formatTokenAmount, formatTokenWithSymbol } from '@/lib/contracts/v4/token';
+import { useFormatMoney } from '@/lib/money';
+import { formatToIDR } from '@/util/localCurrency';
+import { toDate } from '@/lib/time';
 import { shortenAddress } from '@/components/ui/WalletAvatar';
 import type { Milestone, Program, Scholar } from '@/lib/api/types';
 import { useT } from '@/lib/i18n';
@@ -36,8 +34,7 @@ const MIN_EVIDENCE = 10;
  */
 export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Props) {
   const { t } = useT();
-  const { chainId } = useActiveChain();
-  const { rate } = useTokenRate();
+  const toMoneyOf = useFormatMoney();
   const { isConnected } = useAccount();
 
   // Milestone reports are always "milestone fraud"; a participant report is minor (0) or serious (2).
@@ -54,11 +51,15 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
     scholar.wallet as `0x${string}`,
     BigInt(program.pid),
   );
-  const stakeUsdc = formatUnits(stakeRequired, 6);
-  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(usdcAddress(chainId), stakeUsdc);
-  const stakeKnown = stakeRequired > 0n && !stakeUnknown;
-  const toMoney = (units: bigint) =>
-    rate ? formatToIDR(usdcToIdr(Number(formatUnits(units, 6)), rate)) : `${formatUnits(units, 6)} USDC`;
+  // The contract doubles the deposit within 6 hours of the review deadline. The 10-minute margin covers
+  // the time it takes to sign; anything sent above the requirement comes straight back.
+  const [openedAt] = useState(() => Date.now());
+  const deadline = toDate(milestone?.disputeDeadline)?.getTime();
+  const late = deadline !== undefined && openedAt > deadline - (6 * 60 + 10) * 60 * 1000;
+  const depositDue = stakeRequired * (late ? 2n : 1n);
+  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(program.token, formatTokenAmount(depositDue, program.token));
+  const stakeKnown = !stakeUnknown && stakeRequired > 0n;
+  const toMoney = (units: bigint) => toMoneyOf(units, program.token);
 
   useEffect(() => {
     if (isSuccess) {
@@ -86,7 +87,7 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
       setStep('tx');
       start(
         [BigInt(program.pid), scholar.wallet as `0x${string}`, BigInt(milestone?.blockchainId ?? 0), disputeType, metaCID],
-        stakeRequired,
+        { token: program.token, amount: depositDue },
       );
     } catch (err) {
       console.error(err);
@@ -150,12 +151,11 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
           <div className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-xs space-y-1">
             <p className="font-bold text-sm">{t('reportForm.rulesTitle')}</p>
             <ul className="list-disc ml-5 text-gray-700 space-y-0.5">
-              <li>{stakeKnown ? t('reportForm.ruleDeposit', { amount: toMoney(stakeRequired) }) : t('reportForm.ruleDepositPending')}</li>
+              <li>{stakeKnown ? t('reportForm.ruleDeposit', { amount: toMoney(depositDue) }) : t('reportForm.ruleDepositPending')}</li>
               <li>{t('reportForm.ruleReward', { amount: stakeKnown ? toMoney(potentialReward) : '—' })}</li>
               <li>{t('reportForm.ruleLost')}</li>
               {milestone && <li>{t('reportForm.ruleDouble')}</li>}
             </ul>
-            {isNativeToken(program.token) && <p className="font-bold text-skred">{t('report.nativeNote')}</p>}
           </div>
 
           <div className="space-y-2">
@@ -176,7 +176,7 @@ export function ReportEvidenceModal({ onClose, program, scholar, milestone }: Pr
 
           {stakeKnown && !hasEnough && (
             <div className="text-xs font-bold text-skred">
-              {t('reportForm.shortfall', { amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${stakeUsdc} USDC` })}{' '}
+              {t('reportForm.shortfall', { amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : formatTokenWithSymbol(depositDue, program.token) })}{' '}
               <button type="button" className="underline" onClick={() => setTopUpOpen(true)}>
                 {t('donate.addFunds')}
               </button>

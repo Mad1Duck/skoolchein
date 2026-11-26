@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useReadContract } from "wagmi";
-import { formatUnits } from "viem";
+import { erc20Abi } from "viem";
 import { addr } from "@/lib/chain/addr";
 import { getV4Addresses } from "@/lib/chain/chains";
 import { useActiveChain } from "@/lib/chain/useActiveChain";
-import { useApproveUSDC } from "./treasury";
+import { isNativeToken } from "../token";
 import { scholarshipBountyAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
 
@@ -19,13 +19,16 @@ export function useRaiseDispute() {
     scholar: `0x${string}`,
     milestoneId: bigint,
     disputeType: number,
-    evidenceCID: string
+    evidenceCID: string,
+    /** Deposit sent as value, for a native-currency program only. */
+    value?: bigint
   ) => {
     writeContract({
       address: addr("ScholarshipBounty"),
       abi: scholarshipBountyAbi,
       functionName: "raiseDispute",
       args: [pid, scholar, milestoneId, disputeType, evidenceCID],
+      value,
     });
   };
 
@@ -79,13 +82,13 @@ export function useTriggerAutoGuilty() {
 
 // ── Dispute deposit ──────────────────────────────────────────────────────────
 //
-// raiseDispute pulls the reporter's deposit in USDC (safeTransferFrom), so it
-// needs a prior approve(Bounty, stake). The deposit comes from the on-chain
+// The reporter's deposit is paid in the PROGRAM'S token: sent as value for the
+// native currency, otherwise pulled after approve(Bounty, stake). It comes from the on-chain
 // view calculateStake(scholar, pid) — 10% of the possible reward, which itself
 // is a share of the scholar's REMAINING fund — and DOUBLES when the report is
 // raised within 6 hours of the milestone's dispute deadline.
 
-/** Deposit and possible reward for reporting `scholar` in program `pid` (USDC, 6 decimals). */
+/** Deposit and possible reward for reporting `scholar` in program `pid`, in the program's token. */
 export function useBountyStake(scholar?: `0x${string}`, pid?: bigint) {
   const { chainId } = useActiveChain();
   const enabled = Boolean(scholar) && pid !== undefined;
@@ -104,23 +107,31 @@ export function useBountyStake(scholar?: `0x${string}`, pid?: bigint) {
 }
 
 /**
- * Report a problem: approve the deposit, then raise the dispute.
- * Approves 2x the base deposit so the anti-griefing doubling never fails on allowance.
+ * Report a problem. A native-currency deposit travels with the report; a token deposit is approved
+ * first (for twice the base amount, so the late-report doubling never fails on allowance).
  */
 export function useRaiseDisputeWithStake() {
-  const approveTx = useApproveUSDC();
+  const approveTx = useTxHook();
   const raiseTx = useRaiseDispute();
   const [phase, setPhase] = useState<"idle" | "approving" | "raising">("idle");
   const pending = useRef<Parameters<typeof raiseTx.raiseDispute> | null>(null);
 
   const start = (
-    args: Parameters<typeof raiseTx.raiseDispute>,
-    stakeRequired: bigint,
+    args: [pid: bigint, scholar: `0x${string}`, milestoneId: bigint, disputeType: number, evidenceCID: string],
+    deposit: { token: string; amount: bigint },
   ) => {
     pending.current = args;
-    if (stakeRequired > 0n) {
+    if (isNativeToken(deposit.token)) {
+      setPhase("raising");
+      raiseTx.raiseDispute(...args, deposit.amount);
+    } else if (deposit.amount > 0n) {
       setPhase("approving");
-      approveTx.approve(addr("ScholarshipBounty"), formatUnits(stakeRequired * 2n, 6));
+      approveTx.writeContract({
+        address: deposit.token as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [addr("ScholarshipBounty"), deposit.amount * 2n],
+      });
     } else {
       setPhase("raising");
       raiseTx.raiseDispute(...args);

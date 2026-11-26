@@ -13,7 +13,8 @@ import { VotingBoard } from '../components/VotingBoard';
 import { ProgramFundingCard } from '../components/ProgramFundingCard';
 import { MilestonePlanCard } from '../components/MilestonePlanCard';
 import { DonorRefundCard } from '../components/DonorRefundCard';
-import { useLeftoverShares } from '@/lib/contracts/v4/hooks/treasury';
+import { CancelledFundCard } from '../components/CancelledFundCard';
+import { useHasDonors, useLeftoverShares } from '@/lib/contracts/v4/hooks/treasury';
 import { useParams, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -102,6 +103,7 @@ export function ProgramDetailPage() {
     return all > 0n ? Number((mine * 1000n) / all) / 10 : 0;
   };
   const reportsQ = useProgramDisputes(activeTab === 'reports' ? id : '');
+  const hasDonors = useHasDonors(program?.pid ?? 0, !!program && program.initiator === userAddress);
   const { shares: leftoverShares } = useLeftoverShares(program?.pid, (scholarsQ.data ?? []).map((s) => s.wallet));
 
 
@@ -135,6 +137,9 @@ export function ProgramDetailPage() {
   // Stages move by the clock, so the stored status can lag: a program whose application window
   // has ended is ready to be finalized even if it still reads APPLICATION_OPEN.
   const applicationsClosed = Date.now() >= (toDate(program.applicationEnd)?.getTime() ?? Infinity);
+  // Public or private can only be chosen while applications are open and nobody has donated.
+  const publicLocked =
+    !(program.status === 'CREATED' || program.status === 'APPLICATION_OPEN') || applicationsClosed || !!hasDonors;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
@@ -173,7 +178,7 @@ export function ProgramDetailPage() {
                 type="button"
                 role="switch"
                 aria-checked={program.openDonation}
-                disabled={isToggling}
+                disabled={isToggling || publicLocked}
                 onClick={() => {
                   // Closing donations turns a public program into a private one, which is easy to do by accident.
                   if (program.openDonation && !window.confirm(t('detail.donationsConfirm'))) return;
@@ -188,6 +193,7 @@ export function ProgramDetailPage() {
               </button>
               <span className="text-xs text-gray-500 max-w-md">
                 {program.openDonation ? t('detail.donationsOpenHint') : t('detail.donationsClosedHint')}
+                {publicLocked && ` ${t('detail.publicLocked')}`}
               </span>
             </div>
           )}
@@ -288,6 +294,7 @@ export function ProgramDetailPage() {
         )}
 
       <DonorRefundCard program={program} />
+      <CancelledFundCard program={program} />
 
       <MilestonePlanCard programId={program.pid} />
 

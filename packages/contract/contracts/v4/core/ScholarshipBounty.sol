@@ -9,9 +9,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {ScholarshipTypes}    from "../libraries/ScholarshipTypes.sol";
+import {TokenTransfer}       from "../libraries/TokenTransfer.sol";
 import {IScholarshipCore}    from "../interfaces/IScholarship.sol";
 import {IScholarshipTreasury} from "../interfaces/IScholarship.sol";
 import {IMilestoneManager} from "../interfaces/IScholarship.sol";
+
+/// @dev The payment token of a program, as ScholarshipCore records it (address(0) = native).
+interface ICoreToken {
+    function programToken(uint256 pid) external view returns (address);
+}
 
 /**
  * @title  ScholarshipBounty
@@ -40,8 +46,9 @@ import {IMilestoneManager} from "../interfaces/IScholarship.sol";
  *         • 1 active dispute per BH address at a time
  *         • 30-day cooldown after a lost dispute
  *         • 90-day cooldown if flagged as BAD_ACTOR (≥3 consecutive losses)
- *         • A lost report pays its deposit to the accused scholar; only a deposit that could not
- *           be paid out stays here for the admin to sweep to the protocol
+ *         • A lost report pays its deposit to the accused scholar
+ *         • Deposits are paid in the program's own token; one that cannot be delivered waits for its
+ *           owner (`withdrawOwed`). Nobody else can take deposits out.
  *
  *         FRAUD TYPE → PENALTY
  *         • LIGHT_FRAUD     → 6-month freeze
@@ -63,6 +70,7 @@ contract ScholarshipBounty is
     ReentrancyGuardUpgradeable
 {
     using SafeERC20 for IERC20;
+    using TokenTransfer for address;
 
     // ── Roles ────────────────────────────────────────────────────────────────
 
@@ -89,6 +97,12 @@ contract ScholarshipBounty is
     // scholar → programId → active disputeId (0 = none)
     mapping(address => mapping(uint256 => uint256)) public activeDisputeForScholar;
 
+    // APPENDED (live proxy). True when a report's deposit was paid in its program's token; reports
+    // raised before that paid in USDC.
+    mapping(uint256 => bool) public stakeInProgramToken;
+    /// @notice Money that could not be delivered, by token and recipient.
+    mapping(address => mapping(address => uint256)) public owed;
+
     // ── Events ───────────────────────────────────────────────────────────────
 
     event DisputeRaised(
@@ -110,7 +124,8 @@ contract ScholarshipBounty is
         uint256 bhReward
     );
     event BHFlagged(address indexed bountyHunter, uint256 cooldownUntil);
-    event ForfeitedStakesWithdrawn(address recipient, uint256 amount);
+    event PaymentOwed(address indexed token, address indexed account, uint256 amount);
+    event OwedWithdrawn(address indexed token, address indexed account, uint256 amount);
     /// @notice A rejected report: the reporter's deposit was paid to the scholar they accused.
     event ScholarCompensated(uint256 indexed disputeId, address indexed scholar, uint256 amount);
     event GriefingStakeApplied(uint256 indexed disputeId, uint256 originalStake, uint256 appliedStake);
@@ -128,6 +143,8 @@ contract ScholarshipBounty is
     error NotScholar();
     error CounterEvidenceRequired();
     error MilestoneManagerNotSet();
+    error DepositTooLow(uint256 required);
+    error NothingOwed();
 
     // ── Constructor / Initializer ────────────────────────────────────────────
 
@@ -184,8 +201,9 @@ contract ScholarshipBounty is
      *         Can target a specific milestone (milestoneId > 0) or the programme
      *         in general (milestoneId = 0) — e.g. fabricated application documents.
      *
-     *         Stake = 10% of potential reward.  BH must approve USDC to this
-     *         contract before calling.  If potential reward is 0 (empty fund),
+     *         Stake = 10% of potential reward, in the program's token: approve it to this contract
+     *         first, or send it as value for a native-currency program (any excess comes back).
+     *         If potential reward is 0 (empty fund),
      *         no stake is required — BH still takes on cooldown risk.
      *
      * @param pid    Programme the scholar is enrolled in.
@@ -200,7 +218,7 @@ contract ScholarshipBounty is
         uint256 milestoneId,
         ScholarshipTypes.DisputeType disputeType,
         string calldata evidenceCID
-    ) external nonReentrant {
+    ) external payable nonReentrant {
         ScholarshipTypes.BountyHunterRecord storage bh = bhRecords[msg.sender];
 
         // Anti-spam / cooldown checks
@@ -230,17 +248,20 @@ contract ScholarshipBounty is
         if (milestoneId != 0) {
             ScholarshipTypes.Milestone memory m = milestone.getMilestone(milestoneId);
             if (m.disputeDeadline > 0 && block.timestamp > m.disputeDeadline - 6 hours) {
-                uint256 original = stakeRequired;
                 stakeRequired *= 2;
-                emit GriefingStakeApplied(_nextDisputeId + 1, original, stakeRequired);
             }
         }
 
-        if (stakeRequired > 0) {
-            usdc.safeTransferFrom(msg.sender, address(this), stakeRequired);
+        address token = ICoreToken(address(core)).programToken(pid);
+        if (token.isNative()) {
+            if (msg.value < stakeRequired) revert DepositTooLow(stakeRequired);
+        } else {
+            if (msg.value != 0) revert TokenTransfer.UnexpectedNativeValue();
+            if (stakeRequired > 0) IERC20(token).safeTransferFrom(msg.sender, address(this), stakeRequired);
         }
 
         uint256 disputeId = ++_nextDisputeId;
+        stakeInProgramToken[disputeId] = true;
 
         disputes[disputeId] = ScholarshipTypes.Dispute({
             id:                 disputeId,
@@ -283,6 +304,11 @@ contract ScholarshipBounty is
             disputeId, pid, scholar, msg.sender,
             disputeType, evidenceCID, stakeRequired, potentialReward
         );
+        // After DisputeRaised, so whoever follows the events already knows the report it refers to.
+        uint256 normalStake = (potentialReward * ScholarshipTypes.BH_STAKE_PERCENT) / 100;
+        if (stakeRequired > normalStake) emit GriefingStakeApplied(disputeId, normalStake, stakeRequired);
+
+        if (token.isNative()) _payOrOwe(token, msg.sender, msg.value - stakeRequired);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -430,17 +456,15 @@ contract ScholarshipBounty is
             prog.slashDist.protocolPercent
         );
 
-        // Return BH stake (they won — stake is theirs again)
-        if (d.stake > 0) {
-            usdc.safeTransfer(d.bountyHunter, d.stake);
-        }
-
         // Update BH record
         bh.activeDisputeId   = 0;
         bh.totalWins        += 1;
         bh.consecutiveLosses = 0; // Reset consecutive loss counter on win
 
         activeDisputeForScholar[d.scholar][d.pid] = 0;
+
+        // Return BH stake (they won — stake is theirs again)
+        _payOrOwe(_stakeToken(disputeId), d.bountyHunter, d.stake);
     }
 
     /**
@@ -477,14 +501,35 @@ contract ScholarshipBounty is
         activeDisputeForScholar[d.scholar][d.pid] = 0;
 
         // The reporter's deposit goes to the person they wrongly accused (state is final above).
-        // A transfer that fails (for example a recipient the token blocks) must not stop the ruling,
-        // so the deposit then simply stays here, as it used to, for the admin to sweep.
-        if (d.stake > 0) {
-            (bool ok, bytes memory ret) = address(usdc).call(abi.encodeCall(IERC20.transfer, (d.scholar, d.stake)));
-            if (ok && (ret.length == 0 || abi.decode(ret, (bool)))) {
-                emit ScholarCompensated(disputeId, d.scholar, d.stake);
-            }
+        if (d.stake > 0 && _payOrOwe(_stakeToken(disputeId), d.scholar, d.stake)) {
+            emit ScholarCompensated(disputeId, d.scholar, d.stake);
         }
+    }
+
+    function _stakeToken(uint256 disputeId) internal view returns (address) {
+        return stakeInProgramToken[disputeId]
+            ? ICoreToken(address(core)).programToken(disputes[disputeId].pid)
+            : address(usdc);
+    }
+
+    /// @dev Send, or remember the amount for `withdrawOwed`. A refused payment must not stop a ruling.
+    /// @return sent  Whether the money arrived now.
+    function _payOrOwe(address token, address to, uint256 amount) internal returns (bool sent) {
+        if (amount == 0) return true;
+        sent = token.trySend(to, amount);
+        if (!sent) {
+            owed[token][to] += amount;
+            emit PaymentOwed(token, to, amount);
+        }
+    }
+
+    /// @notice Collect money that could not be delivered earlier. Anyone may call; it goes to `account`.
+    function withdrawOwed(address token, address account) external nonReentrant {
+        uint256 amount = owed[token][account];
+        if (amount == 0) revert NothingOwed();
+        owed[token][account] = 0;
+        token.payOut(account, amount);
+        emit OwedWithdrawn(token, account, amount);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -518,24 +563,6 @@ contract ScholarshipBounty is
         ScholarshipTypes.Program memory prog = core.getProgram(pid);
         potentialReward      = (remaining * prog.slashDist.bountyHunterPercent) / 100;
         stakeRequired        = (potentialReward * ScholarshipTypes.BH_STAKE_PERCENT) / 100;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // ADMIN UTILITIES
-    // ═══════════════════════════════════════════════════════════════════
-
-    /**
-     * @notice Sweep forfeited BH stakes to protocol treasury.
-     *         Only DEFAULT_ADMIN_ROLE may call.
-     * @param recipient  Address to receive the accumulated USDC.
-     */
-    function withdrawForfeitedStakes(address recipient)
-        external onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        uint256 bal = usdc.balanceOf(address(this));
-        require(bal > 0, "ScholarshipBounty: nothing to withdraw");
-        usdc.safeTransfer(recipient, bal);
-        emit ForfeitedStakesWithdrawn(recipient, bal);
     }
 
     // ── UUPS ─────────────────────────────────────────────────────────────────

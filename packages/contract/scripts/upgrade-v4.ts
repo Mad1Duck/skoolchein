@@ -2,6 +2,7 @@
  * Upgrade a live v4 deployment in place (same proxy addresses, data kept).
  *
  *   bun scripts/upgrade-v4.ts --chain 31338                 upgrade core, treasury, milestoneManager, bounty
+ *   ... --only core,treasury --fee-bps 300                  upgrade and set the creation fee to 3%
  *   bun scripts/upgrade-v4.ts --chain 31338 --only core,bounty
  *   bun scripts/upgrade-v4.ts --chain 31338 --dry-run       only check who may upgrade, change nothing
  *
@@ -27,6 +28,8 @@ const arg = (name: string) => {
 const chainId = Number(arg("chain") ?? "31338");
 const only = (arg("only") ?? UPGRADABLE.join(",")).split(",").map((s: string) => s.trim()).filter(Boolean);
 const dryRun = process.argv.includes("--dry-run");
+const feeArg = arg("fee-bps"); // creation service fee, e.g. 300 = 3%
+const creationFeeBps = feeArg === undefined ? undefined : Number(feeArg);
 
 const rpc = process.env.NAWASENA_RPC_URL ?? "https://rpc.nawasena-labs.com";
 const account = process.env.DEPLOYER_PRIVATE_KEY
@@ -52,6 +55,7 @@ const addresses = {
   milestoneManager: pick("CONTRACT_MILESTONE_MANAGER"),
   bounty: pick("CONTRACT_BOUNTY"),
   committee: pick("CONTRACT_COMMITTEE"),
+  selection: pick("CONTRACT_SELECTION"),
 };
 
 // ── compiled artifacts ──────────────────────────────────────────────────────
@@ -63,6 +67,7 @@ const artifacts = {
   milestoneManager: art("core/MilestoneManager.sol/MilestoneManager.json"),
   bounty: art("core/ScholarshipBounty.sol/ScholarshipBounty.json"),
   committee: art("governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
+  selection: art("core/ScholarshipSelection.sol/ScholarshipSelection.json"),
   fraudNFT: art("tokens/ScholarshipNFTs.sol/FraudNFT.json"),
 };
 
@@ -73,4 +78,4 @@ const walletClient = createWalletClient({ chain, transport: http(rpc), account }
 console.log(`Chain ${chainId} via ${rpc}`);
 console.log("Proxies:", addresses);
 
-await upgradeV4({ publicClient, walletClient, addresses, artifacts, only, dryRun });
+await upgradeV4({ publicClient, walletClient, addresses, artifacts, only, dryRun, creationFeeBps });

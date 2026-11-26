@@ -18,6 +18,8 @@ interface IStakeCore {
     function getProtocolConfig() external view returns (ScholarshipTypes.ProtocolConfig memory);
     function getShortlist(uint256 pid) external view returns (address[] memory);
     function bountyHunter() external view returns (address);
+    function optionalReceived(address wallet, uint256 pid) external view returns (uint256);
+    function tokenConfig(address token) external view returns (bool enabled, uint256 minDonation, uint256 transactionFee);
 }
 
 /// @dev The slice of ScholarshipBounty that says whether a report against a scholar is still open.
@@ -133,6 +135,18 @@ contract ScholarshipTreasury is
     /// @notice What each scholar received from a completed program's leftover fund, on top of their milestones.
     mapping(uint256 => mapping(address => uint256)) public leftoverReceived;
 
+    /// @notice Service fee a creator pays on top of the fund when creating a program, in basis points.
+    uint256 public creationFeeBps;
+
+    /// @notice Per token, the platform's own money held here: the reserve share of penalties and the
+    ///         donation fees. This is all an admin can withdraw; the rest belongs to programs and users.
+    mapping(address => uint256) public reserveBalance;
+
+    uint256 public constant MAX_CREATION_FEE_BPS = 500; // 5%
+
+    /// @notice Money that could not be delivered (the recipient refused it), by token and recipient.
+    mapping(address => mapping(address => uint256)) public owed;
+
     enum StakeOutcome { REFUND, SUCCESS, SLASH }
 
     // ── Events ───────────────────────────────────────────────────────────────
@@ -165,6 +179,10 @@ contract ScholarshipTreasury is
     event TreasuryReserveWithdrawn(address indexed token, address indexed recipient, uint256 amount);
     event CreatorRefunded(uint256 indexed pid, address creator, uint256 amount);
     event LeftoverReleased(uint256 indexed pid, address scholar, uint256 amount);
+    event CreationFeeSet(uint256 bps);
+    event PaymentOwed(address indexed token, address indexed account, uint256 amount);
+    event OwedWithdrawn(address indexed token, address indexed account, uint256 amount);
+    event CreationFeeCharged(uint256 indexed pid, address token, uint256 amount);
 
     // ── Errors ───────────────────────────────────────────────────────────────
 
@@ -182,6 +200,8 @@ contract ScholarshipTreasury is
     error ProgramNotCompleted();
     error ReportStillOpen();
     error NoCompletedScholar();
+    error FeeTooHigh();
+    error InsufficientReserve();
 
     // ── Native token support ────────────────────────────────────────────────
     // Required so TokenTransfer.payOut's low-level call can forward native
@@ -222,16 +242,35 @@ contract ScholarshipTreasury is
 
     /**
      * @notice Record initator fund deposit when a program is created.
-     *         USDC was already transferred directly to this contract by Core.
+     *         Core has already transferred `amount` plus `creationFee(amount)` to this contract;
+     *         the program gets `amount` and the fee goes to the protocol.
      */
     function depositProgramFund(
         uint256 pid,
         uint256 amount,
         address token
-    ) external override onlyRole(CORE_ROLE) {
+    ) external override nonReentrant onlyRole(CORE_ROLE) {
         programToken[pid]    = token;
         programBalance[pid] += amount;
         emit FundDeposited(pid, msg.sender, amount);
+
+        uint256 fee = creationFee(amount);
+        if (fee > 0) {
+            token.payOut(protocolFeeRecipient, fee);
+            emit CreationFeeCharged(pid, token, fee);
+        }
+    }
+
+    /// @notice What a creator pays on top of a program fund of `amount`.
+    function creationFee(uint256 amount) public view override returns (uint256) {
+        return (amount * creationFeeBps) / 10_000;
+    }
+
+    /// @notice Set the creation service fee. Only turn it on once ScholarshipCore collects it.
+    function setCreationFeeBps(uint256 bps) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (bps > MAX_CREATION_FEE_BPS) revert FeeTooHigh();
+        creationFeeBps = bps;
+        emit CreationFeeSet(bps);
     }
 
     /**
@@ -253,7 +292,19 @@ contract ScholarshipTreasury is
         programTotalDonated[pid] += netAmount;
         programBalance[pid]      += netAmount;
 
+        // Core transferred the donation including its fee; the fee is the platform's.
+        if (address(stakeCore) != address(0)) {
+            address token = programToken[pid];
+            reserveBalance[token] += _donationFee(token);
+        }
+
         emit DonationRecorded(pid, donor, netAmount);
+    }
+
+    /// @dev The same fee ScholarshipCore deducts: the token's own setting, else the global one.
+    function _donationFee(address token) internal view returns (uint256) {
+        (bool enabled, , uint256 fee) = stakeCore.tokenConfig(token);
+        return enabled ? fee : stakeCore.getProtocolConfig().transactionFee;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -315,23 +366,26 @@ contract ScholarshipTreasury is
         // remainder (treasuryPercent) stays in contract — no transfer needed
 
         address token = programToken[pid];
-        if (bhReward   > 0) token.payOut(bountyHunter,        bhReward);
+        // A reporter that refuses payment must not be able to block the ruling.
+        _payOrOwe(token, bountyHunter, bhReward);
         if (toProtocol > 0) {
-            token.payOut(protocolFeeRecipient, toProtocol);
             protocolFeeAccumulated += toProtocol;
+            _payOrOwe(token, protocolFeeRecipient, toProtocol);
         }
 
         uint256 toTreasury = forfeited - bhReward - toProtocol; // implicitly = treasuryPercent share
+        reserveBalance[token] += toTreasury;
         emit SlashDistributed(pid, scholarAddr, bountyHunter, bhReward, toTreasury, toProtocol);
     }
 
     /// @dev One winner's portion (the same split the milestones are created from) minus what they
-    ///      have received, never more than the program still holds.
+    ///      have received from it (optional milestones are paid from elsewhere), never more than the
+    ///      program still holds.
     function _unpaidPortion(uint256 pid, address scholar) internal view returns (uint256 unpaid) {
         if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
         ScholarshipTypes.Program memory p = stakeCore.getProgram(pid);
         uint256 portion  = p.totalFund / p.targetWinners;
-        uint256 received = stakeCore.getScholar(scholar, pid).totalReceived;
+        uint256 received = stakeCore.getScholar(scholar, pid).totalReceived - stakeCore.optionalReceived(scholar, pid);
         if (portion > received) unpaid = portion - received;
         if (unpaid > programBalance[pid]) unpaid = programBalance[pid];
     }
@@ -414,8 +468,8 @@ contract ScholarshipTreasury is
         if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
 
         ScholarshipTypes.ProgramStatus st = stakeCore.getProgram(pid).status;
-        if (st == ScholarshipTypes.ProgramStatus.CANCELLED) return (true, StakeOutcome.REFUND);
-        if (st != ScholarshipTypes.ProgramStatus.ACTIVE && st != ScholarshipTypes.ProgramStatus.COMPLETED)
+        bool cancelled = st == ScholarshipTypes.ProgramStatus.CANCELLED;
+        if (!cancelled && st != ScholarshipTypes.ProgramStatus.ACTIVE && st != ScholarshipTypes.ProgramStatus.COMPLETED)
             return (false, StakeOutcome.REFUND);
 
         ScholarshipTypes.Scholar memory s = stakeCore.getScholar(scholar, pid);
@@ -424,7 +478,7 @@ contract ScholarshipTreasury is
         if (s.status == ScholarshipTypes.StudentStatus.COMPLETED) return (true, StakeOutcome.SUCCESS);
         if (s.status == ScholarshipTypes.StudentStatus.FROZEN || s.status == ScholarshipTypes.StudentStatus.BLACKLISTED)
             return (true, StakeOutcome.SLASH);
-        return (false, StakeOutcome.REFUND);
+        return (cancelled, StakeOutcome.REFUND);
     }
 
     /// @dev CEI: the stake is zeroed before any transfer.
@@ -549,6 +603,23 @@ contract ScholarshipTreasury is
     function refundDonors(uint256 pid)
         external override nonReentrant onlyRole(CORE_ROLE)
     {
+        _settleCancelled(pid);
+    }
+
+    /**
+     * @notice The same settlement for a programme that ended CANCELLED after it started, because
+     *         every one of its winners was penalized. Anyone may call it; the money can only go to
+     *         the creator and the donors.
+     */
+    function settleCancelledProgram(uint256 pid) external nonReentrant {
+        if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
+        if (stakeCore.getProgram(pid).status != ScholarshipTypes.ProgramStatus.CANCELLED)
+            revert ProgramNotCancelled();
+        if (programBalance[pid] == 0) revert NothingToWithdraw();
+        _settleCancelled(pid);
+    }
+
+    function _settleCancelled(uint256 pid) internal {
         if (address(stakeCore) == address(0)) revert StakeCoreNotSet();
 
         uint256 balance = programBalance[pid];
@@ -558,7 +629,7 @@ contract ScholarshipTreasury is
             uint256 rest    = balance - donated;
             address creator = stakeCore.getProgram(pid).initiator;
             programBalance[pid] = donated;
-            programToken[pid].payOut(creator, rest);
+            _payOrOwe(programToken[pid], creator, rest);
             emit CreatorRefunded(pid, creator, rest);
         }
 
@@ -603,9 +674,25 @@ contract ScholarshipTreasury is
         programBalance[pid]       = balance - refund;
 
         if (refund > 0) {
-            programToken[pid].payOut(donor, refund);
+            _payOrOwe(programToken[pid], donor, refund);
             emit DonorRefunded(pid, donor, refund);
         }
+    }
+
+    /// @dev Send, or remember the amount for `withdrawOwed` if the recipient refuses it.
+    function _payOrOwe(address token, address to, uint256 amount) internal {
+        if (amount == 0 || token.trySend(to, amount)) return;
+        owed[token][to] += amount;
+        emit PaymentOwed(token, to, amount);
+    }
+
+    /// @notice Collect money that could not be delivered earlier. Anyone may call; it goes to `account`.
+    function withdrawOwed(address token, address account) external nonReentrant {
+        uint256 amount = owed[token][account];
+        if (amount == 0) revert NothingToWithdraw();
+        owed[token][account] = 0;
+        token.payOut(account, amount);
+        emit OwedWithdrawn(token, account, amount);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -638,7 +725,7 @@ contract ScholarshipTreasury is
             uint256 amount = i + 1 == n ? balance - each * (n - 1) : each;
             if (amount > 0) {
                 leftoverReceived[pid][scholars[i]] += amount;
-                token.payOut(scholars[i], amount);
+                _payOrOwe(token, scholars[i], amount);
                 emit LeftoverReleased(pid, scholars[i], amount);
             }
             unchecked { ++i; }
@@ -708,17 +795,18 @@ contract ScholarshipTreasury is
     }
     
     /**
-     * @notice Withdraw accumulated treasury reserve (from slashes).
+     * @notice Withdraw from the platform's reserve (penalty shares and donation fees), never more
+     *         than the reserve holds, so program funds, stakes and bonus pools cannot be taken.
+     * @param token      Which token's reserve.
      * @param recipient  Address to receive the funds.
-     * @param amount     Amount of USDC to withdraw.
+     * @param amount     Amount to withdraw.
      */
     function withdrawTreasuryReserve(address token, address recipient, uint256 amount)
         external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE)
     {
         if (amount == 0) revert NothingToWithdraw();
-        // We don't have a separate tracker for reserve, but we can check balance vs total program/yield/stakes
-        // However, a simple balance-based check or a dedicated counter is better.
-        // For now, we trust the Admin/Multisig to withdraw only what is surplus.
+        if (amount > reserveBalance[token]) revert InsufficientReserve();
+        reserveBalance[token] -= amount;
         token.payOut(recipient, amount);
         emit TreasuryReserveWithdrawn(token, recipient, amount);
     }

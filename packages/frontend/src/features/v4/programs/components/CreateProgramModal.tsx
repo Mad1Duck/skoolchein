@@ -6,7 +6,8 @@ import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import type { ProgramMetadata } from '@/lib/api/types';
 import { useActiveChain, useV4Addresses } from '@/lib/chain/useActiveChain';
-import { NATIVE_TOKEN, getSupportedTokens, getTokenMeta } from '@/lib/contracts/v4/token';
+import { NATIVE_TOKEN, getSupportedTokens, getTokenMeta, formatTokenAmount, formatTokenWithSymbol, parseTokenAmount } from '@/lib/contracts/v4/token';
+import { useCreationFeeBps } from '@/lib/contracts/v4/hooks/treasury';
 import { needsApproval } from '@/lib/contracts/write-hooks';
 import { useTokenBalance } from '@/lib/contracts/v4/hooks/balance';
 import { useTokenRate } from '@/context/token-rate-context';
@@ -66,8 +67,18 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
   const limits = useProtocolLimits();
   const candidatesOk = formData.maxCandidates >= limits.minCandidates && formData.maxCandidates <= limits.maxCandidates;
   const winnersOk = formData.targetWinners >= 1 && formData.targetWinners <= formData.maxCandidates;
-  // The creator funds the program from their own wallet, so check it can cover the fund first.
-  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(formData.token, formData.totalFund);
+  // The service fee comes on top of the fund, so the wallet pays (and approves) both.
+  const feeBps = useCreationFeeBps();
+  let fund = 0n;
+  try {
+    fund = parseTokenAmount(formData.totalFund, formData.token);
+  } catch {
+    fund = 0n; // still being typed
+  }
+  const fee = (fund * (feeBps ?? 0n)) / 10_000n;
+  const totalToPay = formatTokenAmount(fund + fee, formData.token);
+  // The creator funds the program from their own wallet, so check it can cover the payment first.
+  const { hasEnough, shortfallIdr, refetch: refetchBalance } = useTokenBalance(formData.token, totalToPay);
   const fundIdr =
     !tokenMeta.isNative && rate && Number(formData.totalFund) > 0
       ? formatToIDR(usdcToIdr(Number(formData.totalFund), rate))
@@ -97,7 +108,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
       // Native funding needs no ERC20 approval — skip straight to create.
       setStep(needsApproval(formData.token) ? "approve" : "create");
     } else if (step === 'approve') {
-      approve(v4Addresses.ScholarshipCore, formData.totalFund);
+      approve(v4Addresses.ScholarshipCore, totalToPay);
     } else if (step === 'create') {
       const now = BigInt(Math.floor(Date.now() / 1000));
       const appStart = now;
@@ -136,6 +147,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
         timeline: [appStart, appEnd, voteStart, voteEnd],
         milestoneDisputeWindow: disputeWindowSec,
         totalFund: formData.totalFund,
+        fee,
         maxOptionalMilestones: formData.maxOptionalMilestones,
         committeeContract: committeeAddr,
         token: formData.token as `0x${string}`,
@@ -303,10 +315,27 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               </div>
             </div>
 
+            {fee > 0n && (
+              <dl className="rounded-xl border-2 border-black bg-skyellow-light p-3 text-sm space-y-1">
+                <div className="flex justify-between gap-3">
+                  <dt>{t('create.programFund')}</dt>
+                  <dd className="font-data font-bold">{formatTokenWithSymbol(fund, formData.token)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>{t('create.serviceFee', { pct: Number(feeBps) / 100 })}</dt>
+                  <dd className="font-data font-bold">{formatTokenWithSymbol(fee, formData.token)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t-2 border-black/10 pt-1 font-bold">
+                  <dt>{t('create.youPay')}</dt>
+                  <dd className="font-data">{formatTokenWithSymbol(fund + fee, formData.token)}</dd>
+                </div>
+              </dl>
+            )}
+
             {!hasEnough && (
               <p className="text-xs font-bold text-skred">
                 {t('create.shortfall', {
-                  amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${formData.totalFund} ${tokenMeta.symbol}`,
+                  amount: shortfallIdr !== null ? formatToIDR(shortfallIdr) : `${totalToPay} ${tokenMeta.symbol}`,
                 })}{' '}
                 {!tokenMeta.isNative && (
                   <button type="button" className="underline" onClick={() => setTopUpOpen(true)}>
@@ -486,7 +515,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
             <div className="w-10 h-10 border-2 border-black bg-skyellow mx-auto animate-pulse mb-2" />
             <p className="font-bold">{t('create.approving')}</p>
             <p className="text-sm text-gray-600">
-              {t('create.approvingBody', { amount: formData.totalFund, symbol: tokenMeta.symbol })}
+              {t('create.approvingBody', { amount: totalToPay, symbol: tokenMeta.symbol })}
             </p>
           </div>
         )}
@@ -523,6 +552,7 @@ export function CreateProgramModal({ isOpen, onClose }: Props) {
               disabled={
                 !formData.name ||
                 !formData.totalFund ||
+                feeBps === undefined ||
                 weightSum !== 100 ||
                 slashSum !== 100 ||
                 !candidatesOk ||

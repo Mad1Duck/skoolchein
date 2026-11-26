@@ -38,7 +38,7 @@ services:
       # For each extra chain <ID> also set PONDER_RPC_URL_<ID>, START_BLOCK_<ID>
       # and CONTRACT_*_<ID> in .env — env_file passes them straight through.
       PONDER_CHAIN_IDS: ${PONDER_CHAIN_IDS:-31338}
-      # Browser origins allowed to call /graphql and /sql ("*" = any). Local
+      # Browser origins allowed to call the indexer ("*" = any). Local
       # frontends (http://localhost:<port>) are always allowed unless
       # CORS_ALLOW_LOCALHOST=false.
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
@@ -98,6 +98,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       CORS_ALLOW_LOCALHOST: ${CORS_ALLOW_LOCALHOST:-true}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      # Indexer watch (see /health/indexer): alert destination, and the RPC used to tell a quiet
+      # chain from a stuck indexer.
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      PONDER_RPC_URL: ${PONDER_RPC_URL:-https://rpc.nawasena-labs.com}
       PINATA_JWT: ${PINATA_JWT}
       PINATA_GATEWAY: ${PINATA_GATEWAY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -105,8 +109,10 @@ services:
     networks:
       - nawasena-network
     depends_on:
+      # Not service_healthy: a reindex takes longer than the healthcheck allows, and the app should
+      # stay up (it says the data is catching up) instead of failing to start.
       scholarship-ponder:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       # Hits the lightweight liveness probe, NOT /health/detail (which calls
       # Gemini + reads disk and would blow past the timeout).
@@ -139,7 +145,7 @@ services:
       - nawasena-network
     depends_on:
       scholarship-ponder:
-        condition: service_healthy
+        condition: service_started
       scholarship-backend:
         condition: service_healthy
     restart: unless-stopped

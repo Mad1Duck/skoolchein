@@ -37,14 +37,48 @@ export async function loadIPFSJson<T = unknown>(cid: string): Promise<T | null> 
   const key = "skc:json:" + cid;
   try {
     const cached = localStorage.getItem(key);
-    if (cached) return JSON.parse(cached) as T;
+    if (cached) return cleanDoc(JSON.parse(cached)) as T;
   } catch { /* unavailable: fall through to the network */ }
 
   const res = await fetch(ipfsUrl(cid));
   if (!res.ok) throw new Error(`IPFS gateway responded ${res.status}`);
-  const json = (await res.json()) as T;
+  const json = cleanDoc(await res.json()) as T;
   try { localStorage.setItem(key, JSON.stringify(json)); } catch { /* storage full: caching is optional */ }
   return json;
+}
+
+// ── Untrusted documents ──────────────────────────────────────────────────────
+// Anyone can pin any JSON and put its CID on-chain. A number or object where the page expects text
+// would crash it, so a fetched document keeps only fields of the expected type.
+
+const asRecord = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+const asText = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+
+function cleanDoc(raw: unknown): { content?: string; hackquestId?: string; files: EvidenceFile[] } {
+  const doc = asRecord(raw);
+  const files = (Array.isArray(doc.files) ? doc.files : [])
+    .map(asRecord)
+    .filter((f) => typeof f.cid === "string" && f.cid !== "")
+    .map((f) => ({
+      cid: f.cid as string,
+      name: asText(f.name) ?? (f.cid as string),
+      type: asText(f.type) ?? "application/octet-stream",
+      size: typeof f.size === "number" && Number.isFinite(f.size) ? f.size : 0,
+    }));
+  return { content: asText(doc.content), hackquestId: asText(doc.hackquestId), files };
+}
+
+function cleanProgramMeta(raw: unknown): ProgramMetadata {
+  const meta = asRecord(raw);
+  return {
+    name: asText(meta.name) ?? "",
+    description: asText(meta.description) ?? "",
+    organization: asText(meta.organization),
+    country: asText(meta.country),
+    requirements: asText(meta.requirements),
+    coverImageCID: asText(meta.coverImageCID),
+  };
 }
 
 /** Keep a document we just wrote, so its author can read it back even if the gateway is busy. */
@@ -63,7 +97,7 @@ const META_CACHE_PREFIX = "skc:meta:";
 function readCachedMeta(cid: string): ProgramMetadata | null {
   try {
     const raw = localStorage.getItem(META_CACHE_PREFIX + cid);
-    return raw ? (JSON.parse(raw) as ProgramMetadata) : null;
+    return raw ? cleanProgramMeta(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -93,12 +127,13 @@ export async function fetchProgramMeta(cid: string): Promise<ProgramMetadata | n
   if (!meta) {
     const res = await fetch(ipfsUrl(cid));
     if (!res.ok) throw new Error(`IPFS gateway responded ${res.status}`);
-    meta = (await res.json()) as ProgramMetadata;
+    meta = cleanProgramMeta(await res.json());
     rememberProgramMeta(cid, meta);
   }
   // The stored name keeps the backend's naming prefix ("skoolchein_program_My Program").
   // That is for storage only — display just what the creator typed.
-  return meta.name ? { ...meta, name: stripNamePrefix(meta.name) } : meta;
+  // A nameless document leaves `name` undefined, so pages fall back to "Program #id".
+  return { ...meta, name: (meta.name ? stripNamePrefix(meta.name) : undefined) as string };
 }
 
 /** "skoolchein_program_My Program" → "My Program". Names without the prefix pass through. */

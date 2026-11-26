@@ -4,7 +4,7 @@ import { uploadToIPFS } from '@/lib/ipfs';
 import { NeoModal } from '@/components/ui/NeoModal';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useProposeMilestone } from '@/lib/contracts/write-hooks';
-import { useProgram } from '@/lib/api/hooks';
+import { useProgram, useProgramScholars } from '@/lib/api/hooks';
 import { formatTokenCompact, getTokenMeta, parseTokenAmount } from '@/lib/contracts/v4/token';
 import { useT } from '@/lib/i18n';
 
@@ -38,13 +38,14 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
   // All in the program's token, kept as bigint: 18-decimal amounts exceed
   // Number's exact range, so arithmetic here must never round-trip through it.
   //
-  // `totalFund` already includes donations — the indexer's DonationReceived
-  // handler adds each donation's netAmount to it — so it is the true ceiling.
-  // The contract rejects a milestone that exceeds what is still unallocated.
+  // Every winner's portion is promised to their required milestones, so an optional one can only be
+  // paid from portions nobody took. The contract rejects anything above that.
+  const { data: winners = [] } = useProgramScholars(String(programId));
   const totalFund = BigInt(program?.totalFund ?? 0);
   const allocated = BigInt(program?.allocatedFund ?? 0);
-  const spent = BigInt(program?.spentFund ?? 0);
-  const available = totalFund > allocated ? totalFund - allocated : 0n;
+  const portion = totalFund / BigInt(Math.max(1, program?.targetWinners ?? 1));
+  const reserved = portion * BigInt(winners.length);
+  const available = totalFund > reserved + allocated ? totalFund - reserved - allocated : 0n;
 
   // parseTokenAmount throws on malformed input (stray letters, more decimals
   // than the token supports), which must not blank the whole modal.
@@ -198,12 +199,12 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                     <dd className="font-data font-bold">{formatTokenCompact(totalFund, token)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-600">Already allocated</dt>
-                    <dd className="font-data">−{formatTokenCompact(allocated, token)}</dd>
+                    <dt className="text-gray-600">Reserved for {winners.length} winner{winners.length === 1 ? '' : 's'}</dt>
+                    <dd className="font-data">−{formatTokenCompact(reserved, token)}</dd>
                   </div>
-                  <div className="flex justify-between text-gray-500">
-                    <dt className="pl-3">of which paid out</dt>
-                    <dd className="font-data">{formatTokenCompact(spent, token)}</dd>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-600">Other optional milestones</dt>
+                    <dd className="font-data">−{formatTokenCompact(allocated, token)}</dd>
                   </div>
 
                   <div className="flex justify-between border-t-2 border-black/10 pt-1.5">
@@ -238,9 +239,7 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                   <p className="px-3 py-2 border-t-2 border-black bg-red-50 text-red-700 font-bold">
                     Over available fund by {formatTokenCompact(requested - available, token)}.
                     The proposal itself will submit, but your committee cannot approve
-                    it — approval reverts with InsufficientProgramFund unless donations
-                    cover the gap first. It would also use up one of your limited
-                    optional-milestone slots.
+                    it. It would also use up one of your limited optional-milestone slots.
                   </p>
                 )}
                 {amountInvalid && (
@@ -250,8 +249,8 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 )}
                 {!isOverBudget && !amountInvalid && available === 0n && program && (
                   <p className="px-3 py-2 border-t-2 border-black bg-skyellow-light font-bold">
-                    Every {tokenMeta.symbol} in this program is already allocated. A new
-                    milestone needs additional donations first.
+                    All of this program's fund is reserved for its winners, so there is nothing
+                    left for an optional milestone.
                   </p>
                 )}
               </div>
@@ -321,11 +320,8 @@ export function ProposeMilestoneModal({ isOpen, onClose, programId }: Props) {
                 // native (18 decimals) for an unknown token, so submitting early
                 // would scale a USDC program's amount by 10^12.
                 //
-                // Over-budget is deliberately NOT blocked: proposeMilestone has
-                // no fund check (only approveMilestone does), and donations can
-                // arrive before the committee votes. The warning above states
-                // the consequence and the label changes — the choice is the
-                // scholar's, not ours to veto.
+                // Over-budget is not blocked: proposeMilestone has no fund check
+                // (only approval does). The warning above states the consequence.
                 disabled={
                   isPending ||
                   !program ||

@@ -256,6 +256,11 @@ export const scholarshipCoreAbi = [
   },
   {
     "inputs": [],
+    "name": "PublicSettingLocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "QuorumNotMet",
     "type": "error"
   },
@@ -341,6 +346,11 @@ export const scholarshipCoreAbi = [
   {
     "inputs": [],
     "name": "UnexpectedNativeValue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnreservedFundTooLow",
     "type": "error"
   },
   {
@@ -2742,24 +2752,6 @@ export const scholarshipCoreAbi = [
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "pid",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "open",
-        "type": "bool"
-      }
-    ],
-    "name": "toggleOpenDonation",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "",
         "type": "address"
@@ -2878,6 +2870,127 @@ export const scholarshipCoreAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "scholar",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "milestoneId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum ScholarshipTypes.MilestoneKind",
+        "name": "kind",
+        "type": "uint8"
+      }
+    ],
+    "name": "onMilestoneCompleted",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "scholar",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "onOptionalApproved",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      }
+    ],
+    "name": "optionalReceived",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum ScholarshipTypes.DisputeType",
+        "name": "disputeType",
+        "type": "uint8"
+      }
+    ],
+    "name": "slashScholar",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "open",
+        "type": "bool"
+      }
+    ],
+    "name": "toggleOpenDonation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ] as const;

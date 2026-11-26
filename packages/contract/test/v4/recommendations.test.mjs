@@ -145,8 +145,8 @@ describe("recommendation validation", () => {
     assert.equal((await sys.read(core, "getProgram", [BigInt(p.pid)])).status, Status.SCREENING);
 
     await expectRevert(recommend(sys, { pid: p.pid, student: ranked[0], recommender: R(0), score: 90 }), "AlreadyProcessed");
-    // The ones not processed yet can still be recommended.
-    await recommend(sys, { pid: p.pid, student: ranked[4], recommender: R(0), score: 90 });
+    // Nor can the ones still waiting: a higher score now could leave them with no place in the order.
+    await expectRevert(recommend(sys, { pid: p.pid, student: ranked[4], recommender: R(0), score: 90 }), "ScoringClosed");
     assert.equal((await applicant(p.pid, ranked[0])).status, AppStatus.SHORTLISTED);
   });
 });

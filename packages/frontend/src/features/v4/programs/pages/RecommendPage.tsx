@@ -11,6 +11,7 @@ import { fetchProgramMeta } from '@/lib/ipfs';
 import {
   useIsRecommender,
   useSelectionAddress,
+  useShortlistStarted,
   useSignRecommendation,
   useSubmitRecommendation,
 } from '@/lib/contracts/v4/hooks/selection';
@@ -41,6 +42,7 @@ export function RecommendPage() {
   const { data: applicants = [] } = useProgramApplicants(pid);
   const applicant = applicants.find((a) => a.wallet.toLowerCase() === student.toLowerCase());
   const { allowed } = useIsRecommender(pidNum, address);
+  const shortlistStarted = useShortlistStarted(pidNum);
 
   const { sign, isSigning } = useSignRecommendation();
   const { submit, isPending: submitting, isSuccess: submitted, error: submitError } = useSubmitRecommendation();
@@ -59,7 +61,7 @@ export function RecommendPage() {
     : !program ? null
     : program.screeningMode === 0 ? t('rec.committee')
     : !applicant ? t('rec.notApplicant')
-    : applicant.status !== 'PENDING_REVIEW' || !['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status) ? t('rec.closed')
+    : shortlistStarted || applicant.status !== 'PENDING_REVIEW' || !['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status) ? t('rec.closed')
     : address && address.toLowerCase() === student.toLowerCase() ? t('rec.self')
     : address && program.recommendersRestricted && !allowed ? t('rec.notAllowed')
     : null;

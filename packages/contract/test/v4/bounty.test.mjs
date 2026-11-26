@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  deploySystem, setupProgram, snapshot, revertTo, warpTo, expectRevert,
+  deploySystem, setupProgram, snapshot, revertTo, warpTo, expectRevert, publicClient,
   parseEther, zeroAddress, Status, ROLE,
 } from "./harness.mjs";
 
@@ -29,8 +29,7 @@ const donor = () => sys.accounts[12];
 
 /** A program with a running winner who has handed in their first milestone. */
 async function submittedMilestone(slashDist = { bountyHunterPercent: 0, treasuryPercent: 80, protocolPercent: 20 }, totalFund) {
-  // By default there is no hunter share, so no deposit, and the tests do not need USDC.
-  // A small `totalFund` keeps a deposit (paid in 6-decimal USDC) within what the mock can mint.
+  // By default there is no hunter share, so no deposit.
   const prog = await setupProgram(sys, {
     donations: totalFund ? [] : [{ account: donor(), amount: parseEther("10") }],
     slashDist,
@@ -123,41 +122,38 @@ it("the committee's ruling reaches the Bounty through Core", async () => {
   assert.equal(scholar.status, 2);
 });
 
-it("a rejected report pays the reporter's whole deposit to the scholar they accused", async () => {
-  const { usdc } = sys.contracts;
-  const p = await submittedMilestone({ bountyHunterPercent: 50, treasuryPercent: 30, protocolPercent: 20 }, 20_000_000n);
-  // The deposit is paid in USDC whatever the program's token is.
-  await sys.as(reporter()).write(usdc, "mint", [reporter(), 500_000n * 10n ** 6n]);
-  await sys.as(reporter()).write(usdc, "approve", [bounty.address, 500_000n * 10n ** 6n]);
-  await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
-
-  const deposit = (await sys.read(bounty, "disputes", [1n]))[9];
+/** Reports the milestone with the deposit the program's own (native) currency asks for. */
+async function raiseWithDeposit(p) {
+  const [deposit] = await sys.read(bounty, "calculateStake", [p.scholar, BigInt(p.pid)]);
   assert.ok(deposit > 0n, "the report needed a deposit");
-  const before = await sys.read(usdc, "balanceOf", [p.scholar]);
+  await sys.as(reporter()).write(bounty, "raiseDispute", [BigInt(p.pid), p.scholar, p.milestoneId, MILESTONE_FRAUD, "ipfs://evidence"], deposit);
+  return deposit;
+}
+const coins = (address) => publicClient.getBalance({ address });
+
+it("a rejected report pays the reporter's whole deposit to the scholar they accused", async () => {
+  const p = await submittedMilestone({ bountyHunterPercent: 50, treasuryPercent: 30, protocolPercent: 20 });
+  const deposit = await raiseWithDeposit(p);
 
   await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+  const before = await coins(p.scholar);
   await sys.as(sys.deployer).write(bounty, "resolveDispute", [1n, false]); // the committee rejects the report
 
-  assert.equal((await sys.read(usdc, "balanceOf", [p.scholar])) - before, deposit, "the scholar got the whole deposit");
-  assert.equal(await sys.read(usdc, "balanceOf", [bounty.address]), 0n, "nothing is left behind in the Bounty");
+  assert.equal((await coins(p.scholar)) - before, deposit, "the scholar got the whole deposit");
+  assert.equal(await coins(bounty.address), 0n, "nothing is left behind in the Bounty");
   assert.notEqual(await milestoneStatus(p.milestoneId), FROZEN, "the milestone is released again");
 });
 
 it("an upheld report returns the deposit to the reporter and pays nothing to the scholar", async () => {
-  const { usdc } = sys.contracts;
-  const p = await submittedMilestone({ bountyHunterPercent: 50, treasuryPercent: 30, protocolPercent: 20 }, 20_000_000n);
-  await sys.as(reporter()).write(usdc, "mint", [reporter(), 500_000n * 10n ** 6n]);
-  await sys.as(reporter()).write(usdc, "approve", [bounty.address, 500_000n * 10n ** 6n]);
-  await raise(reporter(), p, p.milestoneId, MILESTONE_FRAUD);
-  const deposit = (await sys.read(bounty, "disputes", [1n]))[9];
-  const scholarBefore = await sys.read(usdc, "balanceOf", [p.scholar]);
-
+  const p = await submittedMilestone({ bountyHunterPercent: 50, treasuryPercent: 30, protocolPercent: 20 });
+  const deposit = await raiseWithDeposit(p);
   await sys.as(p.scholar).write(bounty, "submitCounterEvidence", [1n, "ipfs://defense"]);
+  const [scholarBefore, reporterBefore] = [await coins(p.scholar), await coins(reporter())];
   await sys.as(sys.deployer).write(bounty, "resolveDispute", [1n, true]);
 
-  assert.equal(await sys.read(usdc, "balanceOf", [p.scholar]), scholarBefore);
-  assert.equal(await sys.read(usdc, "balanceOf", [reporter()]), 500_000n * 10n ** 6n, "the deposit came back");
-  assert.ok(deposit > 0n);
+  assert.equal(await coins(p.scholar), scholarBefore);
+  assert.ok((await coins(reporter())) - reporterBefore >= deposit, "the deposit came back, with the reward");
+  assert.equal(await coins(bounty.address), 0n);
 });
 
 it("the program's creator can rule on a report in their own program, with no committee at all", async () => {

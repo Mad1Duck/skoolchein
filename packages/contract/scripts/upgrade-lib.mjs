@@ -20,9 +20,11 @@ const KINDS = {
   milestoneManager: { artifact: "milestoneManager", call: "upgradeToAndCall", auth: "admin" },
   bounty: { artifact: "bounty", call: "upgradeToAndCall", auth: "role" },
   committee: { artifact: "committee", call: "upgradeToAndCall", auth: "role" },
+  selection: { artifact: "selection", call: "upgradeToAndCall", auth: "role" },
 };
-// Committee is opt-in (--only committee): the default upgrade leaves the governance contract alone.
-export const UPGRADABLE = Object.keys(KINDS).filter((k) => k !== "committee");
+// Committee and selection are opt-in (--only ...): the default upgrade leaves them alone.
+const OPT_IN = ["committee", "selection"];
+export const UPGRADABLE = Object.keys(KINDS).filter((k) => !OPT_IN.includes(k));
 
 /**
  * @param {object} o
@@ -32,9 +34,10 @@ export const UPGRADABLE = Object.keys(KINDS).filter((k) => k !== "committee");
  * @param {Record<string,{abi:any[], bytecode:string}>} o.artifacts  core, treasury, milestoneManager, bounty, coreLogic
  * @param {string[]} [o.only]  which of UPGRADABLE to upgrade (default: all)
  * @param {boolean} [o.dryRun]  only check that this account may upgrade, change nothing
+ * @param {number} [o.creationFeeBps]  set the creation service fee (needs core and treasury upgraded together)
  * @param {(msg:string)=>void} [o.log]
  */
-export async function upgradeV4({ publicClient, walletClient, addresses, artifacts, only = UPGRADABLE, dryRun = false, log = console.log }) {
+export async function upgradeV4({ publicClient, walletClient, addresses, artifacts, only = UPGRADABLE, dryRun = false, creationFeeBps, log = console.log }) {
   const account = walletClient.account;
   if (!account) throw new Error("walletClient needs an account");
   const me = getAddress(account.address);
@@ -55,11 +58,21 @@ export async function upgradeV4({ publicClient, walletClient, addresses, artifac
   const implOf = async (proxy) => getAddress(`0x${(await publicClient.getStorageAt({ address: proxy, slot: IMPL_SLOT })).slice(-40)}`);
   const addr = (k) => getAddress(addresses[k]);
 
+  if (creationFeeBps !== undefined) {
+    if (!Number.isInteger(creationFeeBps) || creationFeeBps < 0 || creationFeeBps > 500) {
+      throw new Error("the creation fee must be a whole number of basis points between 0 and 500");
+    }
+    // An old Core would not collect the fee, and the Treasury would then pay it out of other money.
+    if (!only.includes("core") || !only.includes("treasury")) {
+      throw new Error("set the creation fee only while upgrading core and treasury together");
+    }
+  }
+
   // ── 1. Make sure this account may upgrade, BEFORE spending anything ──────────
   log(`Upgrader: ${me}`);
   for (const key of only) {
     const kind = KINDS[key];
-    if (!kind) throw new Error(`unknown contract "${key}" (choose from ${UPGRADABLE.join(", ")})`);
+    if (!kind) throw new Error(`unknown contract "${key}" (choose from ${Object.keys(KINDS).join(", ")})`);
     const abi = artifacts[kind.artifact].abi;
     // A proxy can only be upgraded if the code behind it contains the upgrade function. MilestoneManager was
     // first deployed without one, and nothing can add it to a proxy that is already live.
@@ -130,6 +143,10 @@ export async function upgradeV4({ publicClient, walletClient, addresses, artifac
   if (only.includes("treasury") || only.includes("core")) {
     await step("treasury.stakeCore", async () => getAddress(await read(addr("treasury"), treasury.abi, "stakeCore")) === addr("core"), () =>
       send(addr("treasury"), treasury.abi, "setStakeCore", [addr("core")]));
+  }
+  if (creationFeeBps !== undefined) {
+    await step(`treasury.creationFeeBps = ${creationFeeBps}`, async () => (await read(addr("treasury"), treasury.abi, "creationFeeBps")) === BigInt(creationFeeBps), () =>
+      send(addr("treasury"), treasury.abi, "setCreationFeeBps", [BigInt(creationFeeBps)]));
   }
   if (only.includes("treasury") || only.includes("milestoneManager")) {
     // MilestoneManager calls Treasury.disburseMilestone when a milestone is released.

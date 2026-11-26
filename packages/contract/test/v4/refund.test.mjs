@@ -185,7 +185,10 @@ it("an upheld report takes only the guilty scholar's portion, and the others are
   const before = await programBalance(p.pid);
 
   await report(p, guilty);
+  const reserve = () => sys.read(treasury, "reserveBalance", [zeroAddress]);
+  const reserved = await reserve();
   await uphold(p, guilty);
+  assert.equal((await reserve()) - reserved, (portion * 80n) / 100n); // this program's reserve share
   assert.equal(before - (await programBalance(p.pid)), portion);
   assert.equal(await programStatus(p), Status.ACTIVE); // the other scholar is still working
 

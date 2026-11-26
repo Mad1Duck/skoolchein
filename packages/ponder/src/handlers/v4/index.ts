@@ -6,6 +6,11 @@ import { scholarshipTreasuryHandlers, scholarshipReputationHandlers } from "./tr
 import { scholarshipPriceOracleHandlers } from "./oracle";
 import { scholarshipSelectionHandlers } from "./selection";
 
+/**
+ * Handlers must NOT catch their own errors. A thrown error stops the indexer (`ponder start` exits and
+ * the container restarts and retries), so a failed write is noticed instead of leaving a permanent hole
+ * in the data. Where an event can legitimately refer to a row that does not exist, check for the row.
+ */
 export const registerV4Handlers = () => {
   scholarshipCoreHandlers();
   milestoneManagerHandlers();
