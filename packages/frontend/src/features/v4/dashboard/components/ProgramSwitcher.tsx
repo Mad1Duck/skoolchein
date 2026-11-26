@@ -54,9 +54,9 @@ export function ProgramSwitcher({ programs, selectedPid, onSelect }: Props) {
     <section className="rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] p-4 md:p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-2">
-          <h2 className="font-paytone text-xl">My Programs</h2>
+          <h2 className="font-paytone text-xl">{t('switcher.title')}</h2>
           <span className="text-xs font-bold font-data text-gray-500">
-            {visible.length === programs.length ? programs.length : `${visible.length} of ${programs.length}`}
+            {visible.length === programs.length ? programs.length : `${visible.length} / ${programs.length}`}
           </span>
         </div>
 
@@ -65,17 +65,17 @@ export function ProgramSwitcher({ programs, selectedPid, onSelect }: Props) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name or #id"
+              placeholder={t('switcher.search')}
               className="!py-1.5 !text-sm w-44 !rounded-xl"
             />
             <NeoSelect
               size="sm"
               className="w-44"
-              ariaLabel="Filter by status"
+              ariaLabel={t('switcher.filter')}
               value={status}
               onChange={setStatus}
               options={[
-                { value: "ALL", label: "All status" },
+                { value: "ALL", label: t("switcher.all") },
                 ...statuses.map((s) => ({ value: s as string, label: statusLabel(t, s) })),
               ]}
             />

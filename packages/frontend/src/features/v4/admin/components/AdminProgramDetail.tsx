@@ -14,6 +14,7 @@ import {
 import type { Program } from "@/lib/api/types";
 import { fetchProgramMeta } from "@/lib/ipfs";
 import { formatTokenWithSymbol, getTokenMeta } from "@/lib/contracts/v4/token";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   program: Program;
@@ -24,12 +25,14 @@ interface Props {
 type Section = "applicants" | "scholars" | "milestones";
 
 const short = (a?: string | null, head = 6, tail = 4) => (a ? `${a.slice(0, head)}…${a.slice(-tail)}` : "—");
-const dateTime = (d?: string | null) =>
+const dateTime = (locale: string, d?: string | null) =>
   d
-    ? new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? new Date(d).toLocaleString(locale, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : "—";
 
 export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
+  const { t, lang } = useT();
+  const locale = lang === "id" ? "id-ID" : "en-US";
   const id = String(program.pid);
   const [section, setSection] = useState<Section>("applicants");
 
@@ -71,7 +74,7 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
               <span className="font-data text-sm font-black text-gray-500">#{program.pid}</span>
               <NeoBadge status={program.status} />
               <Chip className={program.openDonation ? "bg-skgreen" : "bg-gray-200"}>
-                {program.openDonation ? "Donations open" : "Donations closed"}
+                {program.openDonation ? t('admin.donationsOpen') : t('admin.donationsClosed')}
               </Chip>
             </div>
             <h2 className="font-paytone text-2xl mt-1 [overflow-wrap:anywhere]">
@@ -81,7 +84,7 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="w-9 h-9 shrink-0 flex items-center justify-center border-2 border-black rounded-xl bg-white font-bold text-lg shadow-[2px_2px_0_0_#000] hover:bg-skred hover:text-white hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-75"
           >
             ×
@@ -92,14 +95,14 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
           {meta?.description && <p className="text-sm text-gray-700 [overflow-wrap:anywhere]">{meta.description}</p>}
 
           {/* Funds */}
-          <Block title="Funds">
+          <Block title={t('admin.funds')}>
             <div className="grid grid-cols-2 gap-3">
-              <Tile label="Total fund" value={money(program.totalFund)} tone="bg-skpurple-light" big />
-              <Tile label="Protocol fee" value={money(program.protocolFeeCollected)} tone="bg-skyellow-light" big />
-              <Tile label="Allocated" value={money(program.allocatedFund)} />
-              <Tile label="Spent" value={money(program.spentFund)} />
-              <Tile label="Yield accrued" value={money(program.yieldAccrued)} />
-              <Tile label="Token" value={tokenMeta.isNative ? "Native (ETH)" : tokenMeta.symbol} />
+              <Tile label={t('admin.col.totalFund')} value={money(program.totalFund)} tone="bg-skpurple-light" big />
+              <Tile label={t('admin.fee')} value={money(program.protocolFeeCollected)} tone="bg-skyellow-light" big />
+              <Tile label={t('admin.allocated')} value={money(program.allocatedFund)} />
+              <Tile label={t('admin.spent')} value={money(program.spentFund)} />
+              <Tile label={t('admin.yield')} value={money(program.yieldAccrued)} />
+              <Tile label={t('admin.token')} value={tokenMeta.isNative ? t('admin.nativeEth') : tokenMeta.symbol} />
             </div>
             <div className="mt-3">
               <div className="flex h-4 w-full rounded-full border-2 border-black bg-white overflow-hidden">
@@ -107,42 +110,42 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
                 <div className="h-full bg-skyellow" style={{ width: `${pctAllocated}%` }} />
               </div>
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500 mt-1">
-                <span>Spent {pctSpent.toFixed(0)}%</span>
-                <span>Pending {pctAllocated.toFixed(0)}%</span>
-                <span>Free {Math.max(0, 100 - pctSpent - pctAllocated).toFixed(0)}%</span>
+                <span>{t('admin.spent')} {pctSpent.toFixed(0)}%</span>
+                <span>{t('admin.pending')} {pctAllocated.toFixed(0)}%</span>
+                <span>{t('admin.free')} {Math.max(0, 100 - pctSpent - pctAllocated).toFixed(0)}%</span>
               </div>
             </div>
           </Block>
 
           {/* Participation */}
-          <Block title="Participation">
+          <Block title={t('admin.participation')}>
             <div className="grid grid-cols-3 gap-3">
-              <Tile label="Applicants" value={String(program.applicantCount)} />
-              <Tile label="Shortlisted" value={String(program.shortlistedCount)} />
-              <Tile label="Active scholars" value={String(program.activeScholarCount)} />
-              <Tile label="Max candidates" value={String(program.maxCandidates)} />
-              <Tile label="Target winners" value={String(program.targetWinners)} />
-              <Tile label="Scoring" value={program.screeningMode === 0 ? "Committee" : "Student"} />
+              <Tile label={t('admin.stat.applicants')} value={String(program.applicantCount)} />
+              <Tile label={t('admin.shortlisted')} value={String(program.shortlistedCount)} />
+              <Tile label={t('admin.activeScholars')} value={String(program.activeScholarCount)} />
+              <Tile label={t('admin.maxCandidates')} value={String(program.maxCandidates)} />
+              <Tile label={t('admin.targetWinners')} value={String(program.targetWinners)} />
+              <Tile label={t('admin.scoring')} value={program.screeningMode === 0 ? t('admin.byCommittee') : t('admin.byStudent')} />
             </div>
           </Block>
 
           {/* Timeline */}
-          <Block title="Timeline">
+          <Block title={t('admin.timeline')}>
             <dl className="rounded-xl border-2 border-black divide-y divide-black/10 text-sm">
-              <Line label="Created" value={dateTime(program.createdAt)} />
-              <Line label="Application start" value={dateTime(program.applicationStart)} />
-              <Line label="Application end" value={dateTime(program.applicationEnd)} />
-              <Line label="Voting start" value={dateTime(program.votingStart)} />
-              <Line label="Voting end" value={dateTime(program.votingEnd)} />
-              <Line label="Last updated" value={dateTime(program.updatedAt)} />
+              <Line label={t('admin.col.created')} value={dateTime(locale, program.createdAt)} />
+              <Line label={t('admin.appStart')} value={dateTime(locale, program.applicationStart)} />
+              <Line label={t('admin.appEnd')} value={dateTime(locale, program.applicationEnd)} />
+              <Line label={t('admin.voteStart')} value={dateTime(locale, program.votingStart)} />
+              <Line label={t('admin.voteEnd')} value={dateTime(locale, program.votingEnd)} />
+              <Line label={t('admin.updated')} value={dateTime(locale, program.updatedAt)} />
             </dl>
           </Block>
 
           {/* On-chain */}
-          <Block title="On-chain">
+          <Block title={t('admin.onchain')}>
             <dl className="rounded-xl border-2 border-black divide-y divide-black/10 text-sm">
               <Line
-                label="Initiator"
+                label={t('admin.col.initiator')}
                 value={
                   program.initiator ? (
                     <CopyableText
@@ -151,45 +154,45 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
                       leading={<WalletAvatar address={program.initiator} size={18} />}
                     />
                   ) : (
-                    <span className="text-gray-400">Unknown</span>
+                    <span className="text-gray-400">{t('admin.unknown')}</span>
                   )
                 }
               />
               <Line
-                label="Committee"
+                label={t('admin.committeeAddress')}
                 value={<CopyableText value={program.committeeContract} display={short(program.committeeContract, 8, 6)} />}
               />
               <Line
-                label="Token address"
+                label={t('admin.tokenAddress')}
                 value={
                   tokenMeta.isNative ? (
-                    <span className="font-data text-xs">Native</span>
+                    <span className="font-data text-xs">{t('admin.native')}</span>
                   ) : (
                     <CopyableText value={token} display={short(token, 8, 6)} />
                   )
                 }
               />
               <Line
-                label="Metadata CID"
+                label={t('admin.metadataCid')}
                 value={<CopyableText value={program.metadataCID} display={short(program.metadataCID, 10, 6)} />}
               />
             </dl>
           </Block>
 
           {/* Related records */}
-          <Block title="Records">
+          <Block title={t('admin.records')}>
             <div className="flex gap-2 mb-3">
               {(["applicants", "scholars", "milestones"] as Section[]).map((s) => (
                 <button
                   key={s}
                   onClick={() => setSection(s)}
-                  className={`px-3 py-1.5 rounded-xl border-2 border-black text-xs font-bold capitalize transition-all duration-75 ${
+                  className={`px-3 py-1.5 rounded-xl border-2 border-black text-xs font-bold transition-all duration-75 ${
                     section === s
                       ? "bg-black text-white shadow-none translate-x-[2px] translate-y-[2px]"
                       : "bg-white shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
                   }`}
                 >
-                  {s}
+                  {t(`admin.rec.${s}`)}
                 </button>
               ))}
             </div>
@@ -201,7 +204,7 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
                     <CopyableText value={a.wallet} display={short(a.wallet)} leading={<WalletAvatar address={a.wallet} size={20} />} />
 
                     <span className="flex items-center gap-2">
-                      <span className="font-data text-xs text-gray-500">score {a.totalScore ?? "—"}</span>
+                      <span className="font-data text-xs text-gray-500">{t('admin.score')} {a.totalScore ?? "—"}</span>
                       <NeoBadge status={a.status} />
                     </span>
                   </li>
@@ -249,9 +252,9 @@ export function AdminProgramDetail({ program, onClose, onOverride }: Props) {
           {/* Actions */}
           <div className="flex flex-wrap gap-2 pt-1 pb-4">
             <Link to="/programs/$id" params={{ id }} onClick={onClose}>
-              <NeoButton label="Open public page" variant="secondary" size="md" className="!rounded-xl" />
+              <NeoButton label={t('admin.openPublic')} variant="secondary" size="md" className="!rounded-xl" />
             </Link>
-            <NeoButton label="Override…" variant="danger" size="md" className="!rounded-xl" onClick={onOverride} />
+            <NeoButton label={t('admin.overrideMore')} variant="danger" size="md" className="!rounded-xl" onClick={onOverride} />
           </div>
         </div>
       </aside>
@@ -297,9 +300,10 @@ function Chip({ className = "", children }: { className?: string; children: Reac
 }
 
 function RecordList({ loading, empty, children }: { loading: boolean; empty: boolean; children: ReactNode }) {
+  const { t } = useT();
   if (loading) return <NeoSkeleton lines={3} />;
   if (empty) {
-    return <p className="rounded-xl border-2 border-dashed border-black p-6 text-center text-sm font-bold text-gray-500">No records yet.</p>;
+    return <p className="rounded-xl border-2 border-dashed border-black p-6 text-center text-sm font-bold text-gray-500">{t('admin.noRecords')}</p>;
   }
   return <ul className="rounded-xl border-2 border-black divide-y divide-black/10 max-h-72 overflow-y-auto">{children}</ul>;
 }

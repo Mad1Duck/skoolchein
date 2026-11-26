@@ -14,6 +14,7 @@ import {
 import { NATIVE_TOKEN } from '@/lib/contracts/v4/token';
 import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { useT } from '@/lib/i18n';
 
 type TokenRow = {
   address: `0x${string}`;
@@ -32,6 +33,7 @@ type TokenRow = {
  * surfaced separately below.
  */
 export function AdminTokenOracle() {
+  const { t, tr } = useT();
   const { chainId, address: oracleAddress, isDeployed: isOracleDeployed } = useOracle();
   const { data: tokenAddresses, refetch: refetchTokens } = useOracleTokens();
   const { data: maxPriceAge, refetch: refetchMaxAge } = useOracleMaxPriceAge();
@@ -83,14 +85,11 @@ export function AdminTokenOracle() {
     return (
       <NeoCard>
         <NeoCardBody>
-          <h3 className="font-paytone text-xl mb-2">Token &amp; Rate Oracle</h3>
+          <h3 className="font-paytone text-xl mb-2">{t('admin.oracle.title')}</h3>
           <div className="bg-skyellow-light border-2 border-black p-4 text-sm shadow-[3px_3px_0_0_#000]">
-            <p className="font-bold mb-1">Oracle not deployed yet</p>
+            <p className="font-bold mb-1">{t('admin.oracle.missing')}</p>
             <p className="text-gray-700 text-xs leading-relaxed">
-              <code className="font-data">ScholarshipPriceOracle</code> was added to the Ignition
-              module but isn&apos;t in the current deployment, so it has no address. Redeploy
-              (or run the module against this chain) and re-run{' '}
-              <code className="font-data">sync-deployments.ts &lt;chainId&gt;</code> to populate it.
+              {tr('admin.oracle.missingBody')}
             </p>
           </div>
         </NeoCardBody>
@@ -108,32 +107,30 @@ export function AdminTokenOracle() {
     <NeoCard>
       <NeoCardBody className="space-y-6">
         <div>
-          <h3 className="font-paytone text-xl">Token &amp; Rate Oracle</h3>
+          <h3 className="font-paytone text-xl">{t('admin.oracle.title')}</h3>
           <p className="text-xs text-gray-600 mt-1">
-            USD rates are used for display only — no transfer, fee, or slash calculation reads
-            them. Registering a token here does not whitelist it for programs; that is
-            <code className="font-data mx-1">setTokenConfig</code> on Core.
+            {tr('admin.oracle.intro')}
           </p>
         </div>
 
         {/* ── Registered tokens + rates ─────────────────────────────────── */}
         <div>
           <h4 className="text-xs font-extrabold uppercase tracking-widest mb-2">
-            Registered Tokens
+            {t('admin.oracle.registered')}
           </h4>
           {rows.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No tokens registered yet.</p>
+            <p className="text-sm text-gray-500 italic">{t('admin.oracle.none')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-2 border-black">
                 <thead className="bg-gray-100 border-b-2 border-black">
                   <tr>
-                    <th className="p-2 text-left border-r-2 border-black">Symbol</th>
-                    <th className="p-2 text-left border-r-2 border-black">Address</th>
-                    <th className="p-2 text-right border-r-2 border-black">Dec</th>
-                    <th className="p-2 text-right border-r-2 border-black">Price (USD)</th>
-                    <th className="p-2 text-left border-r-2 border-black">New Rate</th>
-                    <th className="p-2 text-left">Actions</th>
+                    <th className="p-2 text-left border-r-2 border-black">{t('admin.oracle.symbol')}</th>
+                    <th className="p-2 text-left border-r-2 border-black">{t('admin.oracle.address')}</th>
+                    <th className="p-2 text-right border-r-2 border-black">{t('admin.oracle.dec')}</th>
+                    <th className="p-2 text-right border-r-2 border-black">{t('admin.oracle.price')}</th>
+                    <th className="p-2 text-left border-r-2 border-black">{t('admin.oracle.newRate')}</th>
+                    <th className="p-2 text-left">{t('admin.oracle.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,7 +139,7 @@ export function AdminTokenOracle() {
                       <td className="p-2 font-bold border-r-2 border-black">
                         {row.symbol}
                         {row.address.toLowerCase() === NATIVE_TOKEN && (
-                          <span className="ml-1 text-[10px] text-gray-500">(native)</span>
+                          <span className="ml-1 text-[10px] text-gray-500">({t('admin.oracle.native')})</span>
                         )}
                       </td>
                       <td className="p-2 font-data text-xs border-r-2 border-black">
@@ -154,7 +151,7 @@ export function AdminTokenOracle() {
                       <td className="p-2 text-right font-data border-r-2 border-black">
                         ${formatUsdPrice(row.priceUsd)}
                         {isStale(row.updatedAt) && (
-                          <span className="block text-[10px] text-skred font-bold">STALE</span>
+                          <span className="block text-[10px] text-skred font-bold">{t('admin.oracle.stale')}</span>
                         )}
                       </td>
                       <td className="p-2 border-r-2 border-black">
@@ -171,13 +168,13 @@ export function AdminTokenOracle() {
                       </td>
                       <td className="p-2 space-x-1 whitespace-nowrap">
                         <NeoButton
-                          label="Set"
+                          label={t('admin.oracle.set')}
                           variant="primary"
                           disabled={!priceDrafts[row.address] || isSettingPrice}
                           onClick={() => setPrice(row.address, priceDrafts[row.address]!)}
                         />
                         <NeoButton
-                          label="Remove"
+                          label={t('admin.oracle.remove')}
                           variant="ghost"
                           disabled={isDeregistering}
                           onClick={() => deregisterToken(row.address)}
@@ -194,21 +191,21 @@ export function AdminTokenOracle() {
         {/* ── Register a new token ──────────────────────────────────────── */}
         <div className="border-t-2 border-gray-100 pt-4">
           <h4 className="text-xs font-extrabold uppercase tracking-widest mb-2">
-            Register Token
+            {t('admin.oracle.register')}
           </h4>
-          <div className="grid grid-cols-4 gap-2 items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
             <div className="col-span-2">
-              <label className="block text-[10px] font-bold mb-1">Address</label>
+              <label className="block text-[10px] font-bold mb-1">{t('admin.oracle.address')}</label>
               <input
                 type="text"
-                placeholder="0x… (or 0x0 for native)"
+                placeholder={t('admin.oracle.addressHint')}
                 className="w-full border-2 border-black p-2 font-data text-xs"
                 value={newToken.address}
                 onChange={(e) => setNewToken({ ...newToken, address: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold mb-1">Symbol</label>
+              <label className="block text-[10px] font-bold mb-1">{t('admin.oracle.symbol')}</label>
               <input
                 type="text"
                 placeholder="ETH"
@@ -218,7 +215,7 @@ export function AdminTokenOracle() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold mb-1">Decimals</label>
+              <label className="block text-[10px] font-bold mb-1">{t('admin.oracle.decimals')}</label>
               <input
                 type="number"
                 min="0"
@@ -230,12 +227,11 @@ export function AdminTokenOracle() {
             </div>
           </div>
           <p className="text-[10px] text-gray-500 mt-1">
-            Decimals must match the token itself — native is 18, USDC is 6. A wrong value
-            silently misprices every amount shown for that token.
+            {t('admin.oracle.decimalsHelp')}
           </p>
           <div className="mt-2">
             <NeoButton
-              label={isRegistering ? 'Registering…' : 'Register Token'}
+              label={isRegistering ? t('common.processing') : t('admin.oracle.register')}
               variant="success"
               loading={isRegistering}
               disabled={!newToken.address || !newToken.symbol || isRegistering}
@@ -253,14 +249,10 @@ export function AdminTokenOracle() {
         {/* ── Staleness threshold ───────────────────────────────────────── */}
         <div className="border-t-2 border-gray-100 pt-4">
           <h4 className="text-xs font-extrabold uppercase tracking-widest mb-2">
-            Staleness Threshold
+            {t('admin.oracle.age')}
           </h4>
           <p className="text-[10px] text-gray-500 mb-2">
-            Rates older than this are flagged STALE above. Currently{' '}
-            <span className="font-data font-bold">
-              {maxPriceAge !== undefined ? Number(maxPriceAge as bigint) : '—'}
-            </span>{' '}
-            seconds.
+            {t('admin.oracle.ageHelp', { seconds: maxPriceAge !== undefined ? Number(maxPriceAge as bigint) : '—' })}
           </p>
           <div className="flex gap-2 items-end">
             <input
@@ -272,7 +264,7 @@ export function AdminTokenOracle() {
               onChange={(e) => setAgeDraft(e.target.value)}
             />
             <NeoButton
-              label={isSettingAge ? 'Saving…' : 'Update'}
+              label={isSettingAge ? t('common.processing') : t('admin.oracle.update')}
               variant="primary"
               loading={isSettingAge}
               disabled={!ageDraft || isSettingAge}

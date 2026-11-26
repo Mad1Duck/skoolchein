@@ -407,7 +407,7 @@ function ScholarCard({
   return (
     <NeoCard>
       <NeoCardBody className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div className="flex-1">
             <h3 className="font-bold text-lg">{t('panel.program', { id: scholar.pid })}</h3>
             <p className="text-xs text-gray-500 mb-2">
@@ -431,7 +431,7 @@ function ScholarCard({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 w-full md:w-52">
+          <div className="flex flex-col gap-2 w-full xl:w-52">
             {scholar.status === 'FROZEN' ? (
               <div className="bg-red-100 p-2 border-2 border-red-500 rounded text-red-700 text-sm font-bold text-center">
                 {t('panel.frozenUntil', { date: scholar.freezeUntil ? new Date(scholar.freezeUntil).toLocaleDateString() : '—' })}
@@ -524,7 +524,7 @@ function ScholarCard({
               {milestones.map((m) => (
                 <div
                   key={m.blockchainId}
-                  className="flex items-center justify-between text-sm bg-white px-3 py-2.5 border-2 border-black shadow-[2px_2px_0_0_#000]">
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm bg-white px-3 py-2.5 border-2 border-black shadow-[2px_2px_0_0_#000]">
                   <div>
                     <span className="font-bold">#{m.blockchainId}</span>
                     <span className="ml-2 text-xs font-bold uppercase px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-700">
@@ -876,7 +876,7 @@ function BountyDisputeCard({ dispute }: { dispute: Dispute }) {
       </div>
 
       {/* The money */}
-      <dl className="grid grid-cols-3 gap-2 text-center">
+      <dl className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2 text-center">
         <div className="rounded-xl border-2 border-black bg-white p-2">
           <dt className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">{t('panel.stakePaid')}</dt>
           <dd className="mt-0.5 font-data text-sm font-bold">{fmt(dispute.stake, dispute.token)}</dd>
@@ -980,9 +980,9 @@ function AgainstCard({ dispute, onDefend }: { dispute: Dispute; onDefend: () => 
         </span>
       </div>
 
-      <div className="flex items-center gap-3 rounded-xl border-2 border-black bg-skred-light p-2.5">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-black bg-skred-light p-2.5">
         <WalletAvatar address={dispute.bountyHunter} size={36} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[7rem] flex-1">
           <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('reports.reporter')}</p>
           <p className="font-data text-sm font-bold">{shortAddr(dispute.bountyHunter)}</p>
         </div>

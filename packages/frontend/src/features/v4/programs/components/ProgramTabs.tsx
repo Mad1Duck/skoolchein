@@ -54,7 +54,7 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
   const size = breakpoint.isLessThan('sm') ? 'small' : 'large';
 
   return (
-    <div className="grow">
+    <div className="flex flex-1 flex-col">
       <div className="relative -left-2 -top-1 shrink-0 z-10 flex items-end -space-x-1 max-sm:-space-x-2">
         {tabs.map((tab) => (
           <TabButton
@@ -67,9 +67,9 @@ export function ProgramTabs({ programs, tabs }: ProgramTabsProps) {
         ))}
       </div>
 
-      <div className="shrink-0 bg-black rounded-3xl w-full">
-        <div className="relative w-full bg-skbw rounded-e-3xl rounded-bl-3xl border-4 -left-2 -top-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[3.75rem] p-20 max-sm:p-5 max-sm:gap-5">
+      <div className="flex flex-1 flex-col bg-black rounded-3xl w-full">
+        <div className="relative flex flex-1 flex-col w-full bg-skbw rounded-e-3xl rounded-bl-3xl border-4 -left-2 -top-2">
+          <div className={`grid flex-1 grid-cols-1 gap-5 p-5 sm:p-10 lg:grid-cols-2 lg:gap-[3.75rem] lg:p-20 ${filtered.length === 0 ? 'content-center' : 'content-start'}`}>
             {filtered.length === 0 ? (
               <div className="col-span-full text-center py-10">
                 <p className="font-paytone text-2xl">{t('tabs.emptyTitle')}</p>

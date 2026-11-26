@@ -27,7 +27,7 @@ export function StatCard({ label, value, icon, color = "purple", subtitle }: Sta
       )}
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight">{label}</span>
-        <span className="text-2xl font-data font-bold truncate mt-0.5">{value}</span>
+        <span className="text-sm min-[420px]:text-lg sm:text-2xl font-data font-bold [overflow-wrap:anywhere] mt-0.5">{value}</span>
         {subtitle && <span className="text-xs text-gray-500 mt-0.5">{subtitle}</span>}
       </div>
     </div>

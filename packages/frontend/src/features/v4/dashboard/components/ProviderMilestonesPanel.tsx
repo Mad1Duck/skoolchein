@@ -196,7 +196,7 @@ export function ProviderMilestonesPanel({ program, isLoading }: ProviderMileston
 
           {!!leftover && <LeftoverFund program={program} balance={leftover} onReleased={onReleased} />}
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-3">
             <Tile label={t('pm.statWaiting')} value={String(count("PENDING"))} tone="bg-skyellow" />
             <Tile label={t('pm.statReview')} value={String(count("SUBMITTED"))} tone="bg-skpurple-light" />
             <Tile label={t('pm.statDone')} value={String(count("COMPLETED"))} tone="bg-skgreen" />
@@ -252,7 +252,7 @@ function ScholarGroup({ wallet, milestones, program, bonus, penalized }: { walle
     <section className="rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0_0_#000]">
       <header className="flex flex-wrap items-center gap-3 border-b-2 border-black bg-skbw/60 px-4 py-3 rounded-t-[14px]">
         <WalletAvatar address={wallet} size={36} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[7rem] flex-1">
           <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('pm.scholar')}</p>
           <CopyableText value={wallet} display={truncateMiddle(wallet, 8, 6)} />
         </div>

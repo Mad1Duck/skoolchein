@@ -13,6 +13,7 @@ import { CopyableText, truncateMiddle } from "@/components/ui/CopyableText";
 import { LiveBadge } from "@/components/ui/LiveBadge";
 import { NeoSelect } from "@/components/ui/NeoSelect";
 import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/en";
 import { statusLabel } from "@/lib/i18n/status";
 import { AdminControlModal } from "../components/AdminControlModal";
 import { AdminProgramDetail } from "../components/AdminProgramDetail";
@@ -23,33 +24,34 @@ import { formatTokenWithSymbol } from "@/lib/contracts/v4/token";
 
 type Tab = "programs" | "users" | "treasury" | "config";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "programs", label: "Programs" },
-  { key: "users", label: "Users & Roles" },
-  { key: "treasury", label: "Treasury" },
-  { key: "config", label: "Config" },
+const TABS: { key: Tab; label: TranslationKey }[] = [
+  { key: "programs", label: "admin.tab.programs" },
+  { key: "users", label: "admin.tab.users" },
+  { key: "treasury", label: "admin.tab.treasury" },
+  { key: "config", label: "admin.tab.config" },
 ];
 
 const short = (a: string, head = 6, tail = 4) => (a ? `${a.slice(0, head)}…${a.slice(-tail)}` : "—");
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "N/A");
-const fmtDateTime = (d?: string | null) =>
+const fmtDate = (locale: string, d?: string | null) => (d ? new Date(d).toLocaleDateString(locale) : "—");
+const fmtDateTime = (locale: string, d?: string | null) =>
   d
-    ? new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-    : "N/A";
+    ? new Date(d).toLocaleString(locale, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "—";
 
-function timeAgo(d?: string | null): string {
+function timeAgo(t: (key: TranslationKey, vars?: Record<string, string | number>) => string, d?: string | null): string {
   if (!d) return "";
   const sec = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 1000));
-  if (sec < 60) return "just now";
-  const units: [number, string][] = [[86400, "d"], [3600, "h"], [60, "m"]];
-  for (const [size, label] of units) {
-    if (sec >= size) return `${Math.floor(sec / size)}${label} ago`;
+  if (sec < 60) return t("admin.justNow");
+  const units: [number, TranslationKey][] = [[86400, "admin.daysAgo"], [3600, "admin.hoursAgo"], [60, "admin.minutesAgo"]];
+  for (const [size, key] of units) {
+    if (sec >= size) return t(key, { n: Math.floor(sec / size) });
   }
   return "";
 }
 
 export function AdminDashboardPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "id" ? "id-ID" : "en-US";
   const v4Addresses = useV4Addresses();
   const { chainId } = useActiveChain();
   const { address } = useAccount();
@@ -141,13 +143,13 @@ export function AdminDashboardPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95] mb-2">Protocol Admin</h1>
-          <p className="text-gray-500 font-bold text-sm">Global oversight and matrix control.</p>
+          <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95] mb-2">{t('admin.title')}</h1>
+          <p className="text-gray-500 font-bold text-sm">{t('admin.subtitle')}</p>
         </div>
         <div className="inline-flex items-center gap-2 self-start md:self-auto rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[3px_3px_0_0_#000]">
           <WalletAvatar address={address as string} size={22} />
           <LiveBadge />
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Admin</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">{t('admin.role')}</span>
           <CopyableText value={address as string} display={short(address as string)} className="!text-sm" />
         </div>
       </div>
@@ -155,12 +157,12 @@ export function AdminDashboardPage() {
       {/* Overview */}
       {overview && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatTile title="Programs" value={overview.totalPrograms} color="bg-skpurple-light" />
-          <StatTile title="Creators" value={overview.totalCreators} color="bg-skyellow-light" />
-          <StatTile title="Applicants" value={overview.totalApplicants} color="bg-skgreen-light" />
-          <StatTile title="Scholars" value={overview.totalScholars} color="bg-skpurple text-white" />
-          <StatTile title="Milestones" value={overview.totalMilestones} color="bg-skorange" />
-          <StatTile title="Disputes" value={overview.totalDisputes} color="bg-skred-light" />
+          <StatTile title={t('admin.tab.programs')} value={overview.totalPrograms} color="bg-skpurple-light" />
+          <StatTile title={t('admin.stat.creators')} value={overview.totalCreators} color="bg-skyellow-light" />
+          <StatTile title={t('admin.stat.applicants')} value={overview.totalApplicants} color="bg-skgreen-light" />
+          <StatTile title={t('admin.stat.scholars')} value={overview.totalScholars} color="bg-skpurple text-white" />
+          <StatTile title={t('admin.stat.milestones')} value={overview.totalMilestones} color="bg-skorange" />
+          <StatTile title={t('admin.stat.reports')} value={overview.totalDisputes} color="bg-skred-light" />
         </div>
       )}
 
@@ -176,7 +178,7 @@ export function AdminDashboardPage() {
                 : "bg-white text-black shadow-[3px_3px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000]"
             }`}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
@@ -184,24 +186,24 @@ export function AdminDashboardPage() {
       {/* Programs */}
       {activeTab === "programs" && (
         <Panel
-          title="All Programs"
-          subtitle={`${filteredPrograms.length} of ${programs?.length ?? 0}`}
+          title={t('admin.allPrograms')}
+          subtitle={`${filteredPrograms.length} / ${programs?.length ?? 0}`}
           action={
             <div className="flex flex-wrap items-center gap-2">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search #id or wallet"
+                placeholder={t('admin.search')}
                 className="!py-1.5 !text-sm w-48 !rounded-xl"
               />
               <NeoSelect
                 size="sm"
                 className="w-44"
-                ariaLabel="Filter by status"
+                ariaLabel={t('switcher.filter')}
                 value={statusFilter}
                 onChange={setStatusFilter}
                 options={[
-                  { value: "ALL", label: "All status" },
+                  { value: "ALL", label: t("switcher.all") },
                   ...statuses.map((s) => ({ value: s as string, label: statusLabel(t, s) })),
                 ]}
               />
@@ -210,15 +212,15 @@ export function AdminDashboardPage() {
         >
           <DataTable
             head={[
-              <SortHead key="id" label="ID" active={sort.key === "pid"} dir={sort.dir} onClick={() => toggleSort("pid")} />,
-              "Status",
-              "Fund",
-              <SortHead key="created" label="Created" active={sort.key === "created"} dir={sort.dir} onClick={() => toggleSort("created")} />,
-              "Program Period",
-              "Initiator",
+              <SortHead key="id" label={t('admin.col.id')} active={sort.key === "pid"} dir={sort.dir} onClick={() => toggleSort("pid")} />,
+              t('admin.col.status'),
+              t('admin.col.fund'),
+              <SortHead key="created" label={t('admin.col.created')} active={sort.key === "created"} dir={sort.dir} onClick={() => toggleSort("created")} />,
+              t('admin.col.period'),
+              t('admin.col.initiator'),
               "",
             ]}
-            empty={filteredPrograms.length === 0 ? "No programs match." : undefined}
+            empty={filteredPrograms.length === 0 ? t('admin.noMatch') : undefined}
           >
             {filteredPrograms.map((p) => (
               <tr
@@ -230,11 +232,11 @@ export function AdminDashboardPage() {
                 <td className="p-3"><NeoBadge status={p.status} /></td>
                 <td className="p-3 font-bold font-data whitespace-nowrap">{formatTokenWithSymbol(p.totalFund || "0", p.token)}</td>
                 <td className="p-3 whitespace-nowrap">
-                  <div className="font-data text-xs font-bold">{fmtDateTime(p.createdAt)}</div>
-                  <div className="text-[11px] text-gray-500 font-medium">{timeAgo(p.createdAt)}</div>
+                  <div className="font-data text-xs font-bold">{fmtDateTime(locale, p.createdAt)}</div>
+                  <div className="text-[11px] text-gray-500 font-medium">{timeAgo(t, p.createdAt)}</div>
                 </td>
                 <td className="p-3 text-xs font-bold text-gray-600 font-data whitespace-nowrap">
-                  {fmtDate(p.applicationStart)} – {fmtDate(p.votingEnd)}
+                  {fmtDate(locale, p.applicationStart)} – {fmtDate(locale, p.votingEnd)}
                 </td>
                 <td className="p-3">
                   {p.initiator ? (
@@ -245,13 +247,13 @@ export function AdminDashboardPage() {
                       className="text-skpurple"
                     />
                   ) : (
-                    <span className="text-xs font-bold text-gray-400">Unknown</span>
+                    <span className="text-xs font-bold text-gray-400">{t('admin.unknown')}</span>
                   )}
                 </td>
                 <td className="p-3 text-right">
                   <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <NeoButton label="Detail" variant="primary" size="sm" onClick={() => setDetailProgram(p)} />
-                    <NeoButton label="Override" variant="secondary" size="sm" onClick={() => setSelectedProgram(p)} />
+                    <NeoButton label={t('admin.detail')} variant="primary" size="sm" onClick={() => setDetailProgram(p)} />
+                    <NeoButton label={t('admin.override')} variant="secondary" size="sm" onClick={() => setSelectedProgram(p)} />
                   </div>
                 </td>
               </tr>
@@ -263,7 +265,7 @@ export function AdminDashboardPage() {
       {/* Users */}
       {activeTab === "users" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="System Creators" subtitle={`${creators.length}`} tone="bg-skyellow">
+          <Panel title={t('admin.creators')} subtitle={`${creators.length}`} tone="bg-skyellow">
             <ListScroll>
               {creators.map((wallet) => (
                 <Row key={wallet}>
@@ -278,7 +280,7 @@ export function AdminDashboardPage() {
               ))}
             </ListScroll>
           </Panel>
-          <Panel title="Global Applicants" subtitle={`${applicantsData?.length ?? 0}`} tone="bg-skgreen">
+          <Panel title={t('admin.applicants')} subtitle={`${applicantsData?.length ?? 0}`} tone="bg-skgreen">
             <ListScroll>
               {applicantsData?.map((a, i) => (
                 <Row key={i}>
@@ -289,7 +291,7 @@ export function AdminDashboardPage() {
               ))}
             </ListScroll>
           </Panel>
-          <Panel title="Global Scholars" subtitle={`${scholarsData?.length ?? 0}`} tone="bg-skpurple text-white">
+          <Panel title={t('admin.scholars')} subtitle={`${scholarsData?.length ?? 0}`} tone="bg-skpurple text-white">
             <ListScroll>
               {scholarsData?.map((s, i) => (
                 <Row key={i}>
@@ -308,16 +310,16 @@ export function AdminDashboardPage() {
       {/* Treasury */}
       {activeTab === "treasury" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Panel title="Treasury Overview">
+          <Panel title={t('admin.treasuryOverview')}>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-xl border-2 border-black bg-skpurple-light p-4">
-                <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500">Total Backing (USDC)</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500">{t('admin.backing')}</p>
                 <p className="font-paytone text-3xl mt-1 break-words">
                   ${treasuryBalance !== undefined ? formatUnits(treasuryBalance as bigint, 6) : "0.0"}
                 </p>
               </div>
               <div className="rounded-xl border-2 border-black bg-skyellow-light p-4">
-                <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500">Protocol Revenue</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500">{t('admin.revenue')}</p>
                 <p className="font-paytone text-3xl mt-1 break-words">
                   ${protocolFee !== undefined ? formatUnits(protocolFee as bigint, 6) : "0.0"}
                 </p>
@@ -325,7 +327,7 @@ export function AdminDashboardPage() {
             </div>
           </Panel>
 
-          <Panel title="Contract Registry">
+          <Panel title={t('admin.contracts')}>
             <div className="p-4 space-y-3">
               <ContractItem label="ScholarshipCore" address={v4Addresses.ScholarshipCore} />
               <ContractItem label="TreasuryVault" address={v4Addresses.ScholarshipTreasury} />
@@ -335,11 +337,11 @@ export function AdminDashboardPage() {
           </Panel>
 
           <div className="md:col-span-2">
-            <Panel title="Revenue Breakdown by Program" tone="bg-skyellow">
+            <Panel title={t('admin.revenueBy')} tone="bg-skyellow">
               <DataTable
-                head={["Prog ID", "Revenue Collected", "Total Fund", "Fee Rate"]}
+                head={[t('admin.col.programId'), t('admin.col.revenue'), t('admin.col.totalFund'), t('admin.col.feeRate')]}
                 alignRight={[1, 2, 3]}
-                empty={revenuePrograms.length === 0 ? "No revenue collected yet." : undefined}
+                empty={revenuePrograms.length === 0 ? t('admin.noRevenue') : undefined}
               >
                 {revenuePrograms.map((p) => (
                   <tr key={p.pid} className="border-b border-black/10 hover:bg-skbw/60 transition-colors">

@@ -98,11 +98,11 @@ export function ProgramCardV2({
   const initiator = program.initiator;
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="bg-black rounded-3xl">
+    <div className="flex w-full flex-col items-center">
+      <div className="w-full max-w-[32rem] bg-black rounded-3xl">
         <div className="relative -left-2 -top-2">
-          <div className="inline-flex flex-col items-start rounded-3xl border bg-white">
-            <div className="flex flex-col p-6 items-start gap-4">
+          <div className="flex flex-col items-start rounded-3xl border bg-white">
+            <div className="flex flex-col self-stretch p-6 max-sm:p-4 items-start gap-4">
               <div className="flex flex-col gap-4 self-stretch">
                 <div className="flex items-center gap-6 justify-between">
                   <h3
@@ -112,7 +112,7 @@ export function ProgramCardV2({
                   </h3>
                   <StatusBadge status={status} size={size} />
                 </div>
-                <div className="flex items-center gap-2 font-bold text-sm max-w-[90%]">
+                <div className="flex min-w-0 items-center gap-2 font-bold text-sm max-w-[90%]">
                   <img src="/icons/provider-icon.svg" alt="provider-icon" />
                   <p
                     className={`${getTextSize(size, 'text-base', 'text-xs')} truncate`}
@@ -127,19 +127,33 @@ export function ProgramCardV2({
               <div
                 className={`flex items-start ${size === 'small' ? 'gap-1' : 'gap-4'} self-stretch justify-between`}
               >
-                <div className="flex flex-col gap-1">
-                  <p className={getTextSize(size, 'text-sm', 'text-xs')}>
-                    {t('card.closesIn')}
-                  </p>
-                  <div className="flex gap-2 py-2 px-3 items-center rounded-2xl border bg-error-container border-on-error-container">
-                    <img src="/icons/alarm-clock.svg" alt="clock-icon" />
-                    <span
-                      className={`${getTextSize(size, 'text-sm', 'text-[0.625rem]')} text-on-error-container`}
-                    >
-                      {timeLeft}
-                    </span>
+                {shownStatus === 'ACTIVE' ? (
+                  // A running program has no registration clock to count down.
+                  <div className="flex flex-col gap-1">
+                    <p className={getTextSize(size, 'text-sm', 'text-xs')}>
+                      {t('card.stage')}
+                    </p>
+                    <div className="py-2 px-3 rounded-2xl border bg-skgreen">
+                      <span className={getTextSize(size, 'text-sm', 'text-[0.625rem]')}>
+                        {t('card.running')}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <p className={getTextSize(size, 'text-sm', 'text-xs')}>
+                      {t('card.closesIn')}
+                    </p>
+                    <div className="flex gap-2 py-2 px-3 items-center rounded-2xl border bg-error-container border-on-error-container">
+                      <img src="/icons/alarm-clock.svg" alt="clock-icon" />
+                      <span
+                        className={`${getTextSize(size, 'text-sm', 'text-[0.625rem]')} text-on-error-container`}
+                      >
+                        {timeLeft}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-1">
                   <p className={getTextSize(size, 'text-sm', 'text-xs')}>
@@ -184,7 +198,7 @@ export function ProgramCardV2({
               </div>
             </div>
 
-            <div className="rounded-b-3xl flex h-20 p-4 items-center gap-4 self-stretch bg-skpink">
+            <div className="rounded-b-3xl flex flex-wrap min-h-20 p-4 items-center gap-4 self-stretch bg-skpink">
               <div className="flex flex-col justify-end items-end gap-1">
                 <div className="flex justify-end items-start gap-2">
                   <span className={getTextSize(size, 'text-sm', 'text-xs')}>
@@ -222,38 +236,34 @@ export function ProgramCardV2({
                   </div>
                 </div>
               </div>
+              {/* Viewing never needs a wallet; applying does. The two are separate buttons, and Apply
+                  is offered only while applications are actually open. */}
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+                <Link to="/programs/$id" params={{ id: String(program.pid) }}>
+                  <button
+                    className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000] transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none ${
+                      canApply ? 'bg-white text-black hover:bg-skbw' : 'bg-skpurple text-white hover:bg-skpurple-hover'
+                    }`}
+                  >
+                    {canApply ? t('tabs.btnDetails') : (labelButton ?? t('tabs.btnDetails'))}
+                  </button>
+                </Link>
+                {canApply &&
+                  (!address ? (
+                    <NeoButton label="Connect Wallet" variant="connect" size={size === 'small' ? 'sm' : 'md'} />
+                  ) : (
+                    <Link to="/apply/$id" params={{ id: String(program.pid) }}>
+                      <button
+                        className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black bg-skpurple text-white shadow-[3px_3px_0_0_#000] hover:bg-skpurple-hover transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none`}
+                      >
+                        {t('tabs.btnApply')}
+                      </button>
+                    </Link>
+                  ))}
+              </div>
             </div>
           </div>
 
-          <div
-            className={`absolute w-max ${size === 'small' ? 'top-[14rem] left-[15.5rem]' : 'top-[16.5rem] left-[20rem]'}`}
-          >
-            {/* Viewing never needs a wallet; applying does. The two are separate buttons, and Apply
-                is offered only while applications are actually open. */}
-            <div className="flex items-center gap-3 relative -left-1 -top-1">
-              <Link to="/programs/$id" params={{ id: String(program.pid) }}>
-                <button
-                  className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black shadow-[3px_3px_0_0_#000] transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none ${
-                    canApply ? 'bg-white text-black hover:bg-skbw' : 'bg-skpurple text-white hover:bg-skpurple-hover'
-                  }`}
-                >
-                  {canApply ? t('tabs.btnDetails') : (labelButton ?? t('tabs.btnDetails'))}
-                </button>
-              </Link>
-              {canApply &&
-                (!address ? (
-                  <NeoButton label="Connect Wallet" variant="connect" size={size === 'small' ? 'sm' : 'md'} />
-                ) : (
-                  <Link to="/apply/$id" params={{ id: String(program.pid) }}>
-                    <button
-                      className={`font-nunito ${size === 'small' ? 'px-3 py-2 text-base' : 'px-5 py-3 text-xl'} rounded-lg border-2 border-black bg-skpurple text-white shadow-[3px_3px_0_0_#000] hover:bg-skpurple-hover transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none`}
-                    >
-                      {t('tabs.btnApply')}
-                    </button>
-                  </Link>
-                ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

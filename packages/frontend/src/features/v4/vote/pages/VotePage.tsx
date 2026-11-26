@@ -30,9 +30,12 @@ export function VotePage() {
   return (
     <main className="relative isolate">
       {/* Hero */}
-      <section className="relative min-h-[60vh] flex flex-col items-center justify-center bg-skyellow overflow-hidden px-4 pb-24 text-center">
-        <div className="absolute top-0 left-0 right-0 h-1/2 bg-skpurple" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)' }} />
-        <div className="relative z-10 max-w-4xl mx-auto space-y-6">
+      <section className="flex min-h-[60vh] flex-col bg-skyellow text-center">
+        <div
+          className="w-full bg-skpurple px-4 pt-12 pb-20 md:pt-16"
+          style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 2.5rem), 50% 100%, 0 calc(100% - 2.5rem))' }}
+        >
+          <div className="max-w-4xl mx-auto space-y-6">
           <h1 className="font-paytone text-4xl md:text-6xl lg:text-7xl text-white drop-shadow-[4px_4px_0_#000]">
             <SplitText
               text={t('votePage.h1')}
@@ -48,6 +51,9 @@ export function VotePage() {
           <h2 className="font-paytone text-3xl md:text-5xl text-black drop-shadow-[3px_3px_0_#fff]">
             {t('votePage.h2')}
           </h2>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pt-6 pb-24">
           <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mx-auto">
             {t('votePage.lead')}
           </p>
@@ -76,7 +82,7 @@ export function VotePage() {
       </div>
 
       {/* Active voting */}
-      <section id="active-voting" className="bg-skgreen px-4 md:px-10 py-14 -mt-10 pt-24">
+      <section id="active-voting" className="bg-skgreen px-4 md:px-10 py-14 -mt-14 pt-28 max-sm:-mt-64 max-sm:pt-76">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h2 className="font-paytone text-4xl md:text-5xl mb-3">{t('votePage.phase')}</h2>

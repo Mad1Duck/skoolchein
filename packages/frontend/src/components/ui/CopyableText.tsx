@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 interface CopyableTextProps {
   /** Full value: copied to the clipboard and shown in the tooltip. */
@@ -45,6 +46,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
  * the full value on click. Use anywhere an address, hash or CID is shortened.
  */
 export function CopyableText({ value, display, leading, variant = "plain", className = "" }: CopyableTextProps) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -69,8 +71,8 @@ export function CopyableText({ value, display, leading, variant = "plain", class
     <button
       type="button"
       onClick={onClick}
-      title={copied ? "Copied!" : `${value}\nClick to copy`}
-      aria-label={`Copy ${value}`}
+      title={copied ? t("copy.done") : `${value}\n${t("copy.hint")}`}
+      aria-label={t("copy.label", { value })}
       className={`group relative inline-flex items-center gap-1.5 font-data text-xs font-bold transition-colors cursor-copy max-w-full ${base} ${className}`}
     >
       {leading}
@@ -90,7 +92,7 @@ export function CopyableText({ value, display, leading, variant = "plain", class
       </svg>
       {copied && (
         <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border-2 border-black bg-skgreen px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black shadow-[2px_2px_0_0_#000]">
-          Copied
+          {t("copy.done")}
         </span>
       )}
     </button>
