@@ -1,5 +1,6 @@
 import { useChainQuery as useQuery } from "../useChainQuery";
 import { api } from "../client";
+import { getActiveChainId } from "@/lib/chain/chains";
 import type { Recommendation,
   Program, ProgramDetail, Applicant, Scholar, Milestone,
   Vote, ConfidenceStake, Dispute, Reputation, DashboardData,
@@ -34,6 +35,25 @@ export const queryKeys = {
 };
 
 // ── Programs ──────────────────────────────────────────────────────────────────
+
+/** Every program of the active chain, however many pages that takes. */
+export function useAllPrograms() {
+  return useQuery({
+    queryKey: queryKeys.programs({ all: true }),
+    queryFn: async () => {
+      // Pinned once: another query may switch the "active" chain while later pages load.
+      const chainId = getActiveChainId();
+      const all: Program[] = [];
+      for (;;) {
+        const { data } = await api.get<PaginatedResponse<Program>>("/programs", {
+          params: { chainId, limit: 100, offset: all.length },
+        });
+        all.push(...data.data);
+        if (data.data.length === 0 || all.length >= data.total) return all;
+      }
+    },
+  });
+}
 
 export function usePrograms(params?: {
   status?: string; initiator?: string; limit?: number; offset?: number; sort?: "asc" | "desc";

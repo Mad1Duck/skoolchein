@@ -1,6 +1,6 @@
 import { useT } from "@/lib/i18n";
 
-type StatusType = "active" | "vote" | "soon" | "done" | "pddikti" | "disbursed";
+type StatusType = "active" | "vote" | "soon" | "done" | "cancelled" | "pddikti" | "disbursed";
 
 interface StatusBadgeProps {
   status?: string;
@@ -13,6 +13,7 @@ const STATUS_STYLES = {
   vote: { bg: "bg-skred", label: "badge.vote" },
   soon: { bg: "bg-skgreen", label: "badge.soon" },
   done: { bg: "bg-skgreen", label: "badge.done" },
+  cancelled: { bg: "bg-skred", label: "badge.cancelled" },
   disbursed: { bg: "bg-skgreen", label: "badge.disbursed" },
 } as const;
 

@@ -8,7 +8,15 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { fetchProgramMeta } from '@/lib/ipfs';
 import type { Program } from '@/lib/api/types';
 import { useT } from '@/lib/i18n';
+import type { TranslationKey } from '@/lib/i18n/en';
 import { effectiveStatus } from '@/lib/programStatus';
+
+/** Programs with no clock left to count down show their stage instead. */
+const STAGE_BOX: Partial<Record<string, { label: TranslationKey; tone: string }>> = {
+  ACTIVE: { label: 'card.running', tone: 'bg-skgreen' },
+  COMPLETED: { label: 'card.completed', tone: 'bg-skpurple-light' },
+  CANCELLED: { label: 'card.cancelled', tone: 'bg-skred-light' },
+};
 
 interface ProgramCardV2Props {
   program: Program;
@@ -50,7 +58,7 @@ function getTimeLeft(iso: string | null): string {
   return `${String(days).padStart(2, '0')} d: ${String(hours).padStart(2, '0')} hr: ${String(minutes).padStart(2, '0')} min`;
 }
 
-function getStatusKey(status: string): 'active' | 'vote' | 'soon' | 'done' {
+function getStatusKey(status: string): 'active' | 'vote' | 'soon' | 'done' | 'cancelled' {
   switch (status) {
     case 'APPLICATION_OPEN':
     case 'SCREENING':
@@ -60,6 +68,8 @@ function getStatusKey(status: string): 'active' | 'vote' | 'soon' | 'done' {
       return 'vote';
     case 'COMPLETED':
       return 'done';
+    case 'CANCELLED':
+      return 'cancelled';
     case 'CREATED':
     default:
       return 'soon';
@@ -93,6 +103,7 @@ export function ProgramCardV2({
 
   const timeLeft = getTimeLeft(deadline);
   const status = getStatusKey(shownStatus);
+  const stage = STAGE_BOX[shownStatus];
   const tokenMeta = getTokenMeta(program.token);
   const fund = toTokenNumber(program.totalFund, program.token);
   const initiator = program.initiator;
@@ -127,15 +138,14 @@ export function ProgramCardV2({
               <div
                 className={`flex items-start ${size === 'small' ? 'gap-1' : 'gap-4'} self-stretch justify-between`}
               >
-                {shownStatus === 'ACTIVE' ? (
-                  // A running program has no registration clock to count down.
+                {stage ? (
                   <div className="flex flex-col gap-1">
                     <p className={getTextSize(size, 'text-sm', 'text-xs')}>
                       {t('card.stage')}
                     </p>
-                    <div className="py-2 px-3 rounded-2xl border bg-skgreen">
+                    <div className={`py-2 px-3 rounded-2xl border ${stage.tone}`}>
                       <span className={getTextSize(size, 'text-sm', 'text-[0.625rem]')}>
-                        {t('card.running')}
+                        {t(stage.label)}
                       </span>
                     </div>
                   </div>
