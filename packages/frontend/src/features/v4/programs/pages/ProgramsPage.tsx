@@ -1,4 +1,4 @@
-import { effectiveStatus, STATUS_TONE } from '@/lib/programStatus';
+import { displayStatus, STATUS_TONE } from '@/lib/programStatus';
 import { useState, useEffect, memo } from 'react';
 import { useAllPrograms } from '@/lib/api/hooks';
 import type { Program } from '@/lib/api/types';
@@ -17,7 +17,7 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     id: 'active',
     label: t('tabs.active'),
     color: STATUS_TONE.active,
-    filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(effectiveStatus(p)),
+    filter: (p: Program) => ['APPLICATION_OPEN', 'SCREENING'].includes(displayStatus(p)),
   },
   {
     id: 'vote',
@@ -29,7 +29,7 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     id: 'soon',
     label: t('tabs.soon'),
     color: STATUS_TONE.soon,
-    filter: (p: Program) => effectiveStatus(p) === 'CREATED',
+    filter: (p: Program) => displayStatus(p) === 'CREATED',
   },
   // Running and ended programs stay listed, so anyone can check them.
   {
@@ -48,7 +48,8 @@ const getTabs = (t: (key: TranslationKey) => string) => [
     id: 'cancelled',
     label: t('tabs.cancelled'),
     color: STATUS_TONE.cancelled,
-    filter: (p: Program) => p.status === 'CANCELLED',
+    // Cancelled, plus programs whose applications closed with nobody applying.
+    filter: (p: Program) => ['CANCELLED', 'EXPIRED'].includes(displayStatus(p)),
   },
 ];
 

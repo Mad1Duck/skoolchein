@@ -8,7 +8,7 @@ import { donationPresets, formatTokenAmount, getTokenMeta } from '@/lib/contract
 import { useT } from '@/lib/i18n';
 import { toEpochSec } from '@/lib/time';
 import { useFormatMoney } from '@/lib/money';
-import { effectiveStatus } from '@/lib/programStatus';
+import { displayStatus, type DisplayStatus } from '@/lib/programStatus';
 import { DonationPresets } from './DonationPresets';
 
 interface Props {
@@ -21,11 +21,11 @@ interface Props {
 }
 
 /** Epoch-seconds deadline relevant to the program's current phase, or null. */
-function activeDeadline(program: Program): number | null {
+function activeDeadline(program: Program, status: DisplayStatus): number | null {
   const raw =
-    program.status === 'VOTING'
+    status === 'VOTING'
       ? program.votingEnd
-      : program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING'
+      : status === 'APPLICATION_OPEN' || status === 'SCREENING' || status === 'EXPIRED'
         ? program.applicationEnd
         : null;
   return toEpochSec(raw);
@@ -57,7 +57,8 @@ export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReaso
 
   const [amount, setAmount] = useState(() => donationPresets(token)[2]);
 
-  const endSec = activeDeadline(program);
+  const phase = displayStatus(program);
+  const endSec = activeDeadline(program, phase);
   const countdown = useCountdown(endSec);
   const ended = endSec !== null && endSec * 1000 <= Date.now();
 
@@ -68,7 +69,6 @@ export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReaso
   const committed = Math.max(Number(program.allocatedFund), Number(program.spentFund));
   const pctAllocated = total > 0 ? Math.min(100, (committed / total) * 100) : 0;
   // The contract accepts donations only while applications are open.
-  const phase = effectiveStatus(program);
   const donationsClosed = phase !== 'CREATED' && phase !== 'APPLICATION_OPEN';
   const donationsRunning = phase === 'APPLICATION_OPEN' && !(endSec !== null && ended);
 
@@ -92,7 +92,7 @@ export function ProgramFundingCard({ program, meta, onDonate, donateBlockedReaso
             </p>
           </div>
         </div>
-        <NeoBadge status={program.status} />
+        <NeoBadge status={phase} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

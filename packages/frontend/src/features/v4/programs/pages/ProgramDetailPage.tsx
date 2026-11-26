@@ -38,7 +38,7 @@ import { NeoSkeleton } from '@/components/ui/NeoSkeleton';
 import { useT } from '@/lib/i18n';
 import { statusLabel } from '@/lib/i18n/status';
 import { toDate } from '@/lib/time';
-import { effectiveStatus } from '@/lib/programStatus';
+import { displayStatus } from '@/lib/programStatus';
 import { useFormatMoney } from '@/lib/money';
 
 type Tab = 'overview' | 'applicants' | 'scholars' | 'milestones' | 'votes' | 'reports';
@@ -137,6 +137,7 @@ export function ProgramDetailPage() {
   // Stages move by the clock, so the stored status can lag: a program whose application window
   // has ended is ready to be finalized even if it still reads APPLICATION_OPEN.
   const applicationsClosed = Date.now() >= (toDate(program.applicationEnd)?.getTime() ?? Infinity);
+  const shownStatus = displayStatus(program);
   // Public or private can only be chosen while applications are open and nobody has donated.
   const publicLocked =
     !(program.status === 'CREATED' || program.status === 'APPLICATION_OPEN') || applicationsClosed || !!hasDonors;
@@ -159,7 +160,7 @@ export function ProgramDetailPage() {
             <h1 className="font-paytone text-3xl md:text-5xl leading-[0.95]">
               {meta?.name ?? `Program #${program.pid}`}
             </h1>
-            <NeoBadge status={program.status} />
+            <NeoBadge status={shownStatus} />
           </div>
           {meta?.description && (
             <p className="text-gray-600 text-base md:text-lg max-w-2xl leading-relaxed">{meta.description}</p>
@@ -199,7 +200,7 @@ export function ProgramDetailPage() {
           )}
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          {program.status === 'APPLICATION_OPEN' && (
+          {program.status === 'APPLICATION_OPEN' && !applicationsClosed && (
             // Show the current application state instead of inviting a second
             // apply — the contract rejects a duplicate, so offering the button
             // would only produce a failed transaction.
@@ -225,7 +226,7 @@ export function ProgramDetailPage() {
             />
           )}
           {(program.status === 'SCREENING' || (program.status === 'APPLICATION_OPEN' && applicationsClosed)) &&
-            (program.openDonation || userAddress === program.initiator) && (
+            shownStatus !== 'EXPIRED' && (program.openDonation || userAddress === program.initiator) && (
               <NeoButton
                 label={t('panel.resolve')}
                 variant="secondary"
@@ -310,7 +311,7 @@ export function ProgramDetailPage() {
 
       {/* Phase timeline */}
       <div className="bg-white border-2 border-black shadow-[3px_3px_0_0_#000] rounded-lg p-5 md:p-6">
-        <PhaseTimeline currentStatus={effectiveStatus(program)} window={program} />
+        <PhaseTimeline currentStatus={shownStatus} window={program} />
       </div>
 
       {/* Stats */}

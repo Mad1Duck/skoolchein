@@ -1,8 +1,9 @@
-import type { ProgramStatus, ApplicationStatus, ScholarStatus, MilestoneStatus, DisputeStatus } from "@/lib/api/types";
+import type { ApplicationStatus, ScholarStatus, MilestoneStatus, DisputeStatus } from "@/lib/api/types";
+import type { DisplayStatus } from "@/lib/programStatus";
 import { useT } from "@/lib/i18n";
 import { statusLabel } from "@/lib/i18n/status";
 
-type StatusType = ProgramStatus | ApplicationStatus | ScholarStatus | MilestoneStatus | DisputeStatus;
+type StatusType = DisplayStatus | ApplicationStatus | ScholarStatus | MilestoneStatus | DisputeStatus;
 
 const configMap: Record<string, { bg: string; text: string; label?: string }> = {
   // Program
@@ -13,6 +14,7 @@ const configMap: Record<string, { bg: string; text: string; label?: string }> = 
   ACTIVE:            { bg: "bg-skgreen",          text: "text-black" },
   COMPLETED:         { bg: "bg-skpurple-light",   text: "text-skpurple" },
   CANCELLED:         { bg: "bg-skred",            text: "text-white" },
+  EXPIRED:           { bg: "bg-gray-300",         text: "text-black" },
   // Applicant
   PENDING_REVIEW:    { bg: "bg-skyellow-light",   text: "text-yellow-800", label: "Pending" },
   SHORTLISTED:       { bg: "bg-skgreen",          text: "text-green-900" },

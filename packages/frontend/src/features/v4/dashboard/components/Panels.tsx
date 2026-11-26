@@ -16,6 +16,7 @@ import type { TranslationKey } from '@/lib/i18n/en';
 import {
   useOpenApplications,
   useCancelProgram,
+  useApplicationExtensionCount,
   useClaimYield,
   useSubmitMilestone,
   useExecuteMilestone,
@@ -47,6 +48,7 @@ import { useProgramLabel } from '@/lib/api/useProgramLabel';
 import { useVotingClock } from '@/features/v4/vote/useVotingClock';
 import { DefendModal } from '../../report/components/DefendModal';
 import { SubmitMilestoneModal } from './SubmitMilestoneModal';
+import { displayStatus, reopenLimit, MAX_EXTENSIONS } from '@/lib/programStatus';
 import { ExtendDeadlineModal } from './ExtendDeadlineModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +154,11 @@ function InitiatorProgramCard({
   });
 
   const isFinal = ['COMPLETED', 'CANCELLED'].includes(program.status);
+  // Applications closed with nobody applying: only reopening (if still allowed) or cancelling helps.
+  const shownStatus = displayStatus(program);
+  const expired = shownStatus === 'EXPIRED';
+  const extensions = useApplicationExtensionCount(program.pid, expired);
+  const canReopen = expired && reopenLimit(program) !== null && extensions !== undefined && extensions < MAX_EXTENSIONS;
   // Stages move by the clock now: these only decide whether a button has anything to do yet.
   const nowSec = Math.floor(Date.now() / 1000);
   const startReached = nowSec >= (toEpochSec(program.applicationStart) ?? Infinity);
@@ -159,7 +166,7 @@ function InitiatorProgramCard({
   const votingEnded = nowSec >= (toEpochSec(program.votingEnd) ?? Infinity);
   const canConfigure = ['CREATED', 'APPLICATION_OPEN', 'SCREENING'].includes(program.status);
   const canClaim = program.status === 'COMPLETED' && BigInt(program.yieldAccrued) > 0n;
-  const nextHintKey = `panel.next.${program.status}` as TranslationKey;
+  const nextHintKey = (expired && !canReopen ? 'panel.next.EXPIRED_FINAL' : `panel.next.${shownStatus}`) as TranslationKey;
 
   return (
     <div className="w-full rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0_0_#000] p-5 md:p-6 space-y-5">
@@ -168,7 +175,7 @@ function InitiatorProgramCard({
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-data text-sm font-black text-gray-400">#{program.pid}</span>
-            <NeoBadge status={program.status} />
+            <NeoBadge status={shownStatus} />
             {!program.openDonation && (
               <span className="bg-black text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider">
                 {t('panel.private')}
@@ -225,7 +232,7 @@ function InitiatorProgramCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {program.status === 'CREATED' && (
+          {program.status === 'CREATED' && !expired && (
             <NeoButton
               label={openingApps ? t('panel.opening') : t('panel.openApps')}
               variant="primary"
@@ -236,7 +243,7 @@ function InitiatorProgramCard({
             />
           )}
 
-          {(program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING') && (
+          {(program.status === 'APPLICATION_OPEN' || program.status === 'SCREENING') && !expired && (
             <NeoButton
               label={t('panel.resolve')}
               variant="primary"
@@ -267,15 +274,19 @@ function InitiatorProgramCard({
             />
           )}
 
-          {(program.status === 'APPLICATION_OPEN' || program.status === 'VOTING') && (
+          {(program.status === 'APPLICATION_OPEN' || program.status === 'VOTING') && !expired && (
             <NeoButton label={t('panel.extend')} variant="secondary" className="!rounded-xl" onClick={() => setIsExtending(true)} />
           )}
 
-          {canConfigure && (
+          {canReopen && (
+            <NeoButton label={t('panel.reopen')} variant="primary" className="!rounded-xl" onClick={() => setIsExtending(true)} />
+          )}
+
+          {canConfigure && !expired && (
             <NeoButton label={t('settings.open')} variant="secondary" className="!rounded-xl" onClick={onSettings} />
           )}
 
-          {!isFinal && (
+          {!isFinal && !expired && (
             <NeoButton label={t('panel.manageCommittee')} variant="secondary" className="!rounded-xl" onClick={onManageCommittee} />
           )}
         </div>
@@ -284,9 +295,9 @@ function InitiatorProgramCard({
       {/* Destructive action kept apart from the routine ones */}
       {!isFinal && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-black/10 pt-4">
-          <p className="text-xs text-gray-500 font-medium">{t('panel.dangerHint')}</p>
+          <p className="text-xs text-gray-500 font-medium">{t(expired ? 'panel.dangerHintExpired' : 'panel.dangerHint')}</p>
           <NeoButton
-            label={cancelling ? t('panel.cancelling') : t('panel.cancel')}
+            label={cancelling ? t('panel.cancelling') : t(expired ? 'panel.cancelRefund' : 'panel.cancel')}
             variant="danger"
             size="sm"
             className="!rounded-xl"

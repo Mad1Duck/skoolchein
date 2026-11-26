@@ -30,7 +30,7 @@ function TabButton({
   onClick: () => void;
 }) {
   const baseStyle =
-    'flex items-center justify-center gap-2 border-black font-normal font-paytone lg:shrink-0 lg:whitespace-nowrap lg:rounded-t-3xl lg:border-x-4 lg:border-t-4 lg:px-6 lg:text-2xl lg:max-xl:px-3 lg:max-xl:text-base max-lg:rounded-2xl max-lg:border-2 max-lg:px-2 max-lg:py-2 max-lg:text-sm max-sm:flex-col max-sm:gap-1 max-sm:text-xs';
+    'flex items-center justify-center gap-2 border-black font-normal font-paytone lg:shrink-0 lg:whitespace-nowrap lg:rounded-t-3xl lg:border-x-4 lg:border-t-4 lg:px-6 lg:text-2xl lg:max-2xl:px-4 lg:max-2xl:text-xl lg:max-xl:px-3 lg:max-xl:text-base max-lg:rounded-2xl max-lg:border-2 max-lg:px-2 max-lg:py-2 max-lg:text-sm max-sm:flex-col max-sm:gap-1 max-sm:text-xs';
   // Folder tabs on wide screens; below that a grid of buttons, so no tab is ever out of sight.
   const activeStyle = 'text-black lg:bg-skbw lg:py-6 lg:z-1 max-lg:bg-black max-lg:text-white';
   const inactiveStyle = `${color} text-black lg:border-b-4 lg:py-4`;

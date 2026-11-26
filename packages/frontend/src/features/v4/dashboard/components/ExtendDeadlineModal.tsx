@@ -5,6 +5,7 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { useExtendApplicationDeadline, useExtendVotingDeadline } from '@/lib/contracts/write-hooks';
 import type { Program } from '@/lib/api/types';
 import { useT } from '@/lib/i18n';
+import { displayStatus, reopenLimit } from '@/lib/programStatus';
 
 interface Props {
   isOpen: boolean;
@@ -14,7 +15,10 @@ interface Props {
 
 export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
   const { t } = useT();
-  const isAppOpen = program.status === 'APPLICATION_OPEN';
+  // Reopening an expired program is an application extension whose new deadline must be in the future.
+  const reopening = displayStatus(program) === 'EXPIRED';
+  const limit = reopening ? reopenLimit(program) : null;
+  const isAppOpen = program.status === 'APPLICATION_OPEN' || limit !== null;
   const isVoting = program.status === 'VOTING';
   
   const currentEnd = toEpochSec(isAppOpen ? program.applicationEnd : program.votingEnd) ?? 0;
@@ -29,8 +33,10 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
   // Start with default next day
   const [newEndStr, setNewEndStr] = useState(() => {
     if (!currentEnd) return '';
+    if (limit !== null) return toLocalInput(Math.min(Date.now() + 86400000, limit));
     return toLocalInput(ensureMs(currentEnd) + 86400000);
   });
+  const [openedAt] = useState(() => Date.now());
 
   const { extendApplicationDeadline, isPending: appPending, isSuccess: appSuccess } = useExtendApplicationDeadline();
   const { extendVotingDeadline, isPending: votePending, isSuccess: voteSuccess } = useExtendVotingDeadline();
@@ -93,7 +99,8 @@ export function ExtendDeadlineModal({ isOpen, onClose, program }: Props) {
           <input
             type="datetime-local"
             required
-            min={toLocalInput(ensureMs(currentEnd) + 60000)}
+            min={toLocalInput(reopening ? openedAt + 300000 : ensureMs(currentEnd) + 60000)}
+            max={limit !== null ? toLocalInput(limit) : undefined}
             value={newEndStr}
             onChange={(e) => setNewEndStr(e.target.value)}
             className="w-full border-2 border-black p-2 rounded focus:outline-none focus:border-skpurple"

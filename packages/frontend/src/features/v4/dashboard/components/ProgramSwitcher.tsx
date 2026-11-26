@@ -1,3 +1,4 @@
+import { displayStatus } from '@/lib/programStatus';
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { NeoBadge } from "@/components/ui/NeoBadge";
@@ -37,12 +38,12 @@ export function ProgramSwitcher({ programs, selectedPid, onSelect }: Props) {
   });
   const nameOf = (i: number, p: Program) => metas[i]?.data?.name || `Program #${p.pid}`;
 
-  const statuses = useMemo(() => Array.from(new Set(programs.map((p) => p.status))), [programs]);
+  const statuses = useMemo(() => Array.from(new Set(programs.map((p) => displayStatus(p)))), [programs]);
 
   const visible = programs
     .map((p, i) => ({ p, name: nameOf(i, p) }))
     .filter(({ p, name }) => {
-      if (status !== "ALL" && p.status !== status) return false;
+      if (status !== "ALL" && displayStatus(p) !== status) return false;
       const q = query.trim().toLowerCase();
       if (!q) return true;
       return name.toLowerCase().includes(q) || String(p.pid) === q.replace("#", "");
@@ -107,7 +108,7 @@ export function ProgramSwitcher({ programs, selectedPid, onSelect }: Props) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className={`font-data text-xs font-black ${selected ? "text-white/80" : "text-gray-500"}`}>#{p.pid}</span>
-                  <NeoBadge status={p.status} />
+                  <NeoBadge status={displayStatus(p)} />
                 </div>
                 <p className="font-paytone text-base leading-tight truncate">{name}</p>
                 <p className={`font-data text-xs font-bold ${selected ? "text-white/90" : "text-gray-600"}`}>

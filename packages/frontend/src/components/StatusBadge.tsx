@@ -16,6 +16,7 @@ const STATUS_STYLES = {
   running: { bg: STATUS_TONE.running, label: "badge.running" },
   done: { bg: STATUS_TONE.done, label: "badge.done" },
   cancelled: { bg: STATUS_TONE.cancelled, label: "badge.cancelled" },
+  unapplied: { bg: STATUS_TONE.unapplied, label: "badge.unapplied" },
   pddikti: { bg: "bg-black text-white", label: "badge.pddikti" },
   disbursed: { bg: STATUS_TONE.running, label: "badge.disbursed" },
 } as const;

@@ -1,3 +1,5 @@
+import { useReadContract } from "wagmi";
+import { useV4Addresses } from "@/lib/chain/useActiveChain";
 import { addr } from "@/lib/chain/addr";
 import { scholarshipCoreAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
@@ -95,6 +97,19 @@ export function useOpenScreening() {
     });
   };
   return { openScreening, isPending, isSuccess, error, hash, reset };
+}
+
+/** How many times the application deadline has been extended; only the contract keeps this. */
+export function useApplicationExtensionCount(pid: number, enabled: boolean) {
+  const v4 = useV4Addresses();
+  const { data } = useReadContract({
+    address: v4.ScholarshipCore,
+    abi: scholarshipCoreAbi,
+    functionName: "applicationExtensionCount",
+    args: [BigInt(pid)],
+    query: { enabled: enabled && !!v4.ScholarshipCore },
+  });
+  return data === undefined ? undefined : Number(data);
 }
 
 export function useCancelProgram() {

@@ -8,7 +8,9 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { fetchProgramMeta } from '@/lib/ipfs';
 import type { Program } from '@/lib/api/types';
 import { useT } from '@/lib/i18n';
-import { effectiveStatus, STATUS_TONE } from '@/lib/programStatus';
+import type { TranslationKey } from '@/lib/i18n/en';
+import { toDate } from '@/lib/time';
+import { displayStatus, STATUS_TONE } from '@/lib/programStatus';
 
 interface ProgramCardV2Props {
   program: Program;
@@ -37,12 +39,21 @@ function getLocalValue(amount: number, rate: number): string {
   });
 }
 
-function getTimeLeft(iso: string | null): string {
-  if (!iso) return '00 d: 00 hr: 00 min';
-  const end = new Date(iso).getTime();
-  const secondsLeft = Math.floor(end / 1000) - Math.floor(Date.now() / 1000);
-  if (secondsLeft <= 0) return '00 d: 00 hr: 00 min';
+/** The next thing a program is waiting for. Other statuses have no clock to show. */
+function getNextDeadline(status: string, program: Program): { label: TranslationKey; at: string | null } | null {
+  switch (status) {
+    case 'CREATED':
+      return { label: 'card.opensIn', at: program.applicationStart };
+    case 'APPLICATION_OPEN':
+      return { label: 'card.closesIn', at: program.applicationEnd };
+    case 'VOTING':
+      return { label: 'card.votingClosesIn', at: program.votingEnd };
+    default:
+      return null;
+  }
+}
 
+function getTimeLeft(secondsLeft: number): string {
   const days = Math.floor(secondsLeft / 86400);
   const hours = Math.floor((secondsLeft % 86400) / 3600);
   const minutes = Math.floor((secondsLeft % 3600) / 60);
@@ -64,6 +75,8 @@ function getStatusKey(status: string): keyof typeof STATUS_TONE {
       return 'done';
     case 'CANCELLED':
       return 'cancelled';
+    case 'EXPIRED':
+      return 'unapplied';
     case 'CREATED':
     default:
       return 'soon';
@@ -85,20 +98,14 @@ export function ProgramCardV2({
     staleTime: Infinity,
   });
 
-  const shownStatus = effectiveStatus(program);
+  const shownStatus = displayStatus(program);
   const canApply = shownStatus === 'APPLICATION_OPEN';
 
-  const deadline =
-    shownStatus === 'VOTING'
-      ? program.votingEnd
-      : shownStatus === 'APPLICATION_OPEN' || shownStatus === 'SCREENING'
-        ? program.applicationEnd
-        : program.createdAt;
-
-  const timeLeft = getTimeLeft(deadline);
+  const deadline = getNextDeadline(shownStatus, program);
+  const secondsLeft = Math.floor(((toDate(deadline?.at)?.getTime() ?? 0) - Date.now()) / 1000);
+  // A time already passed is left out rather than shown as zero.
+  const countdown = deadline && secondsLeft > 0 ? { label: deadline.label, left: getTimeLeft(secondsLeft) } : null;
   const status = getStatusKey(shownStatus);
-  // Past selection of applicants or ended: no clock left to count down, the badge says it all.
-  const hasCountdown = !['screening', 'running', 'done', 'cancelled'].includes(status);
   const tokenMeta = getTokenMeta(program.token);
   const fund = toTokenNumber(program.totalFund, program.token);
   const initiator = program.initiator;
@@ -133,17 +140,17 @@ export function ProgramCardV2({
               <div
                 className={`flex items-start ${size === 'small' ? 'gap-1' : 'gap-4'} self-stretch justify-between`}
               >
-                {hasCountdown && (
+                {countdown && (
                   <div className="flex flex-col gap-1">
                     <p className={getTextSize(size, 'text-sm', 'text-xs')}>
-                      {t('card.closesIn')}
+                      {t(countdown.label)}
                     </p>
                     <div className="flex gap-2 py-2 px-3 items-center rounded-2xl border bg-error-container border-on-error-container">
                       <img src="/icons/alarm-clock.svg" alt="clock-icon" />
                       <span
                         className={`${getTextSize(size, 'text-sm', 'text-[0.625rem]')} text-on-error-container`}
                       >
-                        {timeLeft}
+                        {countdown.left}
                       </span>
                     </div>
                   </div>
@@ -166,7 +173,7 @@ export function ProgramCardV2({
                     </span>
                   </div>
                   <p
-                    className={`self-stretch ${hasCountdown ? 'text-right' : 'text-left'} ${getTextSize(size, 'text-xs', 'text-[0.625rem]')}`}
+                    className={`self-stretch ${countdown ? 'text-right' : 'text-left'} ${getTextSize(size, 'text-xs', 'text-[0.625rem]')}`}
                   >
                     {t('card.verified')}
                   </p>

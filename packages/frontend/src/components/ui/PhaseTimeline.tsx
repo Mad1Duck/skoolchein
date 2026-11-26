@@ -1,4 +1,5 @@
-import type { Program, ProgramStatus } from "@/lib/api/types";
+import type { Program } from "@/lib/api/types";
+import type { DisplayStatus } from "@/lib/programStatus";
 import { useVotingClock } from "@/features/v4/vote/useVotingClock";
 import { useT } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
@@ -14,13 +15,13 @@ const PHASES = [
 
 const statusOrder: Record<string, number> = {
   CREATED: 0, APPLICATION_OPEN: 1, SCREENING: 2,
-  VOTING: 3, ACTIVE: 4, COMPLETED: 5, CANCELLED: -1,
+  VOTING: 3, ACTIVE: 4, COMPLETED: 5, CANCELLED: -1, EXPIRED: -1,
 };
 
 type Window = Pick<Program, "applicationStart" | "applicationEnd" | "votingStart" | "votingEnd">;
 
 /** The next moment that matters in each stage, and what to call it. */
-function nextMoment(status: ProgramStatus, w?: Window): { at: string | null | undefined; key: "applyOpens" | "applyEnds" | "votingOpens" | "votingEnds" } | null {
+function nextMoment(status: DisplayStatus, w?: Window): { at: string | null | undefined; key: "applyOpens" | "applyEnds" | "votingOpens" | "votingEnds" } | null {
   if (!w) return null;
   switch (status) {
     case "CREATED": return { at: w.applicationStart, key: "applyOpens" };
@@ -36,7 +37,7 @@ export function PhaseTimeline({
   window: w,
   className = "",
 }: {
-  currentStatus: ProgramStatus;
+  currentStatus: DisplayStatus;
   /** The program's dates; when given, the current stage shows a live countdown. */
   window?: Window;
   className?: string;
