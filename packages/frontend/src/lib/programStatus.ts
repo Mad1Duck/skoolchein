@@ -1,6 +1,17 @@
 import type { Program, ProgramStatus } from "@/lib/api/types";
 import { toDate } from "@/lib/time";
 
+/** One colour per status, shared by the program tabs and the card badge so they always match. */
+export const STATUS_TONE = {
+  active: "bg-skpurple",
+  screening: "bg-skyellow",
+  vote: "bg-skorange",
+  soon: "bg-skcyan",
+  running: "bg-skgreen-dark",
+  done: "bg-skviolet",
+  cancelled: "bg-skred",
+} as const;
+
 /**
  * The status to SHOW for a program.
  *
