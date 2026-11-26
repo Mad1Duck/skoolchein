@@ -1,9 +1,9 @@
-import { useReadContract, useSignTypedData } from "wagmi";
+import { useReadContract, useReadContracts, useSignTypedData } from "wagmi";
 import { hexToString, stringToHex } from "viem";
 import { addr } from "@/lib/chain/addr";
 import { getV4Addresses } from "@/lib/chain/chains";
 import { useActiveChain } from "@/lib/chain/useActiveChain";
-import { scholarshipSelectionAbi } from "@/constants/contractsV4";
+import { scholarshipCoreAbi, scholarshipSelectionAbi } from "@/constants/contractsV4";
 import { useTxHook } from "./use-tx-base";
 import { RECOMMENDATION_TYPES, type SignedRecommendation } from "@/lib/recommendations";
 
@@ -39,7 +39,47 @@ function useSelectionRead(functionName: string, args: readonly unknown[] = [], e
 /** Applicants still waiting to be processed, best first: the exact list resolveShortlist expects. */
 export function useRankedApplicants(pid: number, enabled = true) {
   const r = useSelectionRead("rankApplicants", [BigInt(pid)], enabled);
-  return { ...r, data: r.data as readonly `0x${string}`[] | undefined };
+  const local = useLocalRanking(pid, enabled && r.isError);
+  return { ...r, data: (r.data as readonly `0x${string}`[] | undefined) ?? local };
+}
+
+/**
+ * The same ranking, computed here. The contract view sorts on-chain and runs out of gas once a program
+ * has a few hundred applicants; the contract still verifies whatever order is submitted.
+ */
+function useLocalRanking(pid: number, enabled: boolean): readonly `0x${string}`[] | undefined {
+  const { chainId } = useActiveChain();
+  const core = getV4Addresses(chainId).ScholarshipCore;
+  const list = useReadContract({
+    chainId,
+    address: core,
+    abi: scholarshipCoreAbi,
+    functionName: "getProgramApplicants",
+    args: [BigInt(pid)],
+    query: { enabled },
+  });
+  const wallets = (list.data as readonly `0x${string}`[] | undefined) ?? [];
+  const details = useReadContracts({
+    contracts: wallets.map((wallet) => ({
+      chainId,
+      address: core,
+      abi: scholarshipCoreAbi,
+      functionName: "getApplicant" as const,
+      args: [BigInt(pid), wallet] as const,
+    })),
+    query: { enabled: enabled && wallets.length > 0 },
+  });
+
+  if (!enabled || !details.data || details.data.some((d) => d.status !== "success")) return undefined;
+  return wallets
+    .map((wallet, i) => {
+      const [, status, score] = details.data[i].result as unknown as readonly [boolean, number, number, bigint];
+      return { wallet, status: Number(status), score: Number(score) };
+    })
+    .filter((a) => a.status === 0) // still waiting to be processed
+    // Higher score first, then the lower address: the order the contract checks.
+    .sort((a, b) => b.score - a.score || (BigInt(a.wallet) < BigInt(b.wallet) ? -1 : 1))
+    .map((a) => a.wallet);
 }
 
 /** The whole shortlist ordered by final score, best first: the exact list selectWinners expects. */
@@ -177,6 +217,19 @@ export function useRecommendationOf(pid: number, student: string | undefined) {
   const r = useSelectionRead("recommendationOf", [BigInt(pid), student], !!student);
   const t = r.data as readonly [bigint, bigint] | undefined;
   return { ...r, count: t ? Number(t[0]) : 0, average: t ? Number(t[1]) : 0 };
+}
+
+/** Whether shortlisting has begun, after which no score or recommendation is accepted. */
+export function useShortlistStarted(pid: number) {
+  const { chainId } = useActiveChain();
+  const { data } = useReadContract({
+    chainId,
+    address: getV4Addresses(chainId).ScholarshipCore,
+    abi: scholarshipCoreAbi,
+    functionName: "resolveProgress",
+    args: [BigInt(pid)],
+  });
+  return Number(data ?? 0) > 0;
 }
 
 /** Whether the creator has put `who` on the program's recommender list. */

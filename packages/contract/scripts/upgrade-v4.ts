@@ -55,6 +55,7 @@ const addresses = {
   milestoneManager: pick("CONTRACT_MILESTONE_MANAGER"),
   bounty: pick("CONTRACT_BOUNTY"),
   committee: pick("CONTRACT_COMMITTEE"),
+  selection: pick("CONTRACT_SELECTION"),
 };
 
 // ── compiled artifacts ──────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ const artifacts = {
   milestoneManager: art("core/MilestoneManager.sol/MilestoneManager.json"),
   bounty: art("core/ScholarshipBounty.sol/ScholarshipBounty.json"),
   committee: art("governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
+  selection: art("core/ScholarshipSelection.sol/ScholarshipSelection.json"),
   fraudNFT: art("tokens/ScholarshipNFTs.sol/FraudNFT.json"),
 };
 

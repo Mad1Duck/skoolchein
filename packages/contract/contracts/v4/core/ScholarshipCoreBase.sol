@@ -163,6 +163,9 @@ abstract contract ScholarshipCoreBase is Initializable {
     // fallback. The module is built from this same base, so it reads and writes Core's own storage.
     address public logic;
 
+    // APPENDED (live proxy): how much of a scholar's `totalReceived` came from optional milestones.
+    mapping(address => mapping(uint256 => uint256)) internal _optionalReceived;
+
     /// @notice Cap one donor's counted vote power at this share of the program fund (basis points, 0 = no cap).
     function setVoterCapBps(uint16 bps) external onlyRole(SELECTION_ROLE) {
         if (bps > 10_000) revert InvalidConfig();
@@ -240,6 +243,10 @@ abstract contract ScholarshipCoreBase is Initializable {
     error StudentNFTNotConfigured();
     error CannotVoteForSelf();
     error AlreadyVoted();
+    error UnreservedFundTooLow();
+    error PublicSettingLocked();
+
+    event OpenDonationToggled(uint256 indexed pid, bool open);
 
     // ── Shared Helpers ───────────────────────────────────────────────────────
     function _requireProgramExists(uint256 pid) internal view { if (pid == 0 || pid > _nextProgramId) revert ProgramNotFound(); }
@@ -418,6 +425,7 @@ abstract contract ScholarshipCoreBase is Initializable {
             s.mandatoryCompleted++;
         } else {
             s.optionalCompleted++;
+            _optionalReceived[scholarAddr][pid] += amount;
         }
 
         s.totalReceived += amount;
@@ -432,25 +440,46 @@ abstract contract ScholarshipCoreBase is Initializable {
         }
     }
 
+    /// @dev Every winner's portion is already promised to their mandatory milestones, so an optional one
+    ///      can only be funded from portions nobody took (fewer winners than the quota).
     function _onOptionalApproved(uint256 pid, address s, uint256 amt) internal {
-        scholars[s][pid].optionalApproved++;
-        programs[pid].allocatedFund += amt;
-    }
-
-    /// @dev A program is complete once none of its winners is still working: each one has finished or
-    ///      been penalized, and at least one finished. The winners can be fewer than `targetWinners`
-    ///      (too few candidates, or a private program's creator choosing fewer).
-    function _checkProgramCompletion(uint256 pid) internal {
-        if (programCompletedScholars[pid] == 0) return;
+        ScholarshipTypes.Program storage p = programs[pid];
         address[] storage list = _shortlist[pid];
+        uint256 winners;
         for (uint256 i; i < list.length; ) {
-            ScholarshipTypes.Scholar storage s = scholars[list[i]][pid];
-            if (s.wallet != address(0) && s.status == ScholarshipTypes.StudentStatus.ACTIVE) return;
+            if (scholars[list[i]][pid].wallet != address(0)) winners++;
             unchecked { ++i; }
         }
-        programs[pid].status = ScholarshipTypes.ProgramStatus.COMPLETED;
-        emit ProgramStatusChanged(pid, ScholarshipTypes.ProgramStatus.COMPLETED);
-        emit ProgramCompleted(pid);
+        if ((p.totalFund / p.targetWinners) * winners + p.allocatedFund + amt > p.totalFund) revert UnreservedFundTooLow();
+        scholars[s][pid].optionalApproved++;
+        p.allocatedFund += amt;
+    }
+
+    /// @dev A program ends once none of its winners is still working: COMPLETED when at least one of
+    ///      them finished, CANCELLED when every one was penalized (the Treasury then returns what is
+    ///      left). The winners can be fewer than `targetWinners` (too few candidates, or a private
+    ///      program's creator choosing fewer).
+    function _checkProgramCompletion(uint256 pid) internal {
+        address[] storage list = _shortlist[pid];
+        uint256 winners;
+        uint256 completed;
+        for (uint256 i; i < list.length; ) {
+            ScholarshipTypes.Scholar storage s = scholars[list[i]][pid];
+            if (s.wallet != address(0)) {
+                if (s.status == ScholarshipTypes.StudentStatus.ACTIVE) return;
+                winners++;
+                if (s.status == ScholarshipTypes.StudentStatus.COMPLETED) completed++;
+            }
+            unchecked { ++i; }
+        }
+        if (winners == 0) return;
+        ScholarshipTypes.ProgramStatus end = completed == 0
+            ? ScholarshipTypes.ProgramStatus.CANCELLED
+            : ScholarshipTypes.ProgramStatus.COMPLETED;
+        if (programs[pid].status == end) return;
+        programs[pid].status = end;
+        emit ProgramStatusChanged(pid, end);
+        if (completed != 0) emit ProgramCompleted(pid);
     }
 
     function _slashScholar(address wallet, uint256 pid, ScholarshipTypes.DisputeType dtype) internal {
@@ -466,8 +495,11 @@ abstract contract ScholarshipCoreBase is Initializable {
             globalFreezeUntil[wallet] = block.timestamp + _config.freezeHeavy;
         }
         emit ScholarSlashed(wallet, pid, dtype);
-        // The penalized scholar may have been the last one the program was waiting for.
-        if (programs[pid].status == ScholarshipTypes.ProgramStatus.ACTIVE) _checkProgramCompletion(pid);
+        // The penalized scholar may have been the last one the program was waiting for, or the only
+        // one counted as having finished it.
+        ScholarshipTypes.ProgramStatus st = programs[pid].status;
+        if (st == ScholarshipTypes.ProgramStatus.ACTIVE || st == ScholarshipTypes.ProgramStatus.COMPLETED)
+            _checkProgramCompletion(pid);
     }
 
     function _resolveDisputeBH(uint256) internal {}

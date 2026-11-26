@@ -5,6 +5,8 @@ import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 import { chainMiddleware } from "@/config/chain-context";
 import { corsMiddleware } from "@/config/cors";
+import { uploadBodyLimit, uploadRateLimit } from "@/config/upload-limits";
+import { startIndexerWatch } from "@/features/health/indexer-watch";
 import {
   HealthController,
   IpfsController,
@@ -31,13 +33,16 @@ HonoRouteBuilder.configure({
     // deliberate 404/400 would be rewritten into a 500.
     if (err instanceof HttpException) return;
     logger.error({ err }, "unhandled error");
-    return c.json({ success: false, error: { code: "INTERNAL_SERVER_ERROR", message: (err as Error).message } }, 500);
+    // The details are in the log. Database and provider errors are not for callers in production.
+    const message = env.NODE_ENV === "production" ? "Something went wrong." : (err as Error).message;
+    return c.json({ success: false, error: { code: "INTERNAL_SERVER_ERROR", message } }, 500);
   },
 });
 
 const app = new Hono();
 app.use(honoLogger());
 app.use("*", corsMiddleware);
+app.use("/ipfs/*", uploadRateLimit, uploadBodyLimit);
 
 // Chain-scope every Ponder-backed route. /v4/learning is backend-owned data
 // (HackQuest/Udemy progress) and is not per-chain.
@@ -61,6 +66,8 @@ const spec = OpenAPIGenerator.generate(controllers as any[], {
 OpenAPIGenerator.mount(app, spec);
 
 app.notFound((c) => c.json({ success: false, message: "Not Found" }, 404));
+
+startIndexerWatch();
 
 export default {
   port: env.PORT,

@@ -26,24 +26,30 @@ jobs:
         run: cp $HOME/apps/skoolcein/.env .env
 
       # Ponder refuses to reuse a schema whose build id differs from the current
-      # one ("Schema 'x' was previously used by a different Ponder app"). Any
-      # change to ponder.schema.ts, ponder.config.ts, or the handlers changes
-      # that build id — so a fixed schema name means every such deploy needs a
-      # manual DROP SCHEMA, which is exactly the recurring breakage this avoids.
+      # one ("Schema 'x' was previously used by a different Ponder app"). The
+      # build id covers the indexer's code, schema and config (including the
+      # addresses and RPC URLs from .env).
       #
-      # Giving each commit its own schema makes the collision impossible: a new
-      # build always lands in a fresh namespace. The previous schema keeps
-      # serving traffic until this one is ready, and `ponder db prune` removes
-      # inactive ones afterwards.
-      - name: Derive per-deployment schema
+      # So the schema is named after exactly those inputs. When one changes, the
+      # indexer starts a fresh namespace and reindexes; when none do (a frontend
+      # or backend deploy), it keeps its data and carries on. Hashing a little too
+      # much only costs a reindex; hashing too little would crash the indexer.
+      - name: Derive indexer schema
         run: |
-          SCHEMA="skoolcein_$(git rev-parse --short HEAD)"
+          KEY=$({
+            git rev-parse HEAD:packages/ponder
+            git hash-object docker-compose.yml
+            grep -E '"(ponder|viem|drizzle-orm|hono)": \[' bun.lock
+            grep -E '^(PONDER_|START_BLOCK|CONTRACT_|CHAIN)' .env | sort
+          } | sha256sum | cut -c1-10)
+          SCHEMA="skoolcein_$KEY"
           echo "DATABASE_SCHEMA=$SCHEMA" >> "$GITHUB_ENV"
           # docker compose reads DATABASE_SCHEMA from .env; override it there so
           # the value is identical for `up`, restarts, and any `compose run`.
           sed -i -E '/^DATABASE_SCHEMA=/d' .env
-          echo "DATABASE_SCHEMA=\"$SCHEMA\"" >> .env
-          echo "Deploying into Ponder schema: $SCHEMA"
+          # A .env without a final newline would otherwise swallow the next line.
+          printf '\nDATABASE_SCHEMA="%s"\n' "$SCHEMA" >> .env
+          echo "Indexer schema: $SCHEMA"
 
       - name: Build images
         run: docker compose build
@@ -67,6 +73,19 @@ jobs:
 
       - name: Show running containers
         run: docker compose ps
+
+      # The services start without waiting for the indexer, so wait here: a deploy
+      # whose indexer never catches up must show as failed. It also keeps the prune
+      # below from running while the indexer has not claimed its schema yet.
+      - name: Wait for the indexer
+        run: |
+          for i in $(seq 1 180); do
+            if curl -fsS -o /dev/null http://127.0.0.1:42069/ready; then
+              echo "Indexer ready"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Indexer not ready after 15 minutes"; exit 1
 
       # Drops schemas from superseded deployments. Only touches Ponder-created
       # schemas that are no longer active, so the one just deployed (and the

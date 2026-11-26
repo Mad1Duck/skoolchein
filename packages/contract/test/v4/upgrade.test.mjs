@@ -127,6 +127,21 @@ it("can upgrade just some of the contracts", async () => {
   assert.notEqual(await implOf(treasury.address), treasuryBefore);
 });
 
+it("upgrades Selection and Committee only when they are named", async () => {
+  const { committee } = sys.contracts;
+  const extra = {
+    selection: artifact("contracts/v4/core/ScholarshipSelection.sol/ScholarshipSelection.json"),
+    committee: artifact("contracts/v4/governance/CommitteeGovernance.sol/CommitteeGovernance.json"),
+  };
+  const before = [await implOf(selection.address), await implOf(committee.address)];
+  await upgradeV4({
+    publicClient, walletClient: walletClientFor(sys.deployer), artifacts: { ...art, ...extra }, log: () => {},
+    addresses: { ...addresses(), selection: selection.address, committee: committee.address }, only: ["selection", "committee"],
+  });
+  assert.notEqual(await implOf(selection.address), before[0]);
+  assert.notEqual(await implOf(committee.address), before[1]);
+});
+
 it("refuses, before changing anything, an account that is not allowed to upgrade", async () => {
   const before = await implOf(treasury.address);
   await assert.rejects(upgrade({}, stranger()), /not allowed to upgrade/);

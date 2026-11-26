@@ -11,6 +11,10 @@ export const id: Record<TranslationKey, string> = {
   'common.language': 'Bahasa',
   'common.advanced': 'Lanjutan',
 
+  // indexer
+  'indexer.syncing': 'Data terbaru sedang dimuat. Sebagian program dan saldo mungkin belum tampil.',
+  'indexer.delayed': 'Pembaruan data sedang tertunda. Aksi terbarumu mungkin belum tampil; tidak perlu dikirim ulang.',
+
   // network
   'chain.unsupported': 'Jaringan tidak didukung',
   'chain.networkLabel': 'Jaringan',
@@ -397,6 +401,14 @@ export const id: Record<TranslationKey, string> = {
   'refund.title': 'Donasimu bisa diambil kembali',
   'refund.hint': 'Program ini dibatalkan. {amount} dari donasimu masih disimpan untukmu.',
   'refund.claim': 'Ambil donasiku',
+  'cancelledFund.title': 'Dana yang belum dikembalikan',
+  'cancelledFund.hint': 'Program ini berakhir tanpa selesai dan masih menyimpan {amount}. Pengembalian mengirim donasi ke para donatur dan sisanya ke pembuat program.',
+  'cancelledFund.return': 'Kembalikan dana',
+  'owed.title': 'Pembayaran yang menunggumu',
+  'owed.hint': 'Sebelumnya dana ini gagal dikirim ke dompetmu.',
+  'owed.fromTreasury': 'Pembayaran program',
+  'owed.fromReports': 'Deposit laporan',
+  'owed.withdraw': 'Ambil',
   'fundCard.donationsOver': 'Donasi sudah ditutup. Donasi hanya diterima selama pendaftaran dibuka.',
   'fund.forfeited': 'Dipotong karena laporan',
   'create.programFund': 'Dana program',
@@ -472,6 +484,7 @@ export const id: Record<TranslationKey, string> = {
   'detail.donationsClosed': 'Donasi ditutup',
   'detail.donationsOpenHint': 'Program publik: donatur bisa mendanai dan ikut memilih penerima.',
   'detail.donationsClosedHint': 'Program privat: tanpa donasi dan voting publik. Anda memilih sendiri penerimanya.',
+  'detail.publicLocked': 'Pengaturan ini tidak bisa diubah lagi: terkunci begitu ada donasi atau pendaftaran ditutup.',
   'detail.donationsConfirm': 'Tutup donasi? Program akan menjadi privat: tidak ada voting publik, dan Anda memilih sendiri penerimanya.',
   'detail.applied': 'Sudah mendaftar · {status}',
   'detail.apply': 'Daftar Sekarang',
@@ -1071,7 +1084,6 @@ export const id: Record<TranslationKey, string> = {
   'report.target': 'Yang dilaporkan',
   'report.targetScholar': 'Tentang peserta secara keseluruhan: pendaftarannya atau tindakannya.',
   'report.targetMilestone': 'Hanya tentang milestone ini: buktinya palsu atau tidak sesuai dengan pekerjaannya.',
-  'report.nativeNote': 'Program ini dibayar dengan mata uang native chain, tapi deposit laporan diambil dalam USDC. Periksa jumlahnya sebelum konfirmasi.',
   'report.needWallet': 'Hubungkan wallet dulu. Laporan ditandatangani dan depositnya dibayar dari wallet itu.',
   'report.evidenceMin': 'Tulis minimal {n} karakter.',
   'report.mine': 'Laporan saya ({n})',

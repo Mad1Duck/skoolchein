@@ -146,6 +146,8 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
     error RecommenderNotAllowed();
     error NotStudentScored();
     error ApplicationsClosed();
+    error ApplicantSkipped(address who);
+    error ScoringClosed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -302,6 +304,9 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
         (bool exists, ScholarshipTypes.ApplicationStatus st, , ) = core.getApplicant(pid, student);
         if (!exists) revert NotAnApplicant(student);
         if (st != ScholarshipTypes.ApplicationStatus.PENDING_REVIEW) revert AlreadyProcessed(student);
+        // Raising a pending score above the batches already processed would leave this applicant with
+        // no place in the order, and the shortlist could then never be finished.
+        if (core.resolveProgress(pid) != 0) revert ScoringClosed();
 
         if (recommendersRestricted[pid] && !isRecommender[pid][recommender]) revert RecommenderNotAllowed();
         if (hasRecommended[pid][student][recommender]) revert AlreadyRecommended();
@@ -338,8 +343,9 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
      *         screening is finished.
      *
      *         Batches must continue the same ordering: the first applicant of batch 2 must
-     *         come after the last of batch 1. The final batch (`isLast`) requires that every
-     *         applicant was processed.
+     *         come after the last of batch 1. A batch may not jump over anyone: an applicant left
+     *         behind could never be processed, so the program would be stuck. The final batch
+     *         (`isLast`) requires that every applicant was processed.
      *
      * @param ranked  Applicants, best first. Obtain with rankApplicants().
      */
@@ -381,6 +387,19 @@ contract ScholarshipSelection is Initializable, AccessControlUpgradeable, UUPSUp
 
         lastShortlistKey[pid] = last;
         core.selectionApplyBatch(pid, _trim(yes, ny), _trim(no, nn), isLast);
+        // The final batch already proves everyone was processed.
+        if (!isLast && last.has) _requireNoneSkipped(pid, last);
+    }
+
+    /// @dev Every applicant still waiting must rank after the last one processed.
+    function _requireNoneSkipped(uint256 pid, RankKey memory last) private view {
+        address[] memory all = core.getProgramApplicants(pid);
+        for (uint256 i; i < all.length; ) {
+            (, ScholarshipTypes.ApplicationStatus st, uint32 score, ) = core.getApplicant(pid, all[i]);
+            if (st == ScholarshipTypes.ApplicationStatus.PENDING_REVIEW && !_comesAfter(score, all[i], last.score, last.who))
+                revert ApplicantSkipped(all[i]);
+            unchecked { ++i; }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════

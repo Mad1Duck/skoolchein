@@ -1,7 +1,9 @@
 import { useReadContract, useReadContracts } from "wagmi";
+import { zeroAddress } from "viem";
 import { addr, usdcAddr } from "@/lib/chain/addr";
+import { usdcAddress } from "@/lib/chain/chains";
 import { useActiveChain, useV4Addresses } from "@/lib/chain/useActiveChain";
-import { scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi } from "@/constants/contractsV4";
+import { scholarshipBountyAbi, scholarshipCoreAbi, scholarshipTreasuryAbi, mockUSDCAbi } from "@/constants/contractsV4";
 import { parseUnits } from "viem";
 import { useTxHook } from "./use-tx-base";
 import { parseTokenAmount, nativeValueFor, isNativeToken, formatTokenWithSymbol } from "../token";
@@ -231,4 +233,109 @@ export function useClaimRefund() {
   };
 
   return { claimRefund, isPending, isSuccess, error, hash, reset };
+}
+
+/** Whether anyone has donated to a program. `undefined` while loading. */
+export function useHasDonors(pid: number, enabled = true) {
+  const { chainId } = useActiveChain();
+  const v4 = useV4Addresses();
+  const { data } = useReadContract({
+    chainId,
+    address: v4.ScholarshipTreasury,
+    abi: scholarshipTreasuryAbi,
+    functionName: "getProgramDonors",
+    args: [BigInt(pid)],
+    query: { enabled },
+  });
+  return data === undefined ? undefined : (data as readonly string[]).length > 0;
+}
+
+/**
+ * What a cancelled program still holds that one settlement call would send out: the creator's share,
+ * or donations few enough to be paid together. `undefined` when there is nothing to settle.
+ */
+export function useUnsettledFund(program: { pid: number; status: string }) {
+  const { chainId } = useActiveChain();
+  const v4 = useV4Addresses();
+  const enabled = program.status === "CANCELLED";
+  const base = { chainId, address: v4.ScholarshipTreasury, abi: scholarshipTreasuryAbi } as const;
+  const args = [BigInt(program.pid)] as const;
+  const { data, refetch } = useReadContracts({
+    contracts: [
+      { ...base, functionName: "programBalance", args },
+      { ...base, functionName: "programTotalDonated", args },
+      { ...base, functionName: "getProgramDonors", args },
+      { ...base, functionName: "maxPushRefundDonors" },
+    ],
+    query: { enabled },
+  });
+  const [balance, donated, donors, cap] = (data ?? []).map((d) => d.result) as [
+    bigint?, bigint?, (readonly string[])?, number?,
+  ];
+  const ready = enabled && balance !== undefined && donated !== undefined && donors !== undefined && cap !== undefined;
+  const worthIt = ready && balance > 0n && (balance > donated || donors.length <= Number(cap));
+  return { amount: worthIt ? balance : undefined, donors: donors ?? [], refetch };
+}
+
+/** Send a cancelled program's remaining fund to its creator and donors. Anyone may call it. */
+export function useSettleCancelled() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const settle = (pid: bigint) => {
+    writeContract({
+      address: addr("ScholarshipTreasury"),
+      abi: scholarshipTreasuryAbi,
+      functionName: "settleCancelledProgram",
+      args: [pid],
+    });
+  };
+
+  return { settle, isPending, isSuccess, error, hash, reset };
+}
+
+export interface OwedPayment {
+  source: "ScholarshipTreasury" | "ScholarshipBounty";
+  token: `0x${string}`;
+  amount: bigint;
+}
+
+/** Payments to `account` that could not be delivered and are waiting to be collected. */
+export function useOwedPayments(account: `0x${string}` | undefined) {
+  const { chainId } = useActiveChain();
+  const v4 = useV4Addresses();
+  const tokens = [zeroAddress, usdcAddress(chainId)].filter(Boolean) as `0x${string}`[];
+  const slots = (["ScholarshipTreasury", "ScholarshipBounty"] as const).flatMap((source) =>
+    tokens.map((token) => ({ source, token })),
+  );
+  const { data, refetch } = useReadContracts({
+    contracts: slots.map(({ source, token }) => ({
+      chainId,
+      address: v4[source],
+      abi: source === "ScholarshipTreasury" ? scholarshipTreasuryAbi : scholarshipBountyAbi,
+      functionName: "owed" as const,
+      args: [token, account ?? zeroAddress] as const,
+    })),
+    query: { enabled: !!account },
+  });
+  const payments: OwedPayment[] = slots.flatMap((slot, i) => {
+    // A deployment made before this existed fails the read, which simply shows nothing.
+    const amount = (data?.[i]?.result as bigint | undefined) ?? 0n;
+    return account && amount > 0n ? [{ ...slot, amount }] : [];
+  });
+  return { payments, refetch };
+}
+
+export function useWithdrawOwed() {
+  const { writeContract, isPending, isSuccess, error, hash, reset } = useTxHook();
+
+  const withdraw = (source: OwedPayment["source"], token: `0x${string}`, account: `0x${string}`) => {
+    writeContract({
+      address: addr(source),
+      abi: source === "ScholarshipTreasury" ? scholarshipTreasuryAbi : scholarshipBountyAbi,
+      functionName: "withdrawOwed",
+      args: [token, account],
+    });
+  };
+
+  return { withdraw, isPending, isSuccess, error, hash, reset };
 }

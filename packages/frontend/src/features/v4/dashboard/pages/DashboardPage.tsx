@@ -27,6 +27,7 @@ import { StudentProfileCard } from '../components/StudentProfileCard';
 import { DashboardMessageCard } from '../components/DashboardMessageCard';
 import { DashboardNftCollections } from '../components/DashboardNftCollections';
 import { ProviderMilestonesPanel } from '../components/ProviderMilestonesPanel';
+import { OwedPayments } from '../components/OwedPayments';
 import { useT } from '@/lib/i18n';
 import type { TranslationKey } from '@/lib/i18n/en';
 import {
@@ -260,6 +261,8 @@ export function DashboardPage() {
           <StatCard label={t('dash.statVotes')} value={summary.votesCount.toString()} color="cyan" />
           <StatCard label={t('dash.statReports')} value={summary.disputesCount.toString()} color="red" />
         </div>
+
+        <OwedPayments account={address} />
 
         {/* Provider / Student switcher */}
         {isProvider && isStudent && (

@@ -20,9 +20,11 @@ const KINDS = {
   milestoneManager: { artifact: "milestoneManager", call: "upgradeToAndCall", auth: "admin" },
   bounty: { artifact: "bounty", call: "upgradeToAndCall", auth: "role" },
   committee: { artifact: "committee", call: "upgradeToAndCall", auth: "role" },
+  selection: { artifact: "selection", call: "upgradeToAndCall", auth: "role" },
 };
-// Committee is opt-in (--only committee): the default upgrade leaves the governance contract alone.
-export const UPGRADABLE = Object.keys(KINDS).filter((k) => k !== "committee");
+// Committee and selection are opt-in (--only ...): the default upgrade leaves them alone.
+const OPT_IN = ["committee", "selection"];
+export const UPGRADABLE = Object.keys(KINDS).filter((k) => !OPT_IN.includes(k));
 
 /**
  * @param {object} o
@@ -70,7 +72,7 @@ export async function upgradeV4({ publicClient, walletClient, addresses, artifac
   log(`Upgrader: ${me}`);
   for (const key of only) {
     const kind = KINDS[key];
-    if (!kind) throw new Error(`unknown contract "${key}" (choose from ${UPGRADABLE.join(", ")})`);
+    if (!kind) throw new Error(`unknown contract "${key}" (choose from ${Object.keys(KINDS).join(", ")})`);
     const abi = artifacts[kind.artifact].abi;
     // A proxy can only be upgraded if the code behind it contains the upgrade function. MilestoneManager was
     // first deployed without one, and nothing can add it to a proxy that is already live.

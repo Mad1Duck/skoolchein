@@ -440,30 +440,45 @@ contract MilestoneManager is Initializable, UUPSUpgradeable {
     // BOUNTY ROLE — FREEZE / RELEASE
     // ═══════════════════════════════════════════════════════════════════
 
-    /// @dev Called by ScholarshipBounty (holds BOUNTY_ROLE on Core).
+    /// @dev Called by ScholarshipBounty (holds BOUNTY_ROLE on Core). Only unpaid work can be frozen: a
+    ///      paid milestone that went through freeze and release used to become payable a second time.
     function freezeMilestone(uint256 milestoneId) external {
         if (!_coreContract.hasBountyRole(msg.sender)) revert NotBountyRole();
         ScholarshipTypes.Milestone storage m = milestones[milestoneId];
         if (m.id == 0) revert NotFound();
+        if (m.status != ScholarshipTypes.MilestoneStatus.PENDING && m.status != ScholarshipTypes.MilestoneStatus.SUBMITTED)
+            revert WrongStatus(m.status);
         m.status = ScholarshipTypes.MilestoneStatus.FROZEN;
         emit MilestoneFrozen(milestoneId);
     }
 
+    /// @dev A rejected report puts the milestone back where it was. Work that was never handed in
+    ///      returns to PENDING; it used to become SUBMITTED and payable without any proof.
     function releaseMilestone(uint256 milestoneId) external {
         if (!_coreContract.hasBountyRole(msg.sender)) revert NotBountyRole();
         ScholarshipTypes.Milestone storage m = milestones[milestoneId];
         if (m.id == 0) revert NotFound();
-        ScholarshipTypes.Program memory prog = _coreContract.getProgram(m.pid);
-        m.status          = ScholarshipTypes.MilestoneStatus.SUBMITTED;
-        m.disputeDeadline = uint48(block.timestamp + prog.milestoneDisputeWindow);
+        if (m.status != ScholarshipTypes.MilestoneStatus.FROZEN) revert WrongStatus(m.status);
+        if (m.completedAt != 0) {
+            m.status = ScholarshipTypes.MilestoneStatus.COMPLETED; // frozen after payment by earlier code
+        } else if (bytes(m.proofCID).length == 0) {
+            m.status          = ScholarshipTypes.MilestoneStatus.PENDING;
+            m.disputeDeadline = 0;
+        } else {
+            m.status          = ScholarshipTypes.MilestoneStatus.SUBMITTED;
+            m.disputeDeadline = uint48(block.timestamp + _coreContract.getProgram(m.pid).milestoneDisputeWindow);
+        }
         emit MilestoneReleased(milestoneId);
     }
 
     // ── Called by BountyResolver after committee vote ─────────────────────────
-    function forceCompleteMilestone(uint256 milestoneId) external {
+    function forceCompleteMilestone(uint256 milestoneId) external nonReentrant {
         if (!_coreContract.hasBountyRole(msg.sender)) revert NotBountyRole();
         ScholarshipTypes.Milestone storage m = milestones[milestoneId];
         if (m.id == 0) revert NotFound();
+        if (m.completedAt != 0 ||
+            (m.status != ScholarshipTypes.MilestoneStatus.SUBMITTED && m.status != ScholarshipTypes.MilestoneStatus.FROZEN))
+            revert WrongStatus(m.status);
         _completeMilestone(milestoneId, m);
     }
 

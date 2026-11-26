@@ -54,6 +54,17 @@ export const scholarshipSelectionAbi = [
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "who",
+        "type": "address"
+      }
+    ],
+    "name": "ApplicantSkipped",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "ApplicationsClosed",
     "type": "error"
@@ -186,6 +197,11 @@ export const scholarshipSelectionAbi = [
   {
     "inputs": [],
     "name": "RecommenderNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ScoringClosed",
     "type": "error"
   },
   {

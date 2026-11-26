@@ -124,6 +124,16 @@ for (const name of [...new Set(Object.values(CONTRACT_MAP))]) {
   abis[name] = artifact.abi;
 }
 
+// Core forwards what it does not define to ScholarshipCoreLogic, so callers reach those functions at
+// Core's address and need them in Core's ABI.
+const logicPath = findArtifact("ScholarshipCoreLogic");
+if (abis.ScholarshipCore && logicPath) {
+  const known = new Set(abis.ScholarshipCore.map((x: any) => `${x.type}:${x.name}`));
+  const extra = JSON.parse(fs.readFileSync(logicPath, "utf8")).abi
+    .filter((x: any) => x.type === "function" && !known.has(`${x.type}:${x.name}`));
+  abis.ScholarshipCore = [...abis.ScholarshipCore, ...extra];
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // STEP 3 — Write to packages/ponder/abis/v4/
 // ════════════════════════════════════════════════════════════════════════════

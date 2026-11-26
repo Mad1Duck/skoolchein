@@ -8,7 +8,7 @@
 #
 # skoolcein.<domain>  → packages/frontend (static SPA)
 # api.<domain>        → packages/backend  (REST: /v4, /ipfs, /sse, /webhooks)
-# indexer.<domain>    → packages/ponder   (GraphQL/SQL only)
+# indexer.<domain>    → packages/ponder   (health probes only; /sql and /graphql stay internal)
 # rpc.nawasena-labs.com → the chain node  (JSON-RPC over TLS, shared infra —
 #                                          not under the skoolcein subdomain)
 #
@@ -30,8 +30,18 @@ api.skoolcein.nawasena-labs.com {
   reverse_proxy scholarship-backend:3001
 }
 
+# Only the health probes are public. /sql runs arbitrary read queries and is for the backend alone,
+# which reaches it over the Docker network (PONDER_SQL_URL), not through Caddy. /graphql is closed
+# because nothing uses it (and under `bun --bun` it answers 500). An allow list, so /metrics and any
+# route Ponder adds later stay private too.
 indexer.skoolcein.nawasena-labs.com {
-  reverse_proxy scholarship-ponder:42069
+  @public path /health /ready
+  handle @public {
+    reverse_proxy scholarship-ponder:42069
+  }
+  handle {
+    respond "Not found" 404
+  }
 }
 
 # Chain JSON-RPC, fronted with TLS.

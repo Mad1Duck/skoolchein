@@ -11,28 +11,19 @@ import { programTokenOf } from "./helpers";
 const decodeBytes32 = (value: `0x${string}`) =>
   /^0x0+$/.test(value) ? "" : hexToString(value, { size: 32 }).replace(/\0/g, "");
 
+type Reader = { client: { readContract: (args: any) => Promise<any> } };
+
+const readMilestone = (context: Reader, managerAddress: `0x${string}`, id: bigint): Promise<any> =>
+  context.client.readContract({ abi: milestoneManagerAbi, address: managerAddress, functionName: "getMilestone", args: [id] });
+
 /**
  * MilestoneCreated / MilestoneProposed don't carry the amount, so read it from
  * the contract. Without this the row keeps its default "0" until the milestone
  * is disbursed, and the UI shows every pending/proposed milestone as 0.
  */
-async function readMilestoneAmount(
-  context: { client: { readContract: (args: any) => Promise<any> } },
-  managerAddress: `0x${string}`,
-  id: bigint,
-): Promise<string> {
-  try {
-    const m: any = await context.client.readContract({
-      abi: milestoneManagerAbi,
-      address: managerAddress,
-      functionName: "getMilestone",
-      args: [id],
-    });
-    return String(m.amount ?? 0);
-  } catch (err) {
-    logger.warn({ err, id: String(id) }, "could not read milestone amount");
-    return "0";
-  }
+async function readMilestoneAmount(context: Reader, managerAddress: `0x${string}`, id: bigint): Promise<string> {
+  const m = await readMilestone(context, managerAddress, id);
+  return String(m.amount);
 }
 
 /**
@@ -40,24 +31,10 @@ async function readMilestoneAmount(
  * not in any event. Nothing ever stored it, so the dashboards had no countdown and the Release button never
  * came on. Read it from the contract.
  */
-async function readDisputeDeadline(
-  context: { client: { readContract: (args: any) => Promise<any> } },
-  managerAddress: `0x${string}`,
-  id: bigint,
-): Promise<Date | null> {
-  try {
-    const m: any = await context.client.readContract({
-      abi: milestoneManagerAbi,
-      address: managerAddress,
-      functionName: "getMilestone",
-      args: [id],
-    });
-    const secs = Number(m.disputeDeadline ?? 0);
-    return secs > 0 ? new Date(secs * 1000) : null;
-  } catch (err) {
-    logger.warn({ err, id: String(id) }, "could not read milestone dispute deadline");
-    return null;
-  }
+async function readDisputeDeadline(context: Reader, managerAddress: `0x${string}`, id: bigint): Promise<Date | null> {
+  const m = await readMilestone(context, managerAddress, id);
+  const secs = Number(m.disputeDeadline);
+  return secs > 0 ? new Date(secs * 1000) : null;
 }
 
 export const milestoneManagerHandlers = () => {
@@ -65,330 +42,284 @@ export const milestoneManagerHandlers = () => {
   // ── MilestoneCreated — Core calls createMandatoryBatch() at selectWinners ─
 
   ponder.on("MilestoneManager:MilestoneCreated", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, pid, scholar, kind } = event.args;
-      const mId = Number(id);
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, pid, scholar, kind } = event.args;
+    const mId = Number(id);
 
-      const kindMap: Record<number, "MANDATORY" | "OPTIONAL" | "NEGOTIATED"> = {
-        0: "MANDATORY", 1: "OPTIONAL", 2: "NEGOTIATED",
-      };
-      const kindStr = kindMap[Number(kind)] ?? "MANDATORY";
-      const provider = decodeBytes32(event.args.provider);
-      const externalId = decodeBytes32(event.args.externalId);
+    const kindMap: Record<number, "MANDATORY" | "OPTIONAL" | "NEGOTIATED"> = {
+      0: "MANDATORY", 1: "OPTIONAL", 2: "NEGOTIATED",
+    };
+    const kindStr = kindMap[Number(kind)] ?? "MANDATORY";
+    const provider = decodeBytes32(event.args.provider);
+    const externalId = decodeBytes32(event.args.externalId);
 
-      const token = await programTokenOf(db, chainId, Number(pid));
-      const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
-      await db.insert(v4Milestones).values({ chainId,
-        blockchainId: mId,
-        pid: Number(pid),
-        token,
-        scholarWallet: String(scholar),
-        kind: kindStr,
-        requiresProof: kindStr !== "MANDATORY",
-        amount,
-        provider,
-        externalId,
-        status: "PENDING",
-      }).onConflictDoUpdate({
-        kind: kindStr,
-        requiresProof: kindStr !== "MANDATORY",
-        amount,
-        provider,
-        externalId,
-        status: "PENDING",
-        updatedAt: new Date(),
-      });
+    const token = await programTokenOf(db, chainId, Number(pid));
+    const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
+    await db.insert(v4Milestones).values({ chainId,
+      blockchainId: mId,
+      pid: Number(pid),
+      token,
+      scholarWallet: String(scholar),
+      kind: kindStr,
+      requiresProof: kindStr !== "MANDATORY",
+      amount,
+      provider,
+      externalId,
+      status: "PENDING",
+    }).onConflictDoUpdate({
+      kind: kindStr,
+      requiresProof: kindStr !== "MANDATORY",
+      amount,
+      provider,
+      externalId,
+      status: "PENDING",
+      updatedAt: new Date(),
+    });
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCreated" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneCreated",
-        data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
-        status: true, blockHash: event.block.hash,
-      });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneCreated handler error");
-    }
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCreated" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneCreated",
+      data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneProposed — scholar proposes OPTIONAL or NEGOTIATED milestone ─
 
   ponder.on("MilestoneManager:MilestoneProposed", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, pid, scholar, kind } = event.args;
-      const mId = Number(id);
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, pid, scholar, kind } = event.args;
+    const mId = Number(id);
 
-      const kindMap: Record<number, "MANDATORY" | "OPTIONAL" | "NEGOTIATED"> = {
-        0: "MANDATORY", 1: "OPTIONAL", 2: "NEGOTIATED",
-      };
-      const kindStr = kindMap[Number(kind)] ?? "OPTIONAL";
-      const provider = decodeBytes32(event.args.provider);
-      const externalId = decodeBytes32(event.args.externalId);
+    const kindMap: Record<number, "MANDATORY" | "OPTIONAL" | "NEGOTIATED"> = {
+      0: "MANDATORY", 1: "OPTIONAL", 2: "NEGOTIATED",
+    };
+    const kindStr = kindMap[Number(kind)] ?? "OPTIONAL";
+    const provider = decodeBytes32(event.args.provider);
+    const externalId = decodeBytes32(event.args.externalId);
 
-      const token = await programTokenOf(db, chainId, Number(pid));
-      const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
-      await db.insert(v4Milestones).values({ chainId,
-        blockchainId: mId,
-        pid: Number(pid),
-        token,
-        scholarWallet: String(scholar),
-        kind: kindStr,
-        requiresProof: kindStr !== "MANDATORY",
-        amount,
-        proposedBy: String(scholar),
-        provider,
-        externalId,
-        status: "PROPOSED",
-      }).onConflictDoUpdate({
-        status: "PROPOSED",
-        requiresProof: kindStr !== "MANDATORY",
-        amount,
-        proposedBy: String(scholar),
-        provider,
-        externalId,
-        updatedAt: new Date(),
-      });
+    const token = await programTokenOf(db, chainId, Number(pid));
+    const amount = await readMilestoneAmount(context, event.log.address as `0x${string}`, id);
+    await db.insert(v4Milestones).values({ chainId,
+      blockchainId: mId,
+      pid: Number(pid),
+      token,
+      scholarWallet: String(scholar),
+      kind: kindStr,
+      requiresProof: kindStr !== "MANDATORY",
+      amount,
+      proposedBy: String(scholar),
+      provider,
+      externalId,
+      status: "PROPOSED",
+    }).onConflictDoUpdate({
+      status: "PROPOSED",
+      requiresProof: kindStr !== "MANDATORY",
+      amount,
+      proposedBy: String(scholar),
+      provider,
+      externalId,
+      updatedAt: new Date(),
+    });
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneProposed" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneProposed",
-        data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
-        status: true, blockHash: event.block.hash,
-      });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneProposed handler error");
-    }
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneProposed" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneProposed",
+      data: { milestoneId: mId, pid: Number(pid), scholar, kind: kindStr },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneApproved — committee approves OPTIONAL/NEGOTIATED proposal ──
 
   ponder.on("MilestoneManager:MilestoneApproved", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, approvedBy } = event.args;
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, approvedBy } = event.args;
 
-      const milestone = await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({ status: "PENDING", approvedBy: String(approvedBy), updatedAt: new Date() });
+    const milestone = await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+      .set({ status: "PENDING", approvedBy: String(approvedBy), updatedAt: new Date() });
 
-      if (milestone.pid) {
-        const coreAddress = await context.client.readContract({
-          abi: [{ "inputs": [], "name": "_coreContract", "outputs": [{ "internalType": "contract IScholarshipCoreMin", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }],
-          address: event.log.address as `0x${string}`,
-          functionName: "_coreContract"
-        });
-        const progSync: any = await context.client.readContract({
-          abi: scholarshipCoreAbi,
-          address: coreAddress as `0x${string}`,
-          functionName: "getProgram",
-          args: [BigInt(milestone.pid)],
-        });
-        await db.update(v4Programs, { chainId, pid: milestone.pid })
-          .set({ allocatedFund: String(progSync.allocatedFund), updatedAt: new Date() });
-      }
-
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneApproved" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneApproved",
-        data: { milestoneId: Number(id), approvedBy },
-        status: true, blockHash: event.block.hash,
+    if (milestone.pid) {
+      const progSync: any = await context.client.readContract({
+        abi: scholarshipCoreAbi,
+        address: context.contracts.ScholarshipCore.address!,
+        functionName: "getProgram",
+        args: [BigInt(milestone.pid)],
       });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneApproved handler error");
+      await db.update(v4Programs, { chainId, pid: milestone.pid })
+        .set({ allocatedFund: String(progSync.allocatedFund), updatedAt: new Date() });
     }
+
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneApproved" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneApproved",
+      data: { milestoneId: Number(id), approvedBy },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneRejected — committee menolak proposal ────────────────────
 
   ponder.on("MilestoneManager:MilestoneRejected", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, rejectedBy } = event.args;
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, rejectedBy } = event.args;
 
-      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({ status: "REJECTED", approvedBy: String(rejectedBy), updatedAt: new Date() });
+    await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+      .set({ status: "REJECTED", approvedBy: String(rejectedBy), updatedAt: new Date() });
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRejected" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneRejected",
-        data: { milestoneId: Number(id), rejectedBy },
-        status: true, blockHash: event.block.hash,
-      });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneRejected handler error");
-    }
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRejected" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneRejected",
+      data: { milestoneId: Number(id), rejectedBy },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneSubmitted — scholar submit proof untuk milestone PENDING ─
 
   ponder.on("MilestoneManager:MilestoneSubmitted", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, scholar, proofCID } = event.args;
-      const mId = Number(id);
-      const submittedAt = new Date(Number(event.block.timestamp) * 1000);
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, scholar, proofCID } = event.args;
+    const mId = Number(id);
+    const submittedAt = new Date(Number(event.block.timestamp) * 1000);
 
-      const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
-      await db.update(v4Milestones, { chainId, blockchainId: mId })
-        .set({
-          proofCID: String(proofCID),
-          status: "SUBMITTED",
-          submittedAt,
-          disputeDeadline,
-          updatedAt: new Date(),
-        });
-
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneSubmitted" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneSubmitted",
-        data: { milestoneId: mId, scholar },
-        status: true, blockHash: event.block.hash,
+    const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
+    await db.update(v4Milestones, { chainId, blockchainId: mId })
+      .set({
+        proofCID: String(proofCID),
+        status: "SUBMITTED",
+        submittedAt,
+        disputeDeadline,
+        updatedAt: new Date(),
       });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneSubmitted handler error");
-    }
+
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneSubmitted" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneSubmitted",
+      data: { milestoneId: mId, scholar },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneCompleted — dispute window lewat, executeMilestone() dipanggil ─
 
   ponder.on("MilestoneManager:MilestoneCompleted", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, scholar, amount } = event.args;
-      const mId = Number(id);
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, scholar, amount } = event.args;
+    const mId = Number(id);
 
-      const milestone = await db.update(v4Milestones, { chainId, blockchainId: mId })
-        .set({
-          status: "COMPLETED",
-          amount: String(amount),
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        });
+    const milestone = await db.update(v4Milestones, { chainId, blockchainId: mId })
+      .set({
+        status: "COMPLETED",
+        amount: String(amount),
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-      if (milestone.pid && milestone.scholarWallet) {
-        const existingScholar = await db.find(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet });
+    if (milestone.pid && milestone.scholarWallet) {
+      const existingScholar = await db.find(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet });
 
-        if (existingScholar) {
-          const prev = BigInt(existingScholar.totalReceived ?? "0");
-          await db.update(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet })
-            .set({ totalReceived: String(prev + BigInt(amount)), updatedAt: new Date() });
-        }
-
-        const coreAddress = await context.client.readContract({
-          abi: [{ "inputs": [], "name": "_coreContract", "outputs": [{ "internalType": "contract IScholarshipCoreMin", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }],
-          address: event.log.address as `0x${string}`,
-          functionName: "_coreContract"
-        });
-        const progSync: any = await context.client.readContract({
-          abi: scholarshipCoreAbi,
-          address: coreAddress as `0x${string}`,
-          functionName: "getProgram",
-          args: [BigInt(milestone.pid)],
-        });
-        await db.update(v4Programs, { chainId, pid: milestone.pid })
-          .set({
-            spentFund: String(progSync.spentFund),
-            allocatedFund: String(progSync.allocatedFund),
-            updatedAt: new Date(),
-          });
+      if (existingScholar) {
+        const prev = BigInt(existingScholar.totalReceived ?? "0");
+        await db.update(v4Scholars, { chainId, pid: milestone.pid, wallet: milestone.scholarWallet })
+          .set({ totalReceived: String(prev + BigInt(amount)), updatedAt: new Date() });
       }
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCompleted" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneCompleted",
-        data: { milestoneId: mId, scholar, amount: String(amount) },
-        status: true, blockHash: event.block.hash,
+      const progSync: any = await context.client.readContract({
+        abi: scholarshipCoreAbi,
+        address: context.contracts.ScholarshipCore.address!,
+        functionName: "getProgram",
+        args: [BigInt(milestone.pid)],
       });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneCompleted handler error");
+      await db.update(v4Programs, { chainId, pid: milestone.pid })
+        .set({
+          spentFund: String(progSync.spentFund),
+          allocatedFund: String(progSync.allocatedFund),
+          updatedAt: new Date(),
+        });
     }
+
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneCompleted" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneCompleted",
+      data: { milestoneId: mId, scholar, amount: String(amount) },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneFrozen — ScholarshipBounty panggil freezeMilestone() ─────
 
   ponder.on("MilestoneManager:MilestoneFrozen", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id } = event.args;
-      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({ status: "FROZEN", updatedAt: new Date() });
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id } = event.args;
+    await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+      .set({ status: "FROZEN", updatedAt: new Date() });
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneFrozen" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneFrozen",
-        data: { milestoneId: Number(id) },
-        status: true, blockHash: event.block.hash,
-      });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneFrozen handler error");
-    }
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneFrozen" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneFrozen",
+      data: { milestoneId: Number(id) },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneReleased — dispute selesai, milestone kembali ke SUBMITTED ─
 
   ponder.on("MilestoneManager:MilestoneReleased", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id } = event.args;
-      // Released from a dispute: the contract restarts the review period, so read the new deadline.
-      const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
-      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({ status: "SUBMITTED", disputeDeadline, updatedAt: new Date() });
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id } = event.args;
+    // Released from a dispute: the contract restarts the review period, so read the new deadline.
+    const disputeDeadline = await readDisputeDeadline(context, event.log.address as `0x${string}`, id);
+    await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+      .set({ status: "SUBMITTED", disputeDeadline, updatedAt: new Date() });
 
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneReleased" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneReleased",
-        data: { milestoneId: Number(id) },
-        status: true, blockHash: event.block.hash,
-      });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneReleased handler error");
-    }
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneReleased" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneReleased",
+      data: { milestoneId: Number(id) },
+      status: true, blockHash: event.block.hash,
+    });
   });
 
   // ── MilestoneRevisionRequested — the creator sent a submitted milestone back for a fix ─
 
   ponder.on("MilestoneManager:MilestoneRevisionRequested", async ({ event, context }) => {
-    try {
-      const chainId = context.chain.id;
-      const { db } = context;
-      const { id, reasonCID, count } = event.args;
-      await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
-        .set({
-          status: "PENDING",
-          proofCID: "",
-          submittedAt: null,
-          disputeDeadline: null,
-          revisionCount: Number(count),
-          revisionReasonCID: String(reasonCID),
-          updatedAt: new Date(),
-        });
-
-      await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRevisionRequested" });
-      await sendSseToAll("main", {
-        chainId,
-        step: "MilestoneRevisionRequested",
-        data: { milestoneId: Number(id) },
-        status: true, blockHash: event.block.hash,
+    const chainId = context.chain.id;
+    const { db } = context;
+    const { id, reasonCID, count } = event.args;
+    await db.update(v4Milestones, { chainId, blockchainId: Number(id) })
+      .set({
+        status: "PENDING",
+        proofCID: "",
+        submittedAt: null,
+        disputeDeadline: null,
+        revisionCount: Number(count),
+        revisionReasonCID: String(reasonCID),
+        updatedAt: new Date(),
       });
-    } catch (err) {
-      logger.error({ err }, "MilestoneManager:MilestoneRevisionRequested handler error");
-    }
+
+    await insertBlock({ db, chainId, event, eventName: "MilestoneManager:MilestoneRevisionRequested" });
+    await sendSseToAll("main", {
+      chainId,
+      step: "MilestoneRevisionRequested",
+      data: { milestoneId: Number(id) },
+      status: true, blockHash: event.block.hash,
+    });
   });
 };

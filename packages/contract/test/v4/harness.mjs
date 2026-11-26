@@ -160,7 +160,11 @@ export async function deploySystem() {
   const abiOf = (a) => [...a, ...errors];
 
   const contracts = {
-    core: { address: core, abi: abiOf(art.core.abi) },
+    // What Core does not define itself is served by its logic module, at Core's address.
+    core: {
+      address: core,
+      abi: abiOf([...art.core.abi, ...art.coreLogic.abi.filter((x) => x.type === "function" && !art.core.abi.some((y) => y.name === x.name))]),
+    },
     selection: { address: selection, abi: abiOf(art.selection.abi) },
     admin: { address: admin, abi: abiOf(art.admin.abi) },
     milestones: { address: milestones, abi: abiOf(art.milestones.abi) },

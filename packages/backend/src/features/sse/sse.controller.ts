@@ -1,6 +1,8 @@
 import type { Context } from "hono";
 import type { SSEStreamingApi } from "hono/streaming";
-import { Controller, Get, Post, Sse, ApiTags, ApiDoc, channels, SseChannelClient } from "hono-forge";
+import { Controller, Get, Post, Sse, ApiTags, ApiDoc, channels, SseChannelClient, HttpException } from "hono-forge";
+import { env } from "@/config/env";
+import { secretMatches } from "@/utils/secret";
 
 /**
  * Real-time push channel. Ponder no longer serves SSE itself (moved here per
@@ -72,8 +74,12 @@ export class SseController {
   @Post("/broadcast")
   @ApiDoc({ summary: "Internal: push an event to every connected SSE client (used by Ponder's event handlers, not the public frontend)" })
   async broadcast(c: Context) {
-    const { channel, data } = await c.req.json();
-    await channels.publish(channel ?? CHANNEL, channel ?? CHANNEL, data);
+    // Only the indexer may push: anything sent here is shown to every visitor as a protocol event.
+    if (!secretMatches(c.req.header("x-internal-secret"), env.WEBHOOK_SECRET)) {
+      throw HttpException.unauthorized("Invalid internal secret");
+    }
+    const { data } = await c.req.json();
+    await channels.publish(CHANNEL, CHANNEL, data);
     return { ok: true };
   }
 }

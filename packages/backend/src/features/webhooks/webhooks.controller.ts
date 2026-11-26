@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { Controller, Post, Injectable, Public, ApiTags, ApiDoc, channels, HttpException } from "hono-forge";
 import { env } from "@/config/env";
+import { secretMatches } from "@/utils/secret";
 import { WebhooksService } from "./webhooks.service";
 
 @Controller("/webhooks")
@@ -21,7 +22,7 @@ export class WebhooksController {
     const body = await c.req.json();
     const { address, provider, courseId, progress, status, secret } = body;
 
-    if (secret !== env.WEBHOOK_SECRET) {
+    if (!secretMatches(secret, env.WEBHOOK_SECRET)) {
       throw HttpException.unauthorized("Invalid webhook secret");
     }
 

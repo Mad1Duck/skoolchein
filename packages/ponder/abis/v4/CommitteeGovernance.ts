@@ -95,6 +95,11 @@ export const committeeGovernanceAbi = [
   },
   {
     "inputs": [],
+    "name": "MilestoneNotInProgram",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotCommitteeMember",
     "type": "error"
   },
@@ -106,6 +111,11 @@ export const committeeGovernanceAbi = [
   {
     "inputs": [],
     "name": "OnlyInitiator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ScoringClosed",
     "type": "error"
   },
   {

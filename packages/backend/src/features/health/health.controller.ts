@@ -2,10 +2,13 @@ import type { Context } from "hono";
 import os from "os";
 import checkDiskSpace from "check-disk-space";
 import { sql } from "drizzle-orm";
-import { Controller, Get, Injectable, Public, ApiTags, ApiDoc, channels } from "hono-forge";
+import { Controller, Get, Injectable, Public, ApiTags, ApiDoc, HttpException, channels } from "hono-forge";
 import { db } from "@/config/db";
+import { env } from "@/config/env";
+import { secretMatches } from "@/utils/secret";
 import { logger } from "@/utils/logger";
 import { GeminiService } from "@/features/gemini/gemini.service";
+import { indexerMonitor } from "./indexer-watch";
 
 @Controller("/health")
 @Injectable([GeminiService])
@@ -49,13 +52,30 @@ export class HealthController {
   }
 
   /**
+   * Whether the data behind the app is current. 503 when it is not, so an external uptime monitor can
+   * watch it. Deliberately separate from `/health`: a lagging indexer must not restart the backend.
+   */
+  @Get("/indexer")
+  @Public()
+  @ApiDoc({ summary: "Indexer state: ok, syncing, stalled or down (503 unless ok)" })
+  async indexer(c: Context) {
+    const report = indexerMonitor.latest() ?? (await indexerMonitor.check());
+    if (report.state !== "ok") c.status(503);
+    return report;
+  }
+
+  /**
    * Full diagnostics — CPU, memory, disk, DB, plus a Gemini summary.
    * Deliberately NOT the healthcheck target (see above).
+   * Needs the `x-internal-secret` header: it describes the server and every call costs a Gemini request.
    */
   @Get("/detail")
   @Public()
   @ApiDoc({ summary: "Full diagnostics (CPU, memory, disk, DB, Gemini analysis)" })
   async detail(c: Context) {
+    if (!secretMatches(c.req.header("x-internal-secret"), env.WEBHOOK_SECRET)) {
+      throw HttpException.unauthorized("Not allowed.");
+    }
     const cpuLoad = os.loadavg();
     const totalMem = os.totalmem();
     const freeMem = os.freemem();

@@ -60,6 +60,11 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     // milestoneId → resolved (prevent double-execution)
     mapping(uint256 => bool) public milestoneResolved;
 
+    // ── Score values ─────────────────────────────────────────────────────────
+    // APPENDED (live proxy). pid → applicant → member → academic | income << 8 | recommend << 16 | SCORED
+    mapping(uint256 => mapping(address => mapping(address => uint256))) private _scores;
+    uint256 private constant SCORED = 1 << 24;
+
     // ── Events ───────────────────────────────────────────────────────────────
     event CommitteeMemberAdded(uint256 indexed pid, address member);
     event CommitteeMemberRemoved(uint256 indexed pid, address member);
@@ -78,6 +83,8 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     error MilestoneAlreadyResolved();
     error OnlyInitiator();
     error DisputeNotInProgram();
+    error MilestoneNotInProgram();
+    error ScoringClosed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
@@ -102,12 +109,13 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
         if (msg.sender != prog.initiator) revert OnlyInitiator();
         if (member == prog.initiator) revert InitiatorCannotBeCommittee();
         if (isCommitteeMember[pid][member]) revert AlreadyCommitteeMember();
-        if (_committeeMembers[pid].length >= ScholarshipTypes.MAX_COMMITTEE_MEMBERS) revert TooManyCommitteeMembers();
-
-        uint8 idx = uint8(_committeeMembers[pid].length + 1); // 1-based
+        // Someone who was removed and comes back keeps their old seat, so they cannot be counted twice.
+        if (_memberIndex[pid][member] == 0) {
+            if (_committeeMembers[pid].length >= ScholarshipTypes.MAX_COMMITTEE_MEMBERS) revert TooManyCommitteeMembers();
+            _committeeMembers[pid].push(member);
+            _memberIndex[pid][member] = uint8(_committeeMembers[pid].length); // 1-based
+        }
         isCommitteeMember[pid][member] = true;
-        _memberIndex[pid][member] = idx;
-        _committeeMembers[pid].push(member);
         activeMemberCount[pid]++;
         emit CommitteeMemberAdded(pid, member);
     }
@@ -128,9 +136,14 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // SCORING (unchanged from v4)
+    // SCORING
     // ═══════════════════════════════════════════════════════════════════
 
+    /**
+     * @notice A member scores an applicant (each value 0-100). Once more than half of the active members
+     *         have scored, the applicant gets the AVERAGE of their scores, updated as others add theirs.
+     *         Closed as soon as shortlisting starts, so a ranking can never be changed under voters.
+     */
     function submitScore(
         uint256 pid,
         address applicant,
@@ -139,29 +152,37 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
         uint256 recommendScore
     ) external {
         if (!isCommitteeMember[pid][msg.sender]) revert NotCommitteeMember();
+        ScholarshipTypes.ProgramStatus st = _core.getProgram(pid).status;
+        if (
+            (st != ScholarshipTypes.ProgramStatus.APPLICATION_OPEN && st != ScholarshipTypes.ProgramStatus.SCREENING) ||
+            _core.resolveProgress(pid) != 0
+        ) revert ScoringClosed();
+
         hasScored[pid][applicant][msg.sender] = true;
-        _tryFinalizeScore(pid, applicant, academicScore, incomeScore, recommendScore);
+        _scores[pid][applicant][msg.sender] =
+            _cap(academicScore) | (_cap(incomeScore) << 8) | (_cap(recommendScore) << 16) | SCORED;
+        _applyAverage(pid, applicant);
         emit ScoreSubmitted(pid, applicant, academicScore);
     }
 
-    function _tryFinalizeScore(uint256 pid, address applicant, uint256 academic, uint256 income, uint256 recommend) internal {
+    function _cap(uint256 v) private pure returns (uint256) { return v > 100 ? 100 : v; }
+
+    function _applyAverage(uint256 pid, address applicant) internal {
         address[] memory members = _committeeMembers[pid];
-        uint256 n = members.length;
-        uint256 voted;
-        for (uint256 i; i < n; ) {
-            // Only count votes from members who are STILL active
-            if (isCommitteeMember[pid][members[i]] && hasScored[pid][applicant][members[i]]) {
+        uint256 voted; uint256 a; uint256 i_; uint256 r;
+        for (uint256 i; i < members.length; ) {
+            uint256 v = _scores[pid][applicant][members[i]];
+            // Only count members who are STILL active
+            if (v != 0 && isCommitteeMember[pid][members[i]]) {
+                a  += v & 0xff;
+                i_ += (v >> 8) & 0xff;
+                r  += (v >> 16) & 0xff;
                 voted++;
             }
             unchecked { ++i; }
         }
-
-        // Majority Scoring: trigger when more than 50% of ACTIVE members have voted
-        uint256 activeCount = activeMemberCount[pid];
-        uint256 majority    = activeCount / 2 + 1;
-        
-        if (voted >= majority && activeCount > 0) {
-            _core.submitCommitteeScore(pid, applicant, academic, income, recommend, msg.sender);
+        if (voted >= activeMemberCount[pid] / 2 + 1) {
+            _core.submitCommitteeScore(pid, applicant, a / voted, i_ / voted, r / voted, msg.sender);
         }
     }
 
@@ -222,6 +243,8 @@ contract CommitteeGovernance is Initializable, AccessControlUpgradeable, UUPSUpg
      */
     function voteOnMilestone(uint256 milestoneId, uint256 pid, bool approve) external {
         if (!isCommitteeMember[pid][msg.sender]) revert NotCommitteeMember();
+        // Without this, the committee of any program could decide the milestones of every program.
+        if (_mm.getMilestone(milestoneId).pid != pid) revert MilestoneNotInProgram();
         if (milestoneResolved[milestoneId]) revert MilestoneAlreadyResolved();
 
         uint8 idx = _memberIndex[pid][msg.sender];
@@ -265,6 +288,7 @@ interface IScholarshipCoreGov {
     function resolveDisputeBH(uint256 disputeId) external;
     function resolveDisputeScholar(uint256 disputeId) external;
     function bountyHunter() external view returns (address);
+    function resolveProgress(uint256 pid) external view returns (uint32);
 }
 
 interface IBountyGov {
@@ -272,6 +296,7 @@ interface IBountyGov {
 }
 
 interface IMilestoneManagerGov {
+    function getMilestone(uint256 milestoneId) external view returns (ScholarshipTypes.Milestone memory);
     function approveMilestone(uint256 milestoneId) external;
     function rejectMilestone(uint256 milestoneId) external;
 }

@@ -83,6 +83,20 @@ library TokenTransfer {
     }
 
     /**
+     * @notice Like `payOut`, but reports failure instead of reverting. Callers record what they could
+     *         not send so the recipient can collect it later. Same reentrancy rules as `payOut`.
+     * @dev    The native call is gas-capped so a recipient cannot exhaust a whole batch's gas.
+     */
+    function trySend(address token, address to, uint256 amount) internal returns (bool) {
+        if (isNative(token)) {
+            (bool sent, ) = payable(to).call{value: amount, gas: 60_000}("");
+            return sent;
+        }
+        (bool ok, bytes memory ret) = token.call(abi.encodeCall(IERC20.transfer, (to, amount)));
+        return ok && (ret.length == 0 || abi.decode(ret, (bool)));
+    }
+
+    /**
      * @notice Balance of `token` held by `who`.
      */
     function balanceOf(address token, address who) internal view returns (uint256) {

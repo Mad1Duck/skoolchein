@@ -34,7 +34,6 @@ contract ScholarshipCore is ScholarshipCoreBase {
     event StudentShortlisted(uint256 indexed pid, address indexed student, uint256 score);
     event StudentScreenedOut(uint256 indexed pid, address indexed student, uint256 score, bool locked);
     event ProgramCancelled(uint256 indexed pid);
-    event OpenDonationToggled(uint256 indexed pid, bool open);
 
     // ── Errors ───────────────────────────────────────────────────────────────
     error InvalidScoreWeights();
@@ -440,7 +439,7 @@ contract ScholarshipCore is ScholarshipCoreBase {
     }
 
     /// @dev Anything Core does not define itself (onMilestoneCompleted, onOptionalApproved,
-    ///      slashScholar) is handled by the logic module, running against Core's storage.
+    ///      slashScholar, toggleOpenDonation) is handled by the logic module, against Core's storage.
     fallback() external {
         address module = logic;
         if (module == address(0)) revert();
@@ -453,11 +452,6 @@ contract ScholarshipCore is ScholarshipCoreBase {
             case 0 { revert(0, returndatasize()) }
             default { return(0, returndatasize()) }
         }
-    }
-
-    function toggleOpenDonation(uint256 pid, bool open) external programExists(pid) onlyInitiator(pid) {
-        programs[pid].openDonation = open;
-        emit OpenDonationToggled(pid, open);
     }
 
     function cancelProgram(uint256 pid) external nonReentrant programExists(pid) onlyInitiator(pid) {
