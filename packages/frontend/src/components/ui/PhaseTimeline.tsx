@@ -1,4 +1,5 @@
-import type { Program, ProgramStatus } from "@/lib/api/types";
+import type { Program } from "@/lib/api/types";
+import { TONE_BY_STATUS, type DisplayStatus } from "@/lib/programStatus";
 import { useVotingClock } from "@/features/v4/vote/useVotingClock";
 import { useT } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
@@ -14,13 +15,13 @@ const PHASES = [
 
 const statusOrder: Record<string, number> = {
   CREATED: 0, APPLICATION_OPEN: 1, SCREENING: 2,
-  VOTING: 3, ACTIVE: 4, COMPLETED: 5, CANCELLED: -1,
+  VOTING: 3, ACTIVE: 4, COMPLETED: 5, CANCELLED: -1, EXPIRED: -1,
 };
 
 type Window = Pick<Program, "applicationStart" | "applicationEnd" | "votingStart" | "votingEnd">;
 
 /** The next moment that matters in each stage, and what to call it. */
-function nextMoment(status: ProgramStatus, w?: Window): { at: string | null | undefined; key: "applyOpens" | "applyEnds" | "votingOpens" | "votingEnds" } | null {
+function nextMoment(status: DisplayStatus, w?: Window): { at: string | null | undefined; key: "applyOpens" | "applyEnds" | "votingOpens" | "votingEnds" } | null {
   if (!w) return null;
   switch (status) {
     case "CREATED": return { at: w.applicationStart, key: "applyOpens" };
@@ -36,7 +37,7 @@ export function PhaseTimeline({
   window: w,
   className = "",
 }: {
-  currentStatus: ProgramStatus;
+  currentStatus: DisplayStatus;
   /** The program's dates; when given, the current stage shows a live countdown. */
   window?: Window;
   className?: string;
@@ -67,7 +68,7 @@ export function PhaseTimeline({
                     w-8 h-8 text-sm sm:w-10 sm:h-10 sm:text-lg rounded-full border-2 border-black flex items-center justify-center
                     transition-all duration-300
                     ${isComplete ? "bg-skgreen shadow-[2px_2px_0_0_rgba(0,0,0)]" : ""}
-                    ${isCurrent ? "bg-skyellow shadow-[3px_3px_0_0_rgba(0,0,0)] scale-110 animate-pulse-glow" : ""}
+                    ${isCurrent ? `${TONE_BY_STATUS[currentStatus]} shadow-[3px_3px_0_0_rgba(0,0,0)] scale-110 animate-pulse-glow` : ""}
                     ${isFuture ? "bg-gray-100" : ""}
                     ${isCancelled ? "bg-skred-light opacity-50" : ""}
                   `}
@@ -75,7 +76,7 @@ export function PhaseTimeline({
                   {isComplete ? "✓" : phase.icon}
                 </div>
                 {/* Phones have room for the current stage's name only; the others stay readable to screen readers. */}
-                <span className={`text-xs font-bold whitespace-nowrap ${isCurrent ? "text-skpurple" : "text-gray-500 max-sm:sr-only"}`}>
+                <span className={`text-xs font-bold whitespace-nowrap ${isCurrent ? "text-black" : "text-gray-500 max-sm:sr-only"}`}>
                   {t(`phase.${phase.key}.label` as TranslationKey)}
                 </span>
               </div>
@@ -84,7 +85,7 @@ export function PhaseTimeline({
               {i < PHASES.length - 1 && (
                 <div
                   className={`
-                    flex-1 h-0.5 mx-0.5 sm:mx-1 sm:mt-[-1.25rem]
+                    flex-1 h-1 rounded-full mx-0.5 sm:mx-1 sm:mt-[-1.25rem]
                     transition-all duration-300
                     ${isComplete ? "bg-skgreen-dark" : "bg-gray-300"}
                   `}
@@ -96,7 +97,7 @@ export function PhaseTimeline({
       </div>
 
       {/* What is happening in the current stage, in plain words. */}
-      <p className="mt-4 rounded-xl border-2 border-black bg-white px-3 py-2 text-sm">
+      <p className="mt-4 rounded-xl border-2 border-black bg-skbw px-3 py-2 text-sm">
         <span className="font-bold">{t(`phase.${currentStatus}.label` as TranslationKey)}: </span>
         {t(`phase.${currentStatus}.desc` as TranslationKey)}
       </p>

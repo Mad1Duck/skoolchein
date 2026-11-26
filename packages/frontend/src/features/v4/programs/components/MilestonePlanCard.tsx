@@ -1,4 +1,4 @@
-import { NeoCard, NeoCardBody } from '@/components/ui/NeoCard';
+import { PANEL } from '@/components/ui/surface';
 import { useMilestonePlan } from '@/lib/contracts/v4/hooks/selection';
 import { decodeSpec } from '@/lib/milestoneSpec';
 import { useT } from '@/lib/i18n';
@@ -14,8 +14,7 @@ export function MilestonePlanCard({ programId }: { programId: number }) {
   if (!plan || plan.shareBps.length === 0) return null;
 
   return (
-    <NeoCard>
-      <NeoCardBody className="space-y-3">
+    <section className={`${PANEL} p-5 space-y-3`}>
         <div>
           <h3 className="font-paytone text-lg">{t('planCard.title')}</h3>
           <p className="text-xs text-gray-600">{t('planCard.help')}</p>
@@ -42,7 +41,6 @@ export function MilestonePlanCard({ programId }: { programId: number }) {
             );
           })}
         </ol>
-      </NeoCardBody>
-    </NeoCard>
+    </section>
   );
 }
